@@ -253,7 +253,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             <InfoTile label="Where" value={a.place} sub={`${a.area} · ${distanceLabel(a)}`} />
           </View>
 
-          <Attendance activity={a} />
+          <Attendance activity={a} canRemove={canManage} />
 
           <PressableScale
             disabled={a.viewer.hosting}
@@ -390,7 +390,7 @@ function InfoTile({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-function Attendance({ activity: a }: { activity: ActivityDetail }) {
+function Attendance({ activity: a, canRemove }: { activity: ActivityDetail; canRemove: boolean }) {
   const pct = Math.min(100, (a.goingCount / a.capacity) * 100);
   const extra = a.goingCount - a.attendees.length;
 
@@ -443,6 +443,7 @@ function Attendance({ activity: a }: { activity: ActivityDetail }) {
       </PressableScale>
       <MembersSheet
         activityId={a.id}
+        canRemove={canRemove}
         title={going}
         open={membersOpen}
         onClose={() => setMembersOpen(false)}

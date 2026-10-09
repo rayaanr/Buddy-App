@@ -57,7 +57,8 @@ const isMember = (viewerId: string) =>
  * Selects activities in the shape of ActivitySummary. Every list in the API
  * goes through here so counts, viewer flags and blocking apply one way:
  * activities hosted by someone the viewer blocked (or who blocked them), and
- * cancelled activities, are left out unless the viewer is already going.
+ * cancelled activities, are left out unless the viewer is already going;
+ * activities the host removed the viewer from are always left out.
  */
 export async function findActivitySummaries(
   db: Db | Tx,
@@ -116,6 +117,10 @@ export async function findActivitySummaries(
         viewerId
           ? sql`(${activities.cancelledAt} is null or ${isMember(viewerId)})`
           : isNull(activities.cancelledAt),
+        // Removed by the host: gone for good.
+        viewerId
+          ? sql`not exists (select 1 from activity_removals r where r.activity_id = ${activities.id} and r.user_id = ${viewerId})`
+          : undefined,
       ),
     )
     .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));

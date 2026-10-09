@@ -102,6 +102,11 @@ export type UpdateActivityInput = z.infer<typeof updateActivityInput>;
 
 export const muteInput = z.object({ muted: z.boolean() });
 
+/** Why a host removed someone. Kept private (for moderation), never shown to them. */
+export const REMOVAL_REASONS = ['not_a_fit', 'behaviour', 'other'] as const;
+export const removeGuestInput = z.object({ reason: z.enum(REMOVAL_REASONS) });
+export type RemovalReason = (typeof REMOVAL_REASONS)[number];
+
 /** An activity on "Your activities", with the latest chat line for the preview strip. */
 export const myActivity = activitySummary.extend({
   lastMessage: z

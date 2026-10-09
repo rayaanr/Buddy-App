@@ -2,11 +2,13 @@ import {
   createActivityInput,
   feedQuery,
   muteInput,
+  removeGuestInput,
   myActivitiesQuery,
   updateActivityInput,
 } from '@buddy/shared';
 import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { z } from 'zod';
 
 import { currentUser, requireUser } from '../../auth/middleware';
 import { activities, activityMembers, communityMembers } from '../../db/schema';
@@ -35,6 +37,7 @@ import {
   leaveActivity,
   leaveWaitlist,
   myActivities,
+  removeGuest,
   updateActivity,
 } from './service';
 
@@ -212,6 +215,27 @@ export function activityRoutes(deps: Deps) {
         await announce(id, me.id, result);
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
+
+      // Host removes a guest or someone waiting.
+      .post(
+        '/:id/members/:userId/remove',
+        validate('param', z.object({ id: z.uuid(), userId: z.uuid() })),
+        validate('json', removeGuestInput),
+        async (c) => {
+          const me = currentUser(c);
+          const { id, userId } = c.req.valid('param');
+          const result = await removeGuest(db, me, id, userId, c.req.valid('json').reason);
+          if (result.wasGoing) hub.disconnect(id, userId);
+          await announce(id, me.id, result);
+          void push.notifyUsers([userId], {
+            title: `You’re no longer going to ${result.title}`,
+            body: 'The host removed you from this activity.',
+            data: {},
+            channelId: 'reminders',
+          });
+          return c.json(await getActivityDetail(db, urls, id, me.id));
+        },
+      )
 
       // Mute or unmute this activity's group chat notifications (members only).
       .post('/:id/mute', idParam(), validate('json', muteInput), async (c) => {

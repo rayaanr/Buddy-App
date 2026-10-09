@@ -5,6 +5,7 @@ import type {
   UpdateActivityInput,
   CreateReportInput,
   DiscoverFilter,
+  RemovalReason,
   Me,
   UpdateMeInput,
 } from '@buddy/shared';
@@ -150,6 +151,20 @@ export function useLeaveActivity() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => unwrap(api.activities[':id'].membership.$delete({ param: { id } })),
+    onSuccess: (detail) => refreshActivityLists(qc, detail),
+  });
+}
+
+export function useRemoveGuest(activityId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, reason }: { userId: string; reason: RemovalReason }) =>
+      unwrap(
+        api.activities[':id'].members[':userId'].remove.$post({
+          param: { id: activityId, userId },
+          json: { reason },
+        }),
+      ),
     onSuccess: (detail) => refreshActivityLists(qc, detail),
   });
 }

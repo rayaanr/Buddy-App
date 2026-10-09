@@ -5,12 +5,20 @@ import {
   type ActivityGroup,
   type CreateActivityInput,
   type MyActivity,
+  type RemovalReason,
   type UpdateActivityInput,
 } from '@buddy/shared';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
-import { activities, activityMembers, activityWaitlist, messages, user } from '../../db/schema';
+import {
+  activities,
+  activityMembers,
+  activityRemovals,
+  activityWaitlist,
+  messages,
+  user,
+} from '../../db/schema';
 import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
@@ -132,11 +140,12 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
         startsAt: activities.startsAt,
         hostBlocked: blockedBetween(me.id, activities.hostId).mapWith(Boolean),
         cancelled: sql<boolean>`${activities.cancelledAt} is not null`,
+        removed: removedSql(me.id),
       })
       .from(activities)
       .where(eq(activities.id, activityId))
       .for('update');
-    if (!activity || activity.hostBlocked) throw notFound('Activity');
+    if (!activity || activity.hostBlocked || activity.removed) throw notFound('Activity');
     if (activity.cancelled) throw conflict('This activity was cancelled');
     if (activity.startsAt.getTime() < Date.now() - 60 * 60 * 1000) {
       throw conflict('This activity has already happened');
@@ -222,6 +231,7 @@ export async function joinWaitlist(db: Db, me: { id: string; name: string }, act
         startsAt: activities.startsAt,
         hostBlocked: blockedBetween(me.id, activities.hostId).mapWith(Boolean),
         cancelled: sql<boolean>`${activities.cancelledAt} is not null`,
+        removed: removedSql(me.id),
         member: sql<boolean>`exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${me.id})`,
         waiting: sql<boolean>`exists (select 1 from activity_waitlist w where w.activity_id = ${activities.id} and w.user_id = ${me.id})`,
         going: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
@@ -230,7 +240,7 @@ export async function joinWaitlist(db: Db, me: { id: string; name: string }, act
       .from(activities)
       .where(eq(activities.id, activityId))
       .for('update');
-    if (!activity || activity.hostBlocked) throw notFound('Activity');
+    if (!activity || activity.hostBlocked || activity.removed) throw notFound('Activity');
     if (activity.cancelled) throw conflict('This activity was cancelled');
     if (activity.startsAt.getTime() <= Date.now())
       throw conflict('This activity has already started');
@@ -245,6 +255,50 @@ export async function joinWaitlist(db: Db, me: { id: string; name: string }, act
     }
     await tx.insert(activityWaitlist).values({ activityId, userId: me.id });
     return { message: null };
+  });
+}
+
+const removedSql = (userId: string) =>
+  sql<boolean>`exists (select 1 from activity_removals r where r.activity_id = ${activities.id} and r.user_id = ${userId})`;
+
+/**
+ * Host removes a guest (or someone waiting). They're told they're no longer
+ * going, can't rejoin or see it again, and the next person waiting moves in.
+ * The reason is stored for moderation only.
+ */
+export async function removeGuest(
+  db: Db,
+  host: { id: string },
+  activityId: string,
+  userId: string,
+  reason: RemovalReason,
+) {
+  return db.transaction(async (tx) => {
+    const row = await lockForHost(tx, host.id, activityId);
+    if (userId === host.id) throw forbidden('Hosts can’t remove themselves');
+    const [person] = await tx.select({ name: user.name }).from(user).where(eq(user.id, userId));
+    const left = await tx
+      .delete(activityMembers)
+      .where(and(eq(activityMembers.activityId, activityId), eq(activityMembers.userId, userId)))
+      .returning({ userId: activityMembers.userId });
+    const unqueued = await tx
+      .delete(activityWaitlist)
+      .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)))
+      .returning({ userId: activityWaitlist.userId });
+    if (!person || (!left.length && !unqueued.length)) throw notFound('Guest');
+
+    await tx.insert(activityRemovals).values({ activityId, userId, reason }).onConflictDoNothing();
+    // Worded gently: everyone else in the chat sees this.
+    const messages = left.length
+      ? [await insertSystemMessage(tx, activityId, `${firstName(person.name)} is no longer going`)]
+      : [];
+    const moved = await promoteFromWaitlist(tx, activityId);
+    return {
+      wasGoing: left.length > 0,
+      title: row.title,
+      messages: [...messages, ...moved.messages],
+      promoted: moved.promoted,
+    };
   });
 }
 

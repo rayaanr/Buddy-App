@@ -155,6 +155,31 @@ export const activityWaitlist = pgTable(
   ],
 );
 
+/**
+ * People a host removed from an activity. They can't rejoin or see it again.
+ * The reason is for moderation only.
+ */
+export const activityRemovals = pgTable(
+  'activity_removals',
+  {
+    activityId: uuid()
+      .notNull()
+      .references(() => activities.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    reason: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.activityId, t.userId] }),
+    check(
+      'activity_removals_reason_check',
+      sql`${t.reason} in ('not_a_fit', 'behaviour', 'other')`,
+    ),
+  ],
+);
+
 export const messages = pgTable(
   'messages',
   {
