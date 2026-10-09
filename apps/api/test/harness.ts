@@ -47,7 +47,7 @@ export function useTestApp(
   const { deps, close } = createDeps(env, {
     mailer: mail.mailer,
     storage: options.storage === undefined ? null : options.storage,
-    push: options.push ?? { notifyActivity: async () => {} },
+    push: options.push ?? { notifyActivity: async () => {}, notifyUsers: async () => {} },
   });
   const app = createApp(deps);
 

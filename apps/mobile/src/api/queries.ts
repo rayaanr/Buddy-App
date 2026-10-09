@@ -95,8 +95,7 @@ export const useActivity = (id: string) =>
 export const useActivityMembers = (id: string, enabled: boolean) =>
   useQuery({
     queryKey: [...keys.activity(id), 'members'],
-    queryFn: async () =>
-      (await unwrap(api.activities[':id'].members.$get({ param: { id } }))).members,
+    queryFn: () => unwrap(api.activities[':id'].members.$get({ param: { id } })),
     enabled,
   });
 
@@ -151,6 +150,19 @@ export function useLeaveActivity() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => unwrap(api.activities[':id'].membership.$delete({ param: { id } })),
+    onSuccess: (detail) => refreshActivityLists(qc, detail),
+  });
+}
+
+export function useWaitlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, waiting }: { id: string; waiting: boolean }) =>
+      unwrap(
+        waiting
+          ? api.activities[':id'].waitlist.$delete({ param: { id } })
+          : api.activities[':id'].waitlist.$post({ param: { id } }),
+      ),
     onSuccess: (detail) => refreshActivityLists(qc, detail),
   });
 }

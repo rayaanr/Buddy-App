@@ -12,6 +12,7 @@ const push = {
   notifyActivity: async (activityId: string, message: PushMessage) => {
     sent.push({ activityId, message });
   },
+  notifyUsers: async () => {},
 };
 const t = useTestApp({ push });
 const run = () => sendReminders({ db: t.deps.db, push });

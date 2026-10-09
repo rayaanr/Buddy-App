@@ -23,10 +23,17 @@ export const activitySummary = z.object({
   distanceKm: z.number().nullable(),
   capacity: z.number().int(),
   goingCount: z.number().int(),
+  /** People waiting for a spot (the activity is full). */
+  waitingCount: z.number().int(),
   coverUrl: z.url().nullable(),
   host: userSummary,
   community: z.object({ id: z.uuid(), name: z.string() }).nullable(),
-  viewer: z.object({ joined: z.boolean(), hosting: z.boolean() }),
+  viewer: z.object({
+    joined: z.boolean(),
+    hosting: z.boolean(),
+    /** 1 if you're next in line; null if you're not on the waitlist. */
+    waitlistPosition: z.number().int().nullable(),
+  }),
   /** Called off by the host. Only people who were going still see it. */
   cancelled: z.boolean(),
 });
@@ -43,7 +50,11 @@ export type ActivityDetail = z.infer<typeof activityDetail>;
 /** Everyone going, host first (people you've blocked, or who blocked you, left out). */
 export const activityMember = userSummary.extend({ role: z.enum(['host', 'guest']) });
 export type ActivityMember = z.infer<typeof activityMember>;
-export const activityMembers = z.object({ members: z.array(activityMember) });
+export const activityMembers = z.object({
+  members: z.array(activityMember),
+  /** First in line first. */
+  waitlist: z.array(userSummary),
+});
 
 /** Query for the Discover feed. Query-string values arrive as strings, hence coerce. */
 export const feedQuery = z.object({

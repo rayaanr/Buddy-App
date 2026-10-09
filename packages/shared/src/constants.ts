@@ -60,6 +60,8 @@ export const AREA_NAMES = Object.keys(AREAS) as [Area, ...Area[]];
 export const DEFAULT_AREA: Area = 'Colombo 07';
 
 export const LIMITS = {
+  /** People who can wait for a spot on a full activity. */
+  waitlistMax: 10,
   nameMax: 60,
   bioMax: 280,
   titleMin: 3,

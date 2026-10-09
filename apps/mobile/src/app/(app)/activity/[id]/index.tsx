@@ -1,4 +1,4 @@
-import { ERROR_CODES, type ActivityDetail } from '@buddy/shared';
+import { ERROR_CODES, LIMITS, type ActivityDetail } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -12,7 +12,13 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ApiRequestError, errorMessage } from '@/api/client';
-import { useActivity, useCancelActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
+import {
+  useActivity,
+  useCancelActivity,
+  useJoinActivity,
+  useLeaveActivity,
+  useWaitlist,
+} from '@/api/queries';
 import {
   ActionSheet,
   AnimatedView,
@@ -38,7 +44,15 @@ import { MembersSheet } from '@/components/activity/MembersSheet';
 import { NotFound } from '@/components/ui/NotFound';
 import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { distanceLabel, firstName, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
+import {
+  distanceLabel,
+  firstName,
+  hueFor,
+  ordinal,
+  spotsLabel,
+  spotsLeft,
+  whenLong,
+} from '@/lib/activity';
 import { shareActivity } from '@/lib/share';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -70,6 +84,7 @@ const COVER_HEIGHT = 330;
 function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const join = useJoinActivity();
   const leave = useLeaveActivity();
+  const waitlist = useWaitlist();
   const cancel = useCancelActivity();
   const { top } = useScreenInsets();
   const now = useNow();
@@ -103,9 +118,13 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
 
   const left = spotsLeft(a);
   const isIn = a.viewer.joined || a.viewer.hosting;
-  // The footer's buttons pop when you join or leave.
-  const footerStyle = useEnterOnChange(isIn, 'pop');
-  const busy = join.isPending || leave.isPending;
+  const position = a.viewer.waitlistPosition;
+  // Full: wait for a spot, unless it has started or the waitlist is full too.
+  const canWait =
+    !isIn && left <= 0 && new Date(a.startsAt) > now && a.waitingCount < LIMITS.waitlistMax;
+  // The footer's buttons pop when you join, leave or start waiting.
+  const footerStyle = useEnterOnChange(isIn ? 'in' : position ? 'waiting' : 'out', 'pop');
+  const busy = join.isPending || leave.isPending || waitlist.isPending;
   const hosted = a.host.hostedCount;
   const hostMeta = [
     `Hosted ${hosted} ${hosted === 1 ? 'activity' : 'activities'}`,
@@ -132,6 +151,21 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
       onSuccess: () => toast('Cancelled. Everyone going has been told.'),
       onError: (err) => toast(errorMessage(err)),
     });
+  const onWaitlist = () =>
+    waitlist.mutate(
+      { id: a.id, waiting: !!position },
+      {
+        onSuccess: (detail) => {
+          if (position) return toast('You left the waitlist.');
+          if (detail.viewer.joined) {
+            successHaptic();
+            return toast('A spot was free, so you’re in.');
+          }
+          toast('You’re on the waitlist. We’ll let you know if a spot opens.');
+        },
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
   const onLeave = () =>
     leave.mutate(a.id, {
       onSuccess: () => toast('You left the activity.'),
@@ -240,7 +274,35 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               className="flex-1"
             />
           ) : null}
-          {!isIn && left <= 0 ? (
+          {!isIn && left <= 0 && position ? (
+            <>
+              <View className="flex-1 justify-center">
+                <Text className="font-sans-semibold text-[16px] text-ink">
+                  You’re {ordinal(position)} in line
+                </Text>
+                <Text className="mt-0.5 font-sans text-[13px] text-muted">
+                  We’ll move you in if a spot opens.
+                </Text>
+              </View>
+              <Button
+                label={waitlist.isPending ? 'Leaving…' : 'Leave waitlist'}
+                variant="outline"
+                disabled={busy}
+                onPress={onWaitlist}
+                className="px-5"
+              />
+            </>
+          ) : null}
+          {!isIn && left <= 0 && !position && canWait ? (
+            <Button
+              label={waitlist.isPending ? 'Joining…' : 'Join waitlist'}
+              variant="outline"
+              disabled={busy}
+              onPress={onWaitlist}
+              className="flex-1"
+            />
+          ) : null}
+          {!isIn && left <= 0 && !position && !canWait ? (
             <Button label="Activity full" inactive disabled className="flex-1" />
           ) : null}
           {isIn ? (

@@ -87,13 +87,14 @@ Connections live in this process's memory (`src/realtime/hub.ts`). That's right 
 
 ## Hosting, reminders and share links
 
-| Endpoint                         | Purpose                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `PATCH /v1/activities/:id`       | Host edits title, type, time, place, spots or notes until it starts. Spots can't drop below who's going.     |
-| `POST /v1/activities/:id/cancel` | Host calls it off. It stays visible, marked `cancelled`, only to the people who were going.                  |
-| `GET /a/:id` (public HTML)       | The page behind shared links: Open Graph tags for chat-app previews and an "Open in Buddy" (`buddy://`) link |
+| Endpoint                           | Purpose                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `PATCH /v1/activities/:id`         | Host edits title, type, time, place, spots or notes until it starts. Spots can't drop below who's going.     |
+| `POST /v1/activities/:id/cancel`   | Host calls it off. It stays visible, marked `cancelled`, only to the people who were going.                  |
+| `POST /v1/activities/:id/waitlist` | Wait for a spot on a full activity (max 10 waiting); joins straight away if one is free. `DELETE` to leave.  |
+| `GET /a/:id` (public HTML)         | The page behind shared links: Open Graph tags for chat-app previews and an "Open in Buddy" (`buddy://`) link |
 
-A new time or place, or a cancellation, is posted in the group chat and pushed to everyone going. A job in the API process (`src/jobs/reminders.ts`, every minute) pushes "Coming up" two hours before an activity and "How was it?" three hours after (if anyone joined). Each is claimed with a single `UPDATE … RETURNING`, so running several API instances never double-sends, and moving an activity's time re-arms both.
+People waiting live in `activity_waitlist`, apart from `activity_members`, so they never count as going (chat, counts, reminders). When someone leaves or the host adds spots, the first in line moves in automatically (with the activity row locked, so a racing join can't take the spot), gets a "You're in" push, and the chat shows "… joined from the waitlist". Cancelling clears the waitlist and tells those people too. A new time or place, or a cancellation, is posted in the group chat and pushed to everyone going. A job in the API process (`src/jobs/reminders.ts`, every minute) pushes "Coming up" two hours before an activity and "How was it?" three hours after (if anyone joined). Each is claimed with a single `UPDATE … RETURNING`, so running several API instances never double-sends, and moving an activity's time re-arms both.
 
 ## Photo uploads (Cloudflare R2)
 

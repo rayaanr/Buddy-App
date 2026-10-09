@@ -7,7 +7,7 @@ import { conflict, forbidden, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import { notBlockedBetween } from '../safety/blocks';
 
-type MessageRow = typeof messages.$inferSelect;
+export type MessageRow = typeof messages.$inferSelect;
 
 /** Only people going (host included) can read or write an activity's chat. */
 export async function requireMember(db: Db, activityId: string, userId: string) {

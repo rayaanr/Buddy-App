@@ -35,5 +35,6 @@ export const ERROR_CODES = {
   notFound: 'not_found',
   conflict: 'conflict',
   activityFull: 'activity_full',
+  waitlistFull: 'waitlist_full',
   internal: 'internal_error',
 } as const;

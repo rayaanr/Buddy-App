@@ -10,7 +10,7 @@ import {
 import { GROUP_HUES, type CreateDay } from '@/data/constants';
 import { colors } from '@/theme';
 
-type Activity = Pick<ActivitySummary, 'capacity' | 'goingCount' | 'viewer'>;
+type Activity = Pick<ActivitySummary, 'capacity' | 'goingCount' | 'waitingCount' | 'viewer'>;
 
 export const spotsLeft = (a: Activity) => a.capacity - a.goingCount;
 
@@ -40,7 +40,7 @@ export function leftLabel(a: Activity) {
 
 export function spotsLabel(a: Activity) {
   const left = spotsLeft(a);
-  if (left <= 0) return 'Full';
+  if (left <= 0) return a.waitingCount > 0 ? `Full · ${a.waitingCount} waiting` : 'Full';
   return `${left} spot${left === 1 ? '' : 's'} left`;
 }
 
@@ -86,6 +86,13 @@ const MONTHS_SHORT = [
 export function shortDay(day: string) {
   const [, m, d] = day.split('-').map(Number);
   return `${d} ${MONTHS_SHORT[(m ?? 1) - 1]}`;
+}
+
+/** 1st, 2nd, 3rd, 4th… (waitlist places). */
+export function ordinal(n: number) {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 }
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;

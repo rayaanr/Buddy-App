@@ -12,7 +12,7 @@ import { activities, activityMembers, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { idParam, validate } from '../../lib/validate';
-import { toChatMessage } from '../chat/service';
+import { toChatMessage, type MessageRow } from '../chat/service';
 import { originFor } from '../profiles/service';
 import { picksFor } from './picks';
 import {
@@ -20,6 +20,7 @@ import {
   findActivitySummaries,
   findActivitySummary,
   findMembers,
+  findWaitlist,
   notCancelled,
   pointSql,
   upcoming,
@@ -29,7 +30,9 @@ import {
   createActivity,
   getActivityDetail,
   joinActivity,
+  joinWaitlist,
   leaveActivity,
+  leaveWaitlist,
   myActivities,
   updateActivity,
 } from './service';
@@ -39,21 +42,44 @@ const HISTORY_LIMIT = 10;
 export function activityRoutes(deps: Deps) {
   const { db, urls, hub, push } = deps;
 
-  /** Posts a host change in the chat and tells everyone else who's going. */
+  /**
+   * After a change: posts its chat lines, tells everyone going about a host
+   * change (`notice`, except `actorId`), tells people moved off the waitlist
+   * they're in, and tells people still waiting about a cancellation.
+   */
   const announce = async (
     id: string,
-    hostId: string,
-    result: Awaited<ReturnType<typeof cancelActivity>> | Awaited<ReturnType<typeof updateActivity>>,
+    actorId: string,
+    result: {
+      messages: MessageRow[];
+      promoted: string[];
+      notice?: { title: string; body: string } | null;
+      waiting?: string[];
+    },
   ) => {
-    if (result.message) {
-      hub.publish(id, { type: 'message', message: await toChatMessage(db, urls, result.message) });
+    for (const row of result.messages) {
+      hub.publish(id, { type: 'message', message: await toChatMessage(db, urls, row) });
     }
     if (result.notice) {
-      void push.notifyActivity(
-        id,
-        { ...result.notice, data: { activityId: id }, channelId: 'reminders' },
-        [hostId],
-      );
+      const message = {
+        ...result.notice,
+        data: { activityId: id },
+        channelId: 'reminders' as const,
+      };
+      void push.notifyActivity(id, message, [actorId, ...result.promoted]);
+      if (result.waiting?.length) void push.notifyUsers(result.waiting, message);
+    }
+    if (result.promoted.length) {
+      const [activity] = await db
+        .select({ title: activities.title })
+        .from(activities)
+        .where(eq(activities.id, id));
+      void push.notifyUsers(result.promoted, {
+        title: `You’re in: ${activity?.title ?? 'your activity'}`,
+        body: 'A spot opened up. Say hi in the group chat.',
+        data: { activityId: id, screen: 'chat' },
+        channelId: 'reminders',
+      });
     }
   };
   return (
@@ -139,7 +165,10 @@ export function activityRoutes(deps: Deps) {
         const viewerId = currentUser(c).id;
         const id = c.req.param('id');
         if (!(await findActivitySummary(db, urls, id, viewerId))) throw notFound('Activity');
-        return c.json({ members: await findMembers(db, urls, id, viewerId) });
+        return c.json({
+          members: await findMembers(db, urls, id, viewerId),
+          waitlist: await findWaitlist(db, urls, id, viewerId),
+        });
       })
 
       .post('/', validate('json', createActivityInput), async (c) => {
@@ -178,13 +207,27 @@ export function activityRoutes(deps: Deps) {
         const me = currentUser(c);
         const id = c.req.param('id');
         const result = await leaveActivity(db, me, id);
-        if (result.message) {
-          hub.disconnect(id, me.id);
-          hub.publish(id, {
-            type: 'message',
-            message: await toChatMessage(db, urls, result.message),
-          });
-        }
+        if (result.left) hub.disconnect(id, me.id);
+        await announce(id, me.id, result);
+        return c.json(await getActivityDetail(db, urls, id, me.id));
+      })
+
+      // Full activities: wait for a spot (joins straight away if one is free).
+      .post('/:id/waitlist', idParam(), async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        const result = await joinWaitlist(db, me, id);
+        await announce(id, me.id, {
+          messages: result.message ? [result.message] : [],
+          promoted: [],
+        });
+        return c.json(await getActivityDetail(db, urls, id, me.id));
+      })
+
+      .delete('/:id/waitlist', idParam(), async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        await leaveWaitlist(db, me.id, id);
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
   );

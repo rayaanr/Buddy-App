@@ -3,7 +3,14 @@ import { and, asc, eq, gte, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
 import type { LatLng } from '../../db/geography';
-import { activities, activityMembers, communities, profiles, user } from '../../db/schema';
+import {
+  activities,
+  activityMembers,
+  activityWaitlist,
+  communities,
+  profiles,
+  user,
+} from '../../db/schema';
 import type { Urls } from '../../lib/urls';
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 
@@ -78,6 +85,12 @@ export async function findActivitySummaries(
       communityId: communities.id,
       communityName: communities.name,
       goingCount: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
+      waitingCount: sql<number>`(select count(*)::int from activity_waitlist w where w.activity_id = ${activities.id})`,
+      waitlistPosition: viewerId
+        ? sql<
+            number | null
+          >`(select count(*)::int from activity_waitlist w, activity_waitlist mine where mine.activity_id = ${activities.id} and mine.user_id = ${viewerId} and w.activity_id = mine.activity_id and (w.joined_at, w.user_id) <= (mine.joined_at, mine.user_id) having count(*) > 0)`
+        : sql<null>`null`,
       viewerRole: viewerId
         ? sql<
             string | null
@@ -119,6 +132,7 @@ export async function findActivitySummaries(
     distanceKm: r.distanceKm === null ? null : Math.round(Number(r.distanceKm) * 10) / 10,
     capacity: r.capacity,
     goingCount: r.goingCount,
+    waitingCount: r.waitingCount,
     coverUrl: r.coverUrl,
     host: {
       id: r.hostId,
@@ -127,7 +141,11 @@ export async function findActivitySummaries(
     },
     community:
       r.communityId && r.communityName ? { id: r.communityId, name: r.communityName } : null,
-    viewer: { joined: r.viewerRole === 'guest', hosting: r.viewerRole === 'host' },
+    viewer: {
+      joined: r.viewerRole === 'guest',
+      hosting: r.viewerRole === 'host',
+      waitlistPosition: r.waitlistPosition,
+    },
     cancelled: r.cancelledAt !== null,
   }));
 }
@@ -180,6 +198,32 @@ export async function findMembers(
     name: r.name,
     avatarUrl: urls.avatar(r.avatarKey, r.avatarUrl),
     role: r.role as 'host' | 'guest',
+  }));
+}
+
+/** People waiting for a spot, first in line first; blocked people left out. */
+export async function findWaitlist(db: Db | Tx, urls: Urls, activityId: string, viewerId: string) {
+  const rows = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      avatarKey: profiles.avatarKey,
+      avatarUrl: profiles.avatarUrl,
+    })
+    .from(activityWaitlist)
+    .innerJoin(user, eq(user.id, activityWaitlist.userId))
+    .leftJoin(profiles, eq(profiles.userId, activityWaitlist.userId))
+    .where(
+      and(
+        eq(activityWaitlist.activityId, activityId),
+        notBlockedBetween(viewerId, activityWaitlist.userId),
+      ),
+    )
+    .orderBy(asc(activityWaitlist.joinedAt), asc(activityWaitlist.userId));
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    avatarUrl: urls.avatar(r.avatarKey, r.avatarUrl),
   }));
 }
 

@@ -7,10 +7,10 @@ import {
   type MyActivity,
   type UpdateActivityInput,
 } from '@buddy/shared';
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
-import { activities, activityMembers, messages, user } from '../../db/schema';
+import { activities, activityMembers, activityWaitlist, messages, user } from '../../db/schema';
 import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
@@ -156,10 +156,103 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
       throw conflict('This activity is full', ERROR_CODES.activityFull);
     }
 
-    await tx.insert(activityMembers).values({ activityId, userId: me.id, role: 'guest' });
+    await addGuest(tx, activityId, me.id);
     const message = await insertSystemMessage(tx, activityId, `${firstName(me.name)} joined`);
     return { joined: true, message };
   });
+}
+
+/** Adds a guest, taking them off the waitlist if they were on it. */
+async function addGuest(tx: Tx, activityId: string, userId: string) {
+  await tx.insert(activityMembers).values({ activityId, userId, role: 'guest' });
+  await tx
+    .delete(activityWaitlist)
+    .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)));
+}
+
+/**
+ * Fills open spots from the waitlist, first in line first. Call with the
+ * activity row locked. Does nothing once it has started or been cancelled.
+ */
+async function promoteFromWaitlist(tx: Tx, activityId: string) {
+  const [activity] = await tx
+    .select({
+      capacity: activities.capacity,
+      started: sql<boolean>`${activities.startsAt} <= now()`,
+      cancelled: sql<boolean>`${activities.cancelledAt} is not null`,
+      going: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
+    })
+    .from(activities)
+    .where(eq(activities.id, activityId));
+  const open = activity ? activity.capacity - activity.going : 0;
+  if (!activity || activity.started || activity.cancelled || open <= 0) {
+    return { messages: [], promoted: [] };
+  }
+
+  const next = await tx
+    .select({ userId: activityWaitlist.userId, name: user.name })
+    .from(activityWaitlist)
+    .innerJoin(user, eq(user.id, activityWaitlist.userId))
+    .where(eq(activityWaitlist.activityId, activityId))
+    .orderBy(asc(activityWaitlist.joinedAt), asc(activityWaitlist.userId))
+    .limit(open);
+  const messages = [];
+  for (const person of next) {
+    await addGuest(tx, activityId, person.userId);
+    messages.push(
+      await insertSystemMessage(
+        tx,
+        activityId,
+        `${firstName(person.name)} joined from the waitlist`,
+      ),
+    );
+  }
+  return { messages, promoted: next.map((p) => p.userId) };
+}
+
+/**
+ * Joins the waitlist of a full activity. If a spot is free after all, joins
+ * the activity instead. Repeat calls are no-ops.
+ */
+export async function joinWaitlist(db: Db, me: { id: string; name: string }, activityId: string) {
+  return db.transaction(async (tx) => {
+    const [activity] = await tx
+      .select({
+        capacity: activities.capacity,
+        startsAt: activities.startsAt,
+        hostBlocked: blockedBetween(me.id, activities.hostId).mapWith(Boolean),
+        cancelled: sql<boolean>`${activities.cancelledAt} is not null`,
+        member: sql<boolean>`exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${me.id})`,
+        waiting: sql<boolean>`exists (select 1 from activity_waitlist w where w.activity_id = ${activities.id} and w.user_id = ${me.id})`,
+        going: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
+        waitingCount: sql<number>`(select count(*)::int from activity_waitlist w where w.activity_id = ${activities.id})`,
+      })
+      .from(activities)
+      .where(eq(activities.id, activityId))
+      .for('update');
+    if (!activity || activity.hostBlocked) throw notFound('Activity');
+    if (activity.cancelled) throw conflict('This activity was cancelled');
+    if (activity.startsAt.getTime() <= Date.now())
+      throw conflict('This activity has already started');
+    if (activity.member || activity.waiting) return { message: null };
+
+    if (activity.going < activity.capacity) {
+      await addGuest(tx, activityId, me.id);
+      return { message: await insertSystemMessage(tx, activityId, `${firstName(me.name)} joined`) };
+    }
+    if (activity.waitingCount >= LIMITS.waitlistMax) {
+      throw conflict('The waitlist is full too', ERROR_CODES.waitlistFull);
+    }
+    await tx.insert(activityWaitlist).values({ activityId, userId: me.id });
+    return { message: null };
+  });
+}
+
+/** Leaves the waitlist. A no-op if you weren't on it. */
+export async function leaveWaitlist(db: Db, userId: string, activityId: string) {
+  await db
+    .delete(activityWaitlist)
+    .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)));
 }
 
 /** "Sat 14 Nov, 17:45" in Sri Lanka time, for chat lines and notifications. */
@@ -250,11 +343,17 @@ export async function updateActivity(
       })
       .where(eq(activities.id, activityId));
 
+    // More spots: people waiting move in.
+    const moved =
+      input.capacity !== undefined && input.capacity > row.capacity
+        ? await promoteFromWaitlist(tx, activityId)
+        : { messages: [], promoted: [] };
+
     const changes = [
       timeChanged && `the time to ${whenText(startsAt!)}`,
       placeChanged && `the place to ${input.place}`,
     ].filter(Boolean);
-    if (!changes.length) return { message: null, notice: null };
+    if (!changes.length) return { ...moved, notice: null };
 
     const message = await insertSystemMessage(
       tx,
@@ -265,7 +364,7 @@ export async function updateActivity(
       title: input.title ?? row.title,
       body: `Now ${[timeChanged && whenText(startsAt!), placeChanged && `at ${input.place}`].filter(Boolean).join(', ')}`,
     };
-    return { message, notice };
+    return { messages: [message, ...moved.messages], promoted: moved.promoted, notice };
   });
 }
 
@@ -286,8 +385,14 @@ export async function cancelActivity(
       activityId,
       `${firstName(host.name)} cancelled this activity`,
     );
+    const waiting = await tx
+      .delete(activityWaitlist)
+      .where(eq(activityWaitlist.activityId, activityId))
+      .returning({ userId: activityWaitlist.userId });
     return {
-      message,
+      messages: [message],
+      promoted: [],
+      waiting: waiting.map((w) => w.userId),
       notice: { title: `Cancelled: ${row.title}`, body: `${firstName(host.name)} called it off.` },
     };
   });
@@ -296,6 +401,12 @@ export async function cancelActivity(
 /** Leaves an activity. Hosts can't leave their own activity. Leaving twice is a no-op. */
 export async function leaveActivity(db: Db, me: { id: string; name: string }, activityId: string) {
   return db.transaction(async (tx) => {
+    // Locked like joins, so the freed spot goes to the waitlist, not a racing join.
+    await tx
+      .select({ id: activities.id })
+      .from(activities)
+      .where(eq(activities.id, activityId))
+      .for('update');
     const [member] = await tx
       .select({ role: activityMembers.role })
       .from(activityMembers)
@@ -306,7 +417,7 @@ export async function leaveActivity(db: Db, me: { id: string; name: string }, ac
         .from(activities)
         .where(eq(activities.id, activityId));
       if (!exists) throw notFound('Activity');
-      return { left: false };
+      return { left: false, messages: [], promoted: [] };
     }
     if (member.role === 'host') throw forbidden('Hosts can’t leave their own activity');
 
@@ -314,7 +425,8 @@ export async function leaveActivity(db: Db, me: { id: string; name: string }, ac
       .delete(activityMembers)
       .where(and(eq(activityMembers.activityId, activityId), eq(activityMembers.userId, me.id)));
     const message = await insertSystemMessage(tx, activityId, `${firstName(me.name)} left`);
-    return { left: true, message };
+    const moved = await promoteFromWaitlist(tx, activityId);
+    return { left: true, messages: [message, ...moved.messages], promoted: moved.promoted };
   });
 }
 

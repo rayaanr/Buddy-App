@@ -22,6 +22,7 @@ const t = useTestApp({
     async notifyActivity(_activityId, _message, except) {
       pushes.push({ except: [...except] });
     },
+    async notifyUsers() {},
   },
 });
 

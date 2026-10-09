@@ -127,6 +127,28 @@ export const activityMembers = pgTable(
   ],
 );
 
+/**
+ * People waiting for a spot on a full activity, first in line first. Kept
+ * apart from activity_members so "going" (counts, chat, reminders) never
+ * includes them. They're moved in as spots open (see promoteFromWaitlist).
+ */
+export const activityWaitlist = pgTable(
+  'activity_waitlist',
+  {
+    activityId: uuid()
+      .notNull()
+      .references(() => activities.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    joinedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.activityId, t.userId] }),
+    index('activity_waitlist_user_idx').on(t.userId),
+  ],
+);
+
 export const messages = pgTable(
   'messages',
   {
