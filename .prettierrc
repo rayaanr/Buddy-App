@@ -2,5 +2,13 @@
   "singleQuote": true,
   "printWidth": 100,
   "trailingComma": "all",
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "overrides": [
+    {
+      "files": "apps/mobile/**/*.{ts,tsx}",
+      "options": {
+        "plugins": ["prettier-plugin-tailwindcss"],
+        "tailwindConfig": "./apps/mobile/tailwind.config.js"
+      }
+    }
+  ]
 }

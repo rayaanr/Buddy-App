@@ -26,7 +26,10 @@ export default function EditProfileSheet() {
   };
 
   return (
-    <KeyboardAvoidingView className="flex-1 justify-end" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      className="flex-1 justify-end"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       {/* Reanimated views carry the motion only; NativeWind classes go on plain Views. */}
       <Animated.View entering={FadeIn.duration(200)} style={StyleSheet.absoluteFill}>
         <Pressable

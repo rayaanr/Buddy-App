@@ -1,2 +1,6 @@
 # Design handoff: reference material, not app code
 design/
+
+# Generated
+**/drizzle/meta/
+package-lock.json

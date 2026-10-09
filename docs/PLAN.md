@@ -1,0 +1,105 @@
+# Buddy backend plan
+
+## Decisions
+
+| Area           | Choice                                         | Why                                                   |
+| -------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| API            | Hono on Node                                   | Light, TypeScript-first, typed RPC client for the app |
+| Hosting        | One VPS, Docker Compose (API, Postgres, Caddy) | Low fixed cost, no vendor lock-in                     |
+| Database       | Postgres + PostGIS, Drizzle ORM                | Relational data and "near me" queries                 |
+| Auth           | Better Auth, email one-time codes              | No SMS costs; runs inside the API                     |
+| Email          | Resend (free tier)                             | Sends sign-in codes; needs a verified domain          |
+| Images         | Cloudflare R2, presigned uploads               | No egress fees; uploads skip the VPS                  |
+| Real-time chat | WebSockets in the API process                  | Server is always on anyway; no extra service          |
+| Push           | Expo Push                                      | Free; covers backgrounded apps                        |
+| Contracts      | Zod schemas in `packages/shared`               | One source of truth for app and API                   |
+
+## Phases
+
+### Phase 0: Monorepo
+
+- Move the app to `apps/mobile`; npm workspaces at the root.
+- Root scripts (`dev`, `lint`, `typecheck`, `test`) across packages.
+- GitHub Actions: lint, typecheck and tests on every push.
+- **Done when** the Expo app typechecks, lints and bundles from its new location.
+
+### Phase 1: Shared contracts (`packages/shared`)
+
+- Zod schemas for every API request and response.
+- Real timestamps replace day labels ("Tonight"); the app formats them in Sri Lanka time.
+
+### Phase 2: API foundation (`apps/api`)
+
+- Hono on Node: validated environment, structured logs, one error format, `/health`.
+- Drizzle schema and migrations: users and sessions (Better Auth), `profiles`, `communities`, `community_members`, `activities` (PostGIS point), `activity_members`, `messages`, `chat_reads`, `blocks`, `reports`, `push_tokens`.
+- Seed script with the Colombo data.
+- `infra/docker-compose.dev.yml` for local Postgres + PostGIS.
+- Integration tests against real Postgres.
+- **Done when** the API runs locally and serves the seeded activities.
+
+### Phase 3: Sign-in
+
+- Better Auth email one-time codes via Resend; sessions stored securely on the phone.
+- Sign up → Onboarding → Sign in use real accounts (email replaces +94 phone).
+- Account deletion endpoint (required by Apple and Google).
+- **Done when** a user can sign up by email, onboard, sign out and sign back in.
+
+### Phase 4: Core features
+
+- Activities: nearby feed with filters and PostGIS distance; details; create; join/leave with a transactional capacity check.
+- Communities: list, details, join, leave.
+- Profiles: own (view, edit) and others' (interests in common).
+- Picks: deck ranking moves to the server.
+- **Done when** every screen's data can come from the API.
+
+### Phase 5: Images
+
+- Short-lived R2 upload links restricted to image types and size; the app uploads directly.
+- Profile photos and activity covers.
+
+### Phase 6: Real-time chat
+
+- WebSocket endpoint checking sign-in and membership on connect.
+- In-memory registry of connections per chat.
+- Sending over HTTP with a client-generated ID (retries never duplicate); saved, then broadcast.
+- Typing signals (throttled, not stored); read positions drive Seen.
+- 30-second heartbeat; "messages after X" catch-up endpoint.
+- Expo Push for members who aren't connected.
+
+### Phase 7: App on the real API
+
+- TanStack Query replaces mock data; Zustand keeps UI and session state only.
+- Typed API client from Hono's types.
+- WebSocket hook with automatic reconnect and backoff.
+- Sending → Sent → Seen with instant display.
+- Loading, error and offline states; mock data removed.
+
+### Phase 8: Store readiness
+
+- Moderation: report messages and users, block users, hide blocked content (Apple guideline 1.2).
+- Account deletion in Profile; privacy policy page.
+- Store data declarations (email, location); App Review demo account.
+- Final icon and splash, real bundle ID, EAS build profiles per environment.
+
+### Phase 9: Deploy
+
+- VPS hardening: only 80/443 open, SSH keys only, automatic security updates, Postgres private.
+- `infra/docker-compose.yml` (API, Postgres, Caddy); migrations run on deploy.
+- Nightly `pg_dump` to R2, plus one tested restore.
+- Uptime monitoring and logs; optional GitHub Actions deploy over SSH.
+
+## Milestones
+
+| Milestone                  | Phases | Result                                   |
+| -------------------------- | ------ | ---------------------------------------- |
+| M1: Foundation             | 0–2    | API runs locally with seeded data        |
+| M2: Real accounts and data | 3–5    | Sign-in, activities, communities, images |
+| M3: Chat                   | 6      | Live group chat with receipts and push   |
+| M4: App on real backend    | 7      | Mock data gone                           |
+| M5: Ship                   | 8–9    | Deployed and submitted to both stores    |
+
+## Inputs needed
+
+1. VPS provider, OS and RAM (Phase 9).
+2. A domain name (~$10/year): required for Resend sending to real users and for HTTPS.
+3. Resend and Cloudflare R2 accounts (free) before Phases 3 and 5 go live.

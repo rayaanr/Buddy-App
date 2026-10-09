@@ -59,9 +59,7 @@ export function sendMessage(activityId: string, rawText: string) {
         setTimeout(() => {
           replyTimers.delete(activityId);
           useUiStore.getState().setTyping(null);
-          const current = useActivitiesStore
-            .getState()
-            .activities.find((a) => a.id === activityId);
+          const current = useActivitiesStore.getState().activities.find((a) => a.id === activityId);
           const reply = AUTO_REPLIES[(current?.messages.length ?? 0) % AUTO_REPLIES.length]!;
           useActivitiesStore
             .getState()

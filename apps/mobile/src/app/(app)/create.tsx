@@ -1,6 +1,14 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { Button, Chip, Footer, SectionLabel, TextField } from '@/components/ui';
 import { ACTIVITY_TYPES, CREATE_DAYS, CREATE_TIMES, SPOTS_MAX, SPOTS_MIN } from '@/data/constants';
@@ -37,7 +45,10 @@ export default function CreateActivityScreen() {
   };
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-bg" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      className="flex-1 bg-bg"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}

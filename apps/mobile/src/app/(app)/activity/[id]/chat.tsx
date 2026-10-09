@@ -1,6 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { MessageBubble, toChatRows, type ChatRow } from '@/components/chat/MessageBubble';
 import { BackButton } from '@/components/ui';
@@ -33,7 +41,10 @@ export default function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView className="flex-1 bg-bg" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      className="flex-1 bg-bg"
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View
         className="flex-row items-center gap-3.5 border-b border-line px-[18px] pb-3"
         style={{ paddingTop: top(56) }}
