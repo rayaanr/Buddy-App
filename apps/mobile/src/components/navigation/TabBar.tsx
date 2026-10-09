@@ -58,7 +58,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         accessibilityRole="tab"
         accessibilityState={{ selected: focused }}
         accessibilityLabel={tab.label}
-        scaleTo={0.92}
+        scale="strong"
         className="flex-1 items-center gap-[5px]"
       >
         <TabIcon focused={focused}>
@@ -83,7 +83,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityRole="button"
           accessibilityLabel="New activity"
           haptic="light"
-          scaleTo={0.9}
+          scale="strong"
           className="-mt-1.5 h-[58px] w-[58px] items-center justify-center rounded-[19px] bg-lime"
           style={{
             shadowColor: colors.lime,

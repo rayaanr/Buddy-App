@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { cn } from '@/lib/cn';
+import { colors } from '@/theme';
 import { spring } from '@/theme/motion';
 import { AnimatedView, selectionHaptic } from './Motion';
 
@@ -57,8 +58,7 @@ export function SegmentedControl<T extends string>({
       {segmentWidth ? (
         <AnimatedView
           pointerEvents="none"
-          className="absolute h-[42px] rounded-xl bg-disabled"
-          style={[{ left: PAD, top: PAD, width: segmentWidth }, indicator]}
+          style={[styles.indicator, { left: PAD, top: PAD, width: segmentWidth }, indicator]}
         />
       ) : null}
       {segments.map((s) => {
@@ -86,3 +86,13 @@ export function SegmentedControl<T extends string>({
     </View>
   );
 }
+
+// Style objects, not classes: NativeWind doesn't style Reanimated views.
+const styles = StyleSheet.create({
+  indicator: {
+    position: 'absolute',
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: colors.disabled,
+  },
+});

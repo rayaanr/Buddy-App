@@ -1,6 +1,6 @@
 import { clockLabel } from '@buddy/shared';
 import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ChatItem } from '@/api/chat';
 import { AnimatedView, Avatar, DoubleTickIcon, TickIcon, useEnterOnChange } from '@/components/ui';
@@ -113,7 +113,7 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
         </View>
       </Pressable>
       {showMeta ? (
-        <AnimatedView className="mr-1 mt-[5px] flex-row items-center gap-[5px]" style={metaStyle}>
+        <AnimatedView style={[styles.meta, metaStyle]}>
           <Text
             className="font-sans text-[12px]"
             style={{ color: status === 'failed' ? colors.danger : colors.subtle }}
@@ -127,3 +127,8 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
     </View>
   );
 }
+
+// Style objects, not classes: NativeWind doesn't style Reanimated views.
+const styles = StyleSheet.create({
+  meta: { marginRight: 4, marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
+});

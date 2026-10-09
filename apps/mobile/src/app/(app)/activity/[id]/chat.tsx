@@ -145,7 +145,7 @@ export default function ChatScreen() {
           onPress={send}
           disabled={!canSend}
           haptic="light"
-          scaleTo={0.92}
+          scale="strong"
           accessibilityRole="button"
           accessibilityLabel="Send"
           className={cn(

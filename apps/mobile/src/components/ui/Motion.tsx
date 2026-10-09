@@ -1,9 +1,9 @@
 import * as Haptics from 'expo-haptics';
-import { cssInterop } from 'nativewind';
-import { useEffect, useRef, type ComponentProps } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Platform,
   Pressable,
+  StyleSheet,
   View,
   type PressableProps,
   type StyleProp,
@@ -19,27 +19,26 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { cn } from '@/lib/cn';
-import { PRESS_SCALE, spring } from '@/theme/motion';
+import { colors } from '@/theme';
+import { spring } from '@/theme/motion';
 
-/**
- * Reanimated components that also take NativeWind `className`, so a view can
- * be styled with classes and animated (style, entering, layout) at once.
- */
-export const AnimatedView = Animated.createAnimatedComponent(View);
-cssInterop(AnimatedView, { className: 'style' });
-
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
-cssInterop(AnimatedPressable, { className: 'style' });
-
-export type AnimatedViewProps = ComponentProps<typeof AnimatedView> & { className?: string };
+export const AnimatedView = Animated.View;
 
 type Haptic = 'light' | 'selection';
+
+/** How far a surface sinks while held. Literal classes, so Tailwind generates them. */
+const PRESS = {
+  none: '',
+  subtle: 'active:scale-[0.985]',
+  normal: 'active:scale-[0.97]',
+  strong: 'active:scale-[0.92]',
+} as const;
 
 interface PressableScaleProps extends Omit<PressableProps, 'style'> {
   className?: string;
   style?: StyleProp<ViewStyle>;
-  /** How far it shrinks while held; 1 turns the effect off. */
-  scaleTo?: number;
+  /** subtle for big cards, normal for buttons and rows, strong for small round buttons. */
+  scale?: keyof typeof PRESS;
   haptic?: Haptic;
 }
 
@@ -50,39 +49,29 @@ const playHaptic = (kind: Haptic) => {
 };
 
 /**
- * Pressable that sinks slightly under your finger and springs back: the
- * app's standard touch feedback. Runs on the UI thread, so it stays smooth
- * while JavaScript is busy.
+ * Pressable that sinks slightly under your finger and eases back: the app's
+ * standard touch feedback. It's a plain Pressable using NativeWind's
+ * `active:` and `transition` classes (NativeWind runs the transition with
+ * Reanimated on native), so `className` styles it like any other view.
  */
 export function PressableScale({
-  scaleTo = PRESS_SCALE,
+  scale = 'normal',
   haptic,
-  onPressIn,
-  onPressOut,
   onPress,
-  style,
-  disabled,
+  className,
   ...rest
 }: PressableScaleProps) {
-  const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
-
   return (
-    <AnimatedPressable
-      disabled={disabled}
-      onPressIn={(e) => {
-        scale.set(withSpring(scaleTo, spring.snappy));
-        onPressIn?.(e);
-      }}
-      onPressOut={(e) => {
-        scale.set(withSpring(1, spring.snappy));
-        onPressOut?.(e);
-      }}
+    <Pressable
+      className={cn(
+        scale !== 'none' && 'transition-transform duration-150',
+        PRESS[scale],
+        className,
+      )}
       onPress={(e) => {
         if (haptic) playHaptic(haptic);
         onPress?.(e);
       }}
-      style={[style, animated]}
       {...rest}
     />
   );
@@ -105,9 +94,11 @@ export const successHaptic = () => {
 export function Skeleton({
   className,
   style,
+  testID,
 }: {
   className?: string;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }) {
   const opacity = useSharedValue(0.55);
   useEffect(() => {
@@ -119,32 +110,22 @@ export function Skeleton({
     );
   }, [opacity]);
   const animated = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+  // Classes size and shape a plain View; the pulsing fill is a style-only
+  // Reanimated view, since NativeWind doesn't style Reanimated components.
   return (
-    <AnimatedView
-      className={cn('rounded-xl bg-surface-raised', className)}
-      style={[style, animated]}
+    <View
+      className={cn('overflow-hidden rounded-xl', className)}
+      style={style}
+      testID={testID}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-    />
-  );
-}
-
-/** A screen's worth of placeholders, announced once to screen readers. */
-export function SkeletonList({
-  count = 3,
-  children,
-}: {
-  count?: number;
-  children: (index: number) => React.ReactNode;
-}) {
-  return (
-    <View accessibilityLabel="Loading" accessible className="gap-2.5">
-      {Array.from({ length: count }, (_, i) => (
-        <View key={i}>{children(i)}</View>
-      ))}
+    >
+      <AnimatedView style={[StyleSheet.absoluteFill, styles.fill, animated]} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { backgroundColor: colors['surface-raised'] } });
 
 /**
  * Replays a short entrance on the same element whenever `trigger` changes

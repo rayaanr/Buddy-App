@@ -11,6 +11,7 @@ interface ChipProps {
   shape?: 'pill' | 'tile' | 'compact';
   mono?: boolean;
   className?: string;
+  testID?: string;
 }
 
 const SHAPE = {
@@ -20,14 +21,23 @@ const SHAPE = {
 };
 
 /** Selectable chip: lime when selected, outlined otherwise. */
-export function Chip({ label, selected, onPress, shape = 'pill', mono, className }: ChipProps) {
+export function Chip({
+  label,
+  selected,
+  onPress,
+  shape = 'pill',
+  mono,
+  className,
+  testID,
+}: ChipProps) {
   return (
     <PressableScale
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
+      testID={testID}
       haptic="selection"
-      scaleTo={0.94}
+      scale="strong"
       className={cn(
         'items-center justify-center border',
         SHAPE[shape],

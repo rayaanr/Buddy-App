@@ -24,7 +24,7 @@ export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
-      scaleTo={0.985}
+      scale="subtle"
     >
       <Photo
         uri={a.coverUrl ?? undefined}

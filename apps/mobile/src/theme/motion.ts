@@ -23,9 +23,6 @@ export const spring = {
 
 export const duration = { fast: 150, base: 220, slow: 320 } as const;
 
-/** How far pressable surfaces shrink while held. */
-export const PRESS_SCALE = 0.97;
-
 /** List items arriving: rise and fade, staggered for the first few. */
 export const enterItem = (index = 0) =>
   FadeInDown.duration(duration.slow)

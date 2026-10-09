@@ -13,17 +13,26 @@ interface IconButtonProps {
   /** "glass" floats over photos; "solid" sits on the page background. */
   tone?: 'glass' | 'solid';
   className?: string;
+  testID?: string;
 }
 
 /** Round 44px icon button used in screen headers. */
-export function IconButton({ icon, label, onPress, tone = 'solid', className }: IconButtonProps) {
+export function IconButton({
+  icon,
+  label,
+  onPress,
+  tone = 'solid',
+  className,
+  testID,
+}: IconButtonProps) {
   return (
     <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
       onPress={onPress}
-      scaleTo={0.9}
+      testID={testID}
+      scale="strong"
       className={cn(
         'h-11 w-11 items-center justify-center rounded-full',
         tone === 'glass' ? 'bg-[rgba(11,12,11,0.6)]' : 'bg-surface',

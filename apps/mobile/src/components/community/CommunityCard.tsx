@@ -25,7 +25,7 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
         accessibilityRole="button"
         accessibilityLabel={`${c.name}, ${communityMeta(c)}`}
         className="overflow-hidden rounded-[22px] bg-surface"
-        scaleTo={0.985}
+        scale="subtle"
       >
         <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }} />
         <View className="py-4 pl-[18px] pr-[120px]">

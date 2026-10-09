@@ -1,7 +1,7 @@
 import { ERROR_CODES, type ActivityDetail } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -125,7 +125,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
 
   return (
     <View className="flex-1 bg-bg">
-      <Animated.ScrollView className="flex-1" onScroll={onScroll} scrollEventThrottle={16}>
+      <Animated.ScrollView style={styles.flex} onScroll={onScroll} scrollEventThrottle={16}>
         <AnimatedView style={coverStyle}>
           <Photo uri={a.coverUrl ?? undefined} hue={hueFor(a)} style={{ height: COVER_HEIGHT }}>
             <Scrim from={0.5} opacity={1} />
@@ -158,7 +158,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             onPress={() => router.push(`/user/${a.host.id}`)}
             className="mt-[18px] flex-row items-center gap-3.5"
             accessibilityRole={a.viewer.hosting ? undefined : 'button'}
-            scaleTo={0.98}
+            scale="subtle"
           >
             <Avatar uri={a.host.avatarUrl ?? undefined} size={46} />
             <View>
@@ -179,18 +179,14 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
 
       {/* Fixed header: a bar with the title fades in over the buttons as you scroll. */}
       <View className="absolute inset-x-0 top-0" pointerEvents="box-none">
-        <AnimatedView
-          pointerEvents="none"
-          className="absolute inset-0 border-b border-line bg-bg"
-          style={barStyle}
-        />
+        <AnimatedView pointerEvents="none" style={[styles.bar, barStyle]} />
         <View
           className="flex-row items-center gap-3 px-[18px] pb-2.5"
           style={{ paddingTop: top(56) }}
           pointerEvents="box-none"
         >
           <BackButton tone="glass" />
-          <AnimatedView className="flex-1" style={barStyle} pointerEvents="none">
+          <AnimatedView style={[styles.flex, barStyle]} pointerEvents="none">
             <Text className="font-sans-semibold text-[16px] text-ink" numberOfLines={1}>
               {a.title}
             </Text>
@@ -200,7 +196,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
       </View>
 
       <Footer className="flex-row gap-2.5">
-        <AnimatedView className="flex-1 flex-row gap-2.5" style={footerStyle}>
+        <AnimatedView style={[styles.footerRow, footerStyle]}>
           {!isIn && left > 0 ? (
             <Button
               label={join.isPending ? 'Joining…' : 'Join activity'}
@@ -285,7 +281,7 @@ function Attendance({ activity: a }: { activity: ActivityDetail }) {
         <Text className="font-sans text-[14px] text-muted">{spotsLabel(a)}</Text>
       </View>
       <View className="mt-3.5 h-1.5 overflow-hidden rounded-[3px] bg-track">
-        <AnimatedView className="h-full rounded-[3px] bg-lime" style={fillStyle} />
+        <AnimatedView style={[styles.fill, fillStyle]} />
       </View>
       <View className="mt-3.5 flex-row items-center">
         {a.attendees.slice(0, MAX_FACES).map((p) => (
@@ -306,3 +302,20 @@ function Attendance({ activity: a }: { activity: ActivityDetail }) {
     </View>
   );
 }
+
+// Style objects, not classes: NativeWind doesn't style Reanimated views.
+const styles = StyleSheet.create({
+  bar: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  flex: { flex: 1 },
+  footerRow: { flex: 1, flexDirection: 'row', gap: 10 },
+  fill: { height: '100%', borderRadius: 3, backgroundColor: colors.lime },
+});
