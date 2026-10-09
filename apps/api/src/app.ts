@@ -7,6 +7,7 @@ import { loadSession } from './auth/middleware';
 import type { AppEnv, Deps } from './http/context';
 import { HttpError } from './lib/errors';
 import { activityRoutes } from './modules/activities/routes';
+import { meRoutes } from './modules/me/routes';
 
 /** Builds the HTTP app. Kept free of I/O setup so tests can pass their own deps. */
 export function createApp(deps: Deps) {
@@ -46,7 +47,10 @@ export function createApp(deps: Deps) {
   // Better Auth owns everything under /api/auth (send code, sign in, sign out, session).
   app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw));
 
-  const v1 = new Hono<AppEnv>().use(loadSession(deps)).route('/activities', activityRoutes(deps));
+  const v1 = new Hono<AppEnv>()
+    .use(loadSession(deps))
+    .route('/me', meRoutes(deps))
+    .route('/activities', activityRoutes(deps));
 
   return app.route('/v1', v1);
 }
