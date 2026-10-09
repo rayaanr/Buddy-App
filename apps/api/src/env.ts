@@ -22,6 +22,9 @@ const schema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Buddy <hello@example.com>'),
 
+  /** Optional; only needed if push security is enabled in the Expo project. */
+  EXPO_ACCESS_TOKEN: z.string().optional(),
+
   /** Cloudflare R2 (S3-compatible). Uploads are disabled until all are set. */
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),

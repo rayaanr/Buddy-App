@@ -23,6 +23,21 @@ npm run dev -w @buddy/api            # http://localhost:3000/health
 
 **Signing in during development:** without `RESEND_API_KEY`, sign-in codes are printed to the API log instead of emailed. The seed creates a demo user, `kavindu@buddy.test`.
 
+## Real-time chat
+
+Each activity's chat lives under `/v1/activities/:id/chat` and is open to members (host included):
+
+| Endpoint                   | Purpose                                                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `GET /messages?after=<id>` | History oldest first; `after` catches up after a reconnect. Includes `othersReadUpTo` for "Seen". |
+| `POST /messages`           | Send `{ id, body }`. The app generates `id`, so retries never duplicate (201 new, 200 repeat).    |
+| `POST /read`               | Move your read position to `{ messageId }`.                                                       |
+| `GET /ws` (WebSocket)      | Live `message`, `typing` and `read` events. Send `{"type":"typing"}`.                             |
+
+Sending goes over HTTP, not the socket, so the app gets a clear success or failure. The server pings every 30 seconds and drops sockets that don't answer. Members who aren't connected to that chat get an Expo push notification; the app registers its token with `POST /v1/me/push-tokens` and removes it on sign-out.
+
+Connections live in this process's memory (`src/realtime/hub.ts`). That's right for one API process; running several would need Redis pub/sub to relay events between them.
+
 ## Photo uploads (Cloudflare R2)
 
 Uploads stay disabled (`POST /v1/uploads` answers 503) until all `R2_*` variables are set:

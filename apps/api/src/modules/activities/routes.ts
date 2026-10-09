@@ -6,6 +6,7 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import { activities, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { validate } from '../../lib/validate';
+import { toChatMessage } from '../chat/service';
 import { originFor } from '../profiles/service';
 import { picksFor } from './picks';
 import { filterCondition, findActivitySummaries, pointSql, upcoming } from './queries';
@@ -20,7 +21,7 @@ import {
 const UUID = '{[0-9a-f-]{36}}';
 
 export function activityRoutes(deps: Deps) {
-  const { db, urls } = deps;
+  const { db, urls, hub } = deps;
   return (
     new Hono<AppEnv>()
       .use(requireUser)
@@ -84,14 +85,27 @@ export function activityRoutes(deps: Deps) {
       .post(`/:id${UUID}/membership`, async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
-        await joinActivity(db, me, id);
+        const result = await joinActivity(db, me, id);
+        if (result.message) {
+          hub.publish(id, {
+            type: 'message',
+            message: await toChatMessage(db, urls, result.message),
+          });
+        }
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
       .delete(`/:id${UUID}/membership`, async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
-        await leaveActivity(db, me, id);
+        const result = await leaveActivity(db, me, id);
+        if (result.message) {
+          hub.disconnect(id, me.id);
+          hub.publish(id, {
+            type: 'message',
+            message: await toChatMessage(db, urls, result.message),
+          });
+        }
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
   );

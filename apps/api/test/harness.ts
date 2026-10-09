@@ -1,9 +1,13 @@
+import { serve } from '@hono/node-server';
+import type { AddressInfo } from 'node:net';
 import { afterAll, beforeEach } from 'vitest';
+import { WebSocket, WebSocketServer } from 'ws';
 
 import { createApp } from '../src/app';
 import { createDeps } from '../src/deps';
 import { loadEnv } from '../src/env';
 import type { Mail, Mailer } from '../src/lib/mailer';
+import type { PushSender } from '../src/lib/push';
 import type { Storage } from '../src/lib/storage';
 import { seed } from '../scripts/seed';
 import { TEST_DATABASE_URL } from './global-setup';
@@ -30,7 +34,7 @@ export function captureMailer() {
  * `signIn` goes through the actual email-code flow and returns request headers.
  */
 export function useTestApp(
-  options: { env?: Record<string, string>; storage?: Storage | null } = {},
+  options: { env?: Record<string, string>; storage?: Storage | null; push?: PushSender } = {},
 ) {
   const env = loadEnv({
     NODE_ENV: 'test',
@@ -43,6 +47,7 @@ export function useTestApp(
   const { deps, close } = createDeps(env, {
     mailer: mail.mailer,
     storage: options.storage === undefined ? null : options.storage,
+    push: options.push ?? { notifyActivity: async () => {} },
   });
   const app = createApp(deps);
 
@@ -94,5 +99,37 @@ export function useTestApp(
     return { status: res.status, body: (text ? JSON.parse(text) : null) as T };
   }
 
-  return { app, deps, mail, requestCode, signIn, call };
+  /** Starts a real HTTP + WebSocket server on a random port (for socket tests). */
+  async function listen() {
+    const wss = new WebSocketServer({ noServer: true });
+    const server = await new Promise<ReturnType<typeof serve>>((resolve) => {
+      const s = serve({ fetch: app.fetch, port: 0, websocket: { server: wss } }, () => resolve(s));
+    });
+    const { port } = server.address() as AddressInfo;
+    return {
+      base: `http://127.0.0.1:${port}`,
+      /** Opens a socket as the signed-in user; resolves once open (or rejects with the HTTP status). */
+      connect(path: string, headers: Record<string, string>) {
+        const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`, { headers });
+        const events: unknown[] = [];
+        ws.on('message', (data) => events.push(JSON.parse(String(data))));
+        const opened = new Promise<void>((resolve, reject) => {
+          ws.once('open', () => resolve());
+          ws.once('unexpected-response', (_req, res) =>
+            reject(new Error(`HTTP ${res.statusCode}`)),
+          );
+          ws.once('error', reject);
+        });
+        return { ws, events, opened };
+      },
+      close: () =>
+        new Promise<void>((resolve) => {
+          for (const client of wss.clients) client.terminate();
+          wss.close();
+          server.close(() => resolve());
+        }),
+    };
+  }
+
+  return { app, deps, mail, requestCode, signIn, call, listen };
 }

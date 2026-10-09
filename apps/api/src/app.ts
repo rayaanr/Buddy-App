@@ -7,6 +7,7 @@ import { loadSession } from './auth/middleware';
 import type { AppEnv, Deps } from './http/context';
 import { HttpError } from './lib/errors';
 import { activityRoutes } from './modules/activities/routes';
+import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { meRoutes } from './modules/me/routes';
 import { uploadRoutes } from './modules/uploads/routes';
@@ -53,6 +54,7 @@ export function createApp(deps: Deps) {
   const v1 = new Hono<AppEnv>()
     .use(loadSession(deps))
     .route('/me', meRoutes(deps))
+    .route('/activities/:id{[0-9a-f-]{36}}/chat', chatRoutes(deps))
     .route('/activities', activityRoutes(deps))
     .route('/communities', communityRoutes(deps))
     .route('/users', userRoutes(deps))
