@@ -72,6 +72,7 @@
   "jest": {
     "preset": "jest-expo/ios",
     "setupFiles": [
+      "react-native-gesture-handler/jestSetup.js",
       "react-native-css-interop/dist/test/setup.js"
     ],
     "setupFilesAfterEnv": [

@@ -49,4 +49,11 @@ const fonts = {
   'mono-medium': 'GeistMono_500Medium',
 };
 
-module.exports = { colors, fonts };
+/**
+ * Pixels per `rem` on phones. NativeWind defaults to 14, but the design (and
+ * the web build) use 16, so classes like p-4 or h-11 would come out ~12%
+ * smaller on a phone than in the prototype.
+ */
+const rem = 16;
+
+module.exports = { colors, fonts, rem };

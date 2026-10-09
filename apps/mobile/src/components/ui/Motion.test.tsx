@@ -12,7 +12,7 @@ import { Chip } from './Chip';
 import { PressableScale, Skeleton } from './Motion';
 import { SegmentedControl } from './SegmentedControl';
 
-// NativeWind's native rem is 14px, so p-3 = 10.5 and rounded-2xl = 14.
+// rem is 16px on phones too (metro.config.js), so p-3 = 12 and rounded-2xl = 16.
 
 describe('styles reach native', () => {
   it('PressableScale applies its classes', async () => {
@@ -22,8 +22,8 @@ describe('styles reach native', () => {
       </PressableScale>,
     );
     expect(styleOf('press')).toMatchObject({
-      borderRadius: 14,
-      padding: 10.5,
+      borderRadius: 16,
+      padding: 12,
       backgroundColor: colors.lime,
     });
   });
@@ -72,12 +72,11 @@ describe('styles reach native', () => {
     });
   });
 
-  it('header icon buttons are filled circles', async () => {
+  it('header icon buttons are 44pt circles, as designed', async () => {
     await render(<BackButton testID="back" onPress={() => {}} />);
     const style = styleOf('back') as { width: number; height: number; borderRadius: number };
-    expect(style).toMatchObject({ backgroundColor: colors.surface });
-    expect(style.width).toBe(style.height);
-    expect(style.borderRadius).toBeGreaterThanOrEqual(style.width / 2);
+    expect(style).toMatchObject({ width: 44, height: 44, backgroundColor: colors.surface });
+    expect(style.borderRadius).toBeGreaterThanOrEqual(22);
   });
 
   it('Skeleton is sized by its classes', async () => {

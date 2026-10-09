@@ -64,14 +64,6 @@ export default function AppLayout() {
       />
       <Stack.Screen name="interests" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
-      <Stack.Screen
-        name="edit-profile"
-        options={{
-          presentation: 'transparentModal',
-          animation: 'fade',
-          contentStyle: { backgroundColor: 'transparent' },
-        }}
-      />
     </Stack>
   );
 }
