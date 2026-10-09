@@ -9,6 +9,7 @@ import { HttpError } from './lib/errors';
 import { activityRoutes } from './modules/activities/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { meRoutes } from './modules/me/routes';
+import { uploadRoutes } from './modules/uploads/routes';
 import { userRoutes } from './modules/users/routes';
 
 /** Builds the HTTP app. Kept free of I/O setup so tests can pass their own deps. */
@@ -54,7 +55,8 @@ export function createApp(deps: Deps) {
     .route('/me', meRoutes(deps))
     .route('/activities', activityRoutes(deps))
     .route('/communities', communityRoutes(deps))
-    .route('/users', userRoutes(deps));
+    .route('/users', userRoutes(deps))
+    .route('/uploads', uploadRoutes(deps));
 
   return app.route('/v1', v1);
 }

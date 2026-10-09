@@ -2,6 +2,7 @@ import type { Auth } from '../auth/auth';
 import type { Db } from '../db/client';
 import type { Env } from '../env';
 import type { Mailer } from '../lib/mailer';
+import type { Storage } from '../lib/storage';
 import type { Urls } from '../lib/urls';
 import type { Logger } from '../logger';
 
@@ -12,6 +13,8 @@ export interface Deps {
   logger: Logger;
   auth: Auth;
   mailer: Mailer;
+  /** Null until R2 is configured; upload endpoints then answer 503. */
+  storage: Storage | null;
   urls: Urls;
 }
 

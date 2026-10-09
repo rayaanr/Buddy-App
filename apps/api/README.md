@@ -23,6 +23,18 @@ npm run dev -w @buddy/api            # http://localhost:3000/health
 
 **Signing in during development:** without `RESEND_API_KEY`, sign-in codes are printed to the API log instead of emailed. The seed creates a demo user, `kavindu@buddy.test`.
 
+## Photo uploads (Cloudflare R2)
+
+Uploads stay disabled (`POST /v1/uploads` answers 503) until all `R2_*` variables are set:
+
+1. Create an R2 bucket, e.g. `buddy-media`.
+2. Make it publicly readable through a custom domain (or the `r2.dev` URL for testing), and put that URL in `R2_PUBLIC_URL`.
+3. Create an R2 API token with **Object Read & Write** on that bucket only, and set `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_ACCOUNT_ID`.
+
+The flow: the app asks `POST /v1/uploads` for a ticket, `PUT`s the file to `uploadUrl` with the returned headers within 5 minutes, then sends `key` as `avatarKey` (PATCH `/v1/me`) or `coverKey` (POST `/v1/activities`). The signature covers the file's type and exact size, so a ticket can't be reused for a different file.
+
+Not yet handled: files uploaded but never attached, and replaced avatars, stay in the bucket. An R2 lifecycle rule or a periodic cleanup job can remove them later.
+
 ## Scripts
 
 | Script            | What it does                                                |

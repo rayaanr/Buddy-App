@@ -4,6 +4,7 @@ import { createApp } from '../src/app';
 import { createDeps } from '../src/deps';
 import { loadEnv } from '../src/env';
 import type { Mail, Mailer } from '../src/lib/mailer';
+import type { Storage } from '../src/lib/storage';
 import { seed } from '../scripts/seed';
 import { TEST_DATABASE_URL } from './global-setup';
 
@@ -28,15 +29,21 @@ export function captureMailer() {
  * Builds the real app against the test database, re-seeded before each test.
  * `signIn` goes through the actual email-code flow and returns request headers.
  */
-export function useTestApp() {
+export function useTestApp(
+  options: { env?: Record<string, string>; storage?: Storage | null } = {},
+) {
   const env = loadEnv({
     NODE_ENV: 'test',
     DATABASE_URL: TEST_DATABASE_URL,
     BETTER_AUTH_URL: 'http://localhost:3000',
     BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-123',
+    ...options.env,
   });
   const mail = captureMailer();
-  const { deps, close } = createDeps(env, { mailer: mail.mailer });
+  const { deps, close } = createDeps(env, {
+    mailer: mail.mailer,
+    storage: options.storage === undefined ? null : options.storage,
+  });
   const app = createApp(deps);
 
   beforeEach(async () => {
