@@ -122,6 +122,27 @@ export default function ActivityDetailScreen() {
               {a.description}
             </Text>
           ) : null}
+
+          {a.viewer.hosting ? null : (
+            <Button
+              label="Report activity"
+              variant="ghost"
+              size="sm"
+              weight="medium"
+              className="mt-6"
+              onPress={() =>
+                router.push({
+                  pathname: '/report',
+                  params: {
+                    type: 'activity',
+                    id: a.id,
+                    userId: a.host.id,
+                    name: a.host.name,
+                  },
+                })
+              }
+            />
+          )}
         </View>
       </ScrollView>
 

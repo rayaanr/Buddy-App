@@ -69,6 +69,7 @@ export const LIMITS = {
   capacityMin: 2,
   capacityMax: 30,
   messageMax: 2000,
+  reportDetailsMax: 1000,
   /** Largest image the app may upload, in bytes. */
   uploadMaxBytes: 5 * 1024 * 1024,
 } as const;

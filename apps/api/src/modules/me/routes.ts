@@ -6,6 +6,7 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import { pushTokens } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { validate } from '../../lib/validate';
+import { listBlocked } from '../safety/service';
 import { deleteAccount, getMe, updateMe } from './service';
 
 export function meRoutes({ db, urls, hub }: Deps) {
@@ -27,6 +28,11 @@ export function meRoutes({ db, urls, hub }: Deps) {
         hub.disconnectEverywhere(me.id);
         return c.body(null, 204);
       })
+
+      // People you blocked, so you can unblock them.
+      .get('/blocks', async (c) =>
+        c.json({ people: await listBlocked(db, urls, currentUser(c).id) }),
+      )
 
       // Expo push tokens. A token moves to whoever registered it last (shared phones).
       .post('/push-tokens', validate('json', registerPushTokenInput), async (c) => {

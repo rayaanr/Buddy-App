@@ -72,6 +72,19 @@ Sending goes over HTTP, not the socket, so the app gets a clear success or failu
 
 Connections live in this process's memory (`src/realtime/hub.ts`). That's right for one API process; running several would need Redis pub/sub to relay events between them.
 
+## Reporting and blocking
+
+| Endpoint                   | Purpose                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------- |
+| `POST /v1/reports`         | Report one `userId`, `messageId` or `activityId` with a `reason` and optional note  |
+| `POST /v1/users/:id/block` | Block someone (repeat calls are no-ops); `DELETE` to unblock                        |
+| `GET /v1/me/blocks`        | People you blocked                                                                  |
+| `DELETE /v1/me`            | Delete your account and everything that hangs off it (sessions, messages, hosting…) |
+
+**Blocking hides people from each other in both directions.** The rule lives in `src/modules/safety/blocks.ts` and is applied in one place per surface: activity lists (`findActivitySummaries`), attendees, community members, chat history, live socket events, push notifications and profiles. Activities you're already going to stay visible.
+
+**Reports** go into the `reports` table with `status = 'open'`, are logged, and are emailed to `MODERATION_EMAIL` when set. Set it in production: App Review expects reports to be acted on within 24 hours. There's no admin screen yet; review them in the database.
+
 ## Photo uploads (Cloudflare R2)
 
 Uploads stay disabled (`POST /v1/uploads` answers 503) until all `R2_*` variables are set:

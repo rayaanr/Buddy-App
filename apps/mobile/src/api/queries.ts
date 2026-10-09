@@ -2,6 +2,7 @@ import type {
   ActivityDetail,
   CommunitySummary,
   CreateActivityInput,
+  CreateReportInput,
   DiscoverFilter,
   Me,
   UpdateMeInput,
@@ -15,6 +16,7 @@ import {
 } from '@tanstack/react-query';
 
 import { authClient } from './auth-client';
+import { useAccountStore } from '@/store/account';
 import { ApiRequestError, api, unwrap } from './client';
 
 export const queryClient = new QueryClient({
@@ -42,6 +44,7 @@ export const keys = {
   community: (id: string) => ['communities', id] as const,
   user: (id: string) => ['users', id] as const,
   messages: (activityId: string) => ['chat', activityId] as const,
+  blocked: ['blocked'] as const,
 };
 
 // ── Reads ────────────────────────────────────────────────────────────────
@@ -107,6 +110,12 @@ export const useUser = (id: string) =>
     enabled: !!id,
   });
 
+export const useBlocked = () =>
+  useQuery({
+    queryKey: keys.blocked,
+    queryFn: async () => (await unwrap(api.me.blocks.$get())).people,
+  });
+
 // ── Writes ───────────────────────────────────────────────────────────────
 
 /** After a membership change, lists showing counts or "Going" need refreshing. */
@@ -169,8 +178,36 @@ export function useUpdateMe() {
   });
 }
 
+/** Blocks or unblocks someone. Blocking hides content everywhere, so everything refetches. */
+export function useSetBlocked() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, blocked }: { userId: string; blocked: boolean }) =>
+      blocked
+        ? unwrap(api.users[':id'].block.$post({ param: { id: userId } }))
+        : unwrap(api.users[':id'].block.$delete({ param: { id: userId } })),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+export function useReport() {
+  return useMutation({
+    mutationFn: (input: CreateReportInput) => unwrap(api.reports.$post({ json: input })),
+  });
+}
+
 /** Signs out on the server, then forgets every cached response. */
 export async function signOut() {
   await authClient.signOut().catch(() => {});
   queryClient.clear();
+}
+
+/**
+ * Permanently deletes the account on the server (sessions and push tokens go
+ * with it), then clears everything this device remembers about it.
+ */
+export async function deleteAccount() {
+  await unwrap(api.me.$delete());
+  useAccountStore.getState().forget();
+  await signOut();
 }

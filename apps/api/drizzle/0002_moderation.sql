@@ -1,0 +1,2 @@
+ALTER TABLE "reports" ADD COLUMN "details" text;--> statement-breakpoint
+ALTER TABLE "reports" ADD CONSTRAINT "reports_reason_check" CHECK ("reports"."reason" in ('spam', 'harassment', 'hate', 'sexual', 'violence', 'other'));

@@ -33,6 +33,8 @@ const schema = z.object({
   /** Without a key, sign-in codes are written to the log instead (development only). */
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Buddy <hello@example.com>'),
+  /** Where new reports are emailed. Without it they're only logged. */
+  MODERATION_EMAIL: z.email().optional(),
 
   /** Optional; only needed if push security is enabled in the Expo project. */
   EXPO_ACCESS_TOKEN: z.string().optional(),

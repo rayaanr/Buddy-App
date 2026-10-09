@@ -7,6 +7,7 @@ import { signOut, useHistory, useMe } from '@/api/queries';
 import { Avatar, Button, Heading, Loading, Refresh, SectionLabel, Tag } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { dayMonth, locationLabel, monthYear } from '@/lib/activity';
+import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
 export default function ProfileScreen() {
@@ -89,6 +90,10 @@ export default function ProfileScreen() {
         </Pressable>
       ))}
 
+      <SectionLabel className="mb-1 mt-6">Account</SectionLabel>
+      <SettingsRow label="Blocked people" onPress={() => router.push('/blocked')} />
+      <SettingsRow label="Delete account" danger onPress={() => router.push('/delete-account')} />
+
       <Button
         label="Edit profile"
         variant="outline"
@@ -106,5 +111,28 @@ export default function ProfileScreen() {
         weight="medium"
       />
     </ScrollView>
+  );
+}
+
+function SettingsRow({
+  label,
+  danger,
+  onPress,
+}: {
+  label: string;
+  danger?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      className="flex-row items-center justify-between border-b border-divider py-3.5 active:opacity-80"
+    >
+      <Text className={cn('font-sans text-[15.5px]', danger ? 'text-danger' : 'text-ink')}>
+        {label}
+      </Text>
+      <Text className="font-sans text-[15.5px] text-subtle">›</Text>
+    </Pressable>
   );
 }

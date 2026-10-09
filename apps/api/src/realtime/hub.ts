@@ -25,10 +25,11 @@ export class ChatHub {
     };
   }
 
-  /** Sends an event to everyone connected to a chat, optionally skipping one user. */
-  publish(activityId: string, event: ServerEvent, options: { exceptUserId?: string } = {}) {
+  /** Sends an event to everyone connected to a chat, except the listed users. */
+  publish(activityId: string, event: ServerEvent, options: { except?: Iterable<string> } = {}) {
+    const except = new Set(options.except);
     for (const peer of this.rooms.get(activityId) ?? []) {
-      if (peer.userId === options.exceptUserId) continue;
+      if (except.has(peer.userId)) continue;
       try {
         peer.send(event);
       } catch {

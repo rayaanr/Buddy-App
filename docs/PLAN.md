@@ -16,7 +16,7 @@
 
 ## Status
 
-Phases 0–7 are done (M1–M4). Next: testing locally with Docker Compose, then Phase 8 (store readiness). Phase 9 (deploy) is on hold until local testing is done.
+Phases 0–7 are done (M1–M4). Phase 8 is under way: reporting, blocking and account deletion are done; the privacy policy, store declarations, icon and builds remain. Phase 9 (deploy) is on hold until local testing is done.
 
 Changes from the original plan, decided while building:
 
@@ -28,8 +28,11 @@ Changes from the original plan, decided while building:
 - **`@hono/node-ws` dropped**: `@hono/node-server` v2 has WebSockets built in.
 - **Local backend in Docker Compose** (`compose.yaml` at the root): Postgres + PostGIS and the API, both on Alpine images. The API image holds only the bundled `dist/` (no `node_modules`), and runs migrations on start.
 - **Seed data in two layers**: the core set the tests assert on, plus demo extras for local testing (hosting, a full activity, every area, past activities).
+- **Blocking works both ways**: neither person sees the other's messages (history, live, push), hosted activities or place in attendee lists, and the blocked person gets "not found" for the blocker's profile. Activities you're already going to stay visible so you can still leave them.
+- **Reports are emailed** to `MODERATION_EMAIL` (and always logged). There's no admin screen: review them in the `reports` table and update `status`. App Review expects reports handled within 24 hours.
+- **The swipe deck only opens when the app launches on Discover**, so links into a chat or activity aren't covered by it.
 
-Known gaps carried forward: no photo picker in the UI yet (API ready); activity locations use area centres until a map picker exists; orphaned R2 uploads aren't cleaned up; the WebSocket heartbeat has no automated test.
+Known gaps carried forward: tapping a push notification opens the app but not the chat; no photo picker in the UI yet (API ready); deleting an account leaves its photos in R2; activity locations use area centres until a map picker exists; orphaned R2 uploads aren't cleaned up; the WebSocket heartbeat has no automated test.
 
 ## Phases
 
@@ -93,8 +96,9 @@ Known gaps carried forward: no photo picker in the UI yet (API ready); activity 
 
 ### Phase 8: Store readiness
 
-- Moderation: report messages and users, block users, hide blocked content (Apple guideline 1.2).
-- Account deletion in Profile; privacy policy page.
+- ✅ Moderation: report messages, people and activities; block and unblock people; hide blocked content (Apple guideline 1.2).
+- ✅ Account deletion in Profile.
+- Privacy policy page.
 - Store data declarations (email, location); App Review demo account.
 - Final icon and splash, real bundle ID, EAS build profiles per environment.
 

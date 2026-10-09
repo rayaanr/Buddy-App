@@ -1,3 +1,4 @@
+import type { ChatMessage } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import {
@@ -38,6 +39,17 @@ export default function ChatScreen() {
 
   const a = activity.data;
   const canSend = !!text.trim();
+  const reportMessage = (m: ChatMessage) =>
+    router.push({
+      pathname: '/report',
+      params: {
+        type: 'message',
+        id: m.id,
+        userId: m.sender?.id,
+        name: m.sender?.name,
+        excerpt: m.body,
+      },
+    });
   const send = () => {
     if (!canSend) return;
     chat.send(text);
@@ -75,7 +87,9 @@ export default function ChatScreen() {
           ref={list}
           data={rows}
           keyExtractor={(r) => r.message.id}
-          renderItem={({ item }) => <MessageBubble row={item} onRetry={chat.retry} />}
+          renderItem={({ item }) => (
+            <MessageBubble row={item} onRetry={chat.retry} onReport={reportMessage} />
+          )}
           contentContainerStyle={{
             paddingHorizontal: 18,
             paddingTop: 14,

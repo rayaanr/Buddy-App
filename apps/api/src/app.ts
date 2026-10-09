@@ -11,6 +11,7 @@ import { activityRoutes } from './modules/activities/routes';
 import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { meRoutes } from './modules/me/routes';
+import { reportRoutes } from './modules/safety/routes';
 import { uploadRoutes } from './modules/uploads/routes';
 import { userRoutes } from './modules/users/routes';
 
@@ -72,7 +73,8 @@ export function createApp(deps: Deps) {
     .route('/activities', activityRoutes(deps))
     .route('/communities', communityRoutes(deps))
     .route('/users', userRoutes(deps))
-    .route('/uploads', uploadRoutes(deps));
+    .route('/uploads', uploadRoutes(deps))
+    .route('/reports', reportRoutes(deps));
 
   return app.route('/v1', v1);
 }

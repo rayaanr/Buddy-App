@@ -7,6 +7,7 @@ import { notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import { findActivitySummaries, upcoming } from '../activities/queries';
 import { originFor } from '../profiles/service';
+import { notBlockedBetween } from '../safety/blocks';
 
 const MEMBER_PREVIEW = 6;
 
@@ -52,7 +53,12 @@ export async function getCommunity(
     .from(communityMembers)
     .innerJoin(user, eq(user.id, communityMembers.userId))
     .leftJoin(profiles, eq(profiles.userId, user.id))
-    .where(eq(communityMembers.communityId, id))
+    .where(
+      and(
+        eq(communityMembers.communityId, id),
+        notBlockedBetween(viewerId, communityMembers.userId),
+      ),
+    )
     .orderBy(asc(communityMembers.joinedAt))
     .limit(MEMBER_PREVIEW);
 

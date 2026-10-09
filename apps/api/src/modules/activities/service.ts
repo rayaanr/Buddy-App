@@ -13,6 +13,7 @@ import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
 import { areaCentre, originFor } from '../profiles/service';
+import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 import { countHosted, findActivitySummaries, findAttendees, upcoming } from './queries';
 
 const GROUP_CATEGORY: Record<ActivityGroup, string> = {
@@ -56,7 +57,7 @@ export async function getActivityDetail(
   return {
     ...summary,
     description: extra?.description ?? '',
-    attendees: await findAttendees(db, urls, id),
+    attendees: await findAttendees(db, urls, id, viewerId),
     host: { ...summary.host, hostedCount: await countHosted(db, summary.host.id) },
   };
 }
@@ -110,11 +111,15 @@ export async function createActivity(
 export async function joinActivity(db: Db, me: { id: string; name: string }, activityId: string) {
   return db.transaction(async (tx) => {
     const [activity] = await tx
-      .select({ capacity: activities.capacity, startsAt: activities.startsAt })
+      .select({
+        capacity: activities.capacity,
+        startsAt: activities.startsAt,
+        hostBlocked: blockedBetween(me.id, activities.hostId).mapWith(Boolean),
+      })
       .from(activities)
       .where(eq(activities.id, activityId))
       .for('update');
-    if (!activity) throw notFound('Activity');
+    if (!activity || activity.hostBlocked) throw notFound('Activity');
     if (activity.startsAt.getTime() < Date.now() - 60 * 60 * 1000) {
       throw conflict('This activity has already happened');
     }
@@ -205,6 +210,7 @@ export async function myActivities(
           items.map((a) => a.id),
         ),
         eq(messages.kind, 'user'),
+        notBlockedBetween(userId, messages.senderId),
       ),
     )
     .orderBy(messages.activityId, desc(messages.createdAt), desc(messages.id));

@@ -8,6 +8,7 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import type { AppEnv, Deps } from '../../http/context';
 import { idParam, validate } from '../../lib/validate';
 import type { Peer } from '../../realtime/hub';
+import { blockedIds } from '../safety/blocks';
 import { listMessages, markRead, requireMember, sendMessage } from './service';
 
 const HEARTBEAT_MS = 30_000;
@@ -44,8 +45,10 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
           c.req.valid('json'),
         );
         if (created) {
-          // Everyone connected, including the sender's other devices (apps dedupe by id).
-          hub.publish(activityId, { type: 'message', message });
+          // Everyone connected, including the sender's other devices (apps dedupe
+          // by id), except people on either side of a block with the sender.
+          const blocked = await blockedIds(db, me.id);
+          hub.publish(activityId, { type: 'message', message }, { except: blocked });
           const preview =
             message.body.length > PUSH_PREVIEW_CHARS
               ? `${message.body.slice(0, PUSH_PREVIEW_CHARS)}…`
@@ -53,7 +56,7 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
           void push.notifyActivity(
             activityId,
             { title: c.get('activityTitle'), body: `${me.name}: ${preview}`, data: { activityId } },
-            new Set([me.id, ...hub.connectedUsers(activityId)]),
+            new Set([me.id, ...blocked, ...hub.connectedUsers(activityId)]),
           );
         }
         return c.json(message, created ? 201 : 200);
@@ -63,7 +66,12 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
         const me = currentUser(c);
         const activityId = c.req.param('id')!;
         const upTo = await markRead(db, activityId, me.id, c.req.valid('json').messageId);
-        hub.publish(activityId, { type: 'read', userId: me.id, upTo }, { exceptUserId: me.id });
+        const blocked = await blockedIds(db, me.id);
+        hub.publish(
+          activityId,
+          { type: 'read', userId: me.id, upTo },
+          { except: [me.id, ...blocked] },
+        );
         return c.json({ upTo });
       })
 
@@ -111,11 +119,15 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
                 const now = Date.now();
                 if (now - lastTyping < TYPING_THROTTLE_MS) return;
                 lastTyping = now;
-                hub.publish(
-                  activityId,
-                  { type: 'typing', user: { id: me.id, name: me.name, avatarUrl: null } },
-                  { exceptUserId: me.id },
-                );
+                blockedIds(db, me.id)
+                  .then((blocked) =>
+                    hub.publish(
+                      activityId,
+                      { type: 'typing', user: { id: me.id, name: me.name, avatarUrl: null } },
+                      { except: [me.id, ...blocked] },
+                    ),
+                  )
+                  .catch((err: unknown) => logger.warn({ err, activityId }, 'Typing event failed'));
               }
             },
 

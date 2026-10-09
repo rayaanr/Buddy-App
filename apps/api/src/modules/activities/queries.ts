@@ -5,6 +5,7 @@ import type { Db, Tx } from '../../db/client';
 import type { LatLng } from '../../db/geography';
 import { activities, activityMembers, communities, profiles, user } from '../../db/schema';
 import type { Urls } from '../../lib/urls';
+import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 
 /** Activities stay listed until an hour after they start. */
 export const upcoming = () => gte(activities.startsAt, sql`now() - interval '1 hour'`);
@@ -41,7 +42,9 @@ export interface SummaryOptions {
 
 /**
  * Selects activities in the shape of ActivitySummary. Every list in the API
- * goes through here so counts and viewer flags are computed one way.
+ * goes through here so counts, viewer flags and blocking apply one way:
+ * activities hosted by someone the viewer blocked (or who blocked them) are
+ * left out, unless the viewer is already going.
  */
 export async function findActivitySummaries(
   db: Db | Tx,
@@ -81,7 +84,14 @@ export async function findActivitySummaries(
     .innerJoin(user, eq(user.id, activities.hostId))
     .leftJoin(profiles, eq(profiles.userId, activities.hostId))
     .leftJoin(communities, eq(communities.id, activities.communityId))
-    .where(and(...where))
+    .where(
+      and(
+        ...where,
+        viewerId
+          ? sql`(not ${blockedBetween(viewerId, activities.hostId)} or exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId}))`
+          : undefined,
+      ),
+    )
     .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));
 
   const rows = limit ? await query.limit(limit) : await query;
@@ -124,8 +134,14 @@ export async function findActivitySummary(
   return row ?? null;
 }
 
-/** Up to `limit` people going, host first, then by join time. */
-export async function findAttendees(db: Db | Tx, urls: Urls, activityId: string, limit = 5) {
+/** Up to `limit` people going, host first, then by join time; blocked people left out. */
+export async function findAttendees(
+  db: Db | Tx,
+  urls: Urls,
+  activityId: string,
+  viewerId: string,
+  limit = 5,
+) {
   const rows = await db
     .select({
       id: user.id,
@@ -136,7 +152,12 @@ export async function findAttendees(db: Db | Tx, urls: Urls, activityId: string,
     .from(activityMembers)
     .innerJoin(user, eq(user.id, activityMembers.userId))
     .leftJoin(profiles, eq(profiles.userId, activityMembers.userId))
-    .where(eq(activityMembers.activityId, activityId))
+    .where(
+      and(
+        eq(activityMembers.activityId, activityId),
+        notBlockedBetween(viewerId, activityMembers.userId),
+      ),
+    )
     .orderBy(
       sql`case when ${activityMembers.role} = 'host' then 0 else 1 end`,
       asc(activityMembers.joinedAt),

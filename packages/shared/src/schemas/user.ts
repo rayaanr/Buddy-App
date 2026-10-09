@@ -58,5 +58,7 @@ export const publicProfile = z.object({
   hostedCount: z.number().int(),
   joinedCount: z.number().int(),
   hosting: z.array(activitySummary),
+  /** You blocked this person: their activities and messages are hidden from you. */
+  blockedByYou: z.boolean(),
 });
 export type PublicProfile = z.infer<typeof publicProfile>;

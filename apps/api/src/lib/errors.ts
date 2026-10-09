@@ -25,6 +25,7 @@ export class HttpError extends Error {
 
 export const notFound = (what: string) =>
   new HttpError(404, ERROR_CODES.notFound, `${what} not found`);
+export const badRequest = (message: string) => new HttpError(400, ERROR_CODES.validation, message);
 export const forbidden = (message: string) => new HttpError(403, ERROR_CODES.forbidden, message);
 export const conflict = (message: string, code: string = ERROR_CODES.conflict) =>
   new HttpError(409, code, message);

@@ -1,10 +1,11 @@
 import type { ChatMessage, MessagesPage, SendMessageInput } from '@buddy/shared';
-import { and, asc, desc, eq, gt, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
 import { activities, activityMembers, chatReads, messages, profiles, user } from '../../db/schema';
 import { conflict, forbidden, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
+import { notBlockedBetween } from '../safety/blocks';
 
 type MessageRow = typeof messages.$inferSelect;
 
@@ -64,13 +65,20 @@ async function othersReadUpTo(db: Db, activityId: string, viewerId: string) {
   const [row] = await db
     .select({ upTo: sql<Date | null>`max(${chatReads.lastReadAt})` })
     .from(chatReads)
-    .where(and(eq(chatReads.activityId, activityId), ne(chatReads.userId, viewerId)));
+    .where(
+      and(
+        eq(chatReads.activityId, activityId),
+        ne(chatReads.userId, viewerId),
+        notBlockedBetween(viewerId, chatReads.userId),
+      ),
+    );
   return row?.upTo ? new Date(row.upTo).toISOString() : null;
 }
 
 /**
  * Messages oldest first. With `after`, returns what came after that message
  * (catch-up after a reconnect); otherwise the latest `limit` messages.
+ * Messages from people the viewer blocked, or who blocked them, are left out.
  */
 export async function listMessages(
   db: Db,
@@ -79,6 +87,7 @@ export async function listMessages(
   viewerId: string,
   { after, limit }: { after?: string; limit: number },
 ): Promise<MessagesPage> {
+  const visible = or(isNull(messages.senderId), notBlockedBetween(viewerId, messages.senderId));
   let rows: MessageRow[];
   if (after) {
     const [cursor] = await db
@@ -92,6 +101,7 @@ export async function listMessages(
       .where(
         and(
           eq(messages.activityId, activityId),
+          visible,
           or(
             gt(messages.createdAt, cursor.createdAt),
             and(eq(messages.createdAt, cursor.createdAt), gt(messages.id, after)),
@@ -105,7 +115,7 @@ export async function listMessages(
       await db
         .select()
         .from(messages)
-        .where(eq(messages.activityId, activityId))
+        .where(and(eq(messages.activityId, activityId), visible))
         .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(limit)
     ).reverse();

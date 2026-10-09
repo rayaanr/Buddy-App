@@ -8,7 +8,7 @@ import {
 } from '@expo-google-fonts/schibsted-grotesk';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import { DarkTheme, Stack, ThemeProvider, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
@@ -81,7 +81,10 @@ function RootNavigator() {
     if (me.error instanceof ApiRequestError && me.error.status === 401) void signOut();
   }, [me.error]);
 
-  // Returning users who open the app already signed in get the "Picked for you" deck.
+  // Returning users who open the app already signed in get the "Picked for you"
+  // deck, unless a link opened it somewhere specific (e.g. a chat).
+  const pathname = usePathname();
+  const launchedAt = useRef(pathname);
   const launchedSignedIn = useRef<boolean | null>(null);
   useEffect(() => {
     if (launchedSignedIn.current === null && !session.isPending) {
@@ -91,7 +94,12 @@ function RootNavigator() {
   const onboarded = me.data?.onboarded ?? false;
   const picksRequested = useRef(false);
   useEffect(() => {
-    if (launchedSignedIn.current && onboarded && !picksRequested.current) {
+    if (
+      launchedSignedIn.current &&
+      launchedAt.current === '/' &&
+      onboarded &&
+      !picksRequested.current
+    ) {
       picksRequested.current = true;
       useUiStore.getState().requestPicks();
     }

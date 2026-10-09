@@ -183,10 +183,18 @@ export const reports = pgTable(
     messageId: uuid().references(() => messages.id, { onDelete: 'set null' }),
     activityId: uuid().references(() => activities.id, { onDelete: 'set null' }),
     reason: text().notNull(),
+    /** The reporter's own words, optional. */
+    details: text(),
     status: text().notNull().default('open'),
     ...timestamps,
   },
-  (t) => [index('reports_status_idx').on(t.status)],
+  (t) => [
+    index('reports_status_idx').on(t.status),
+    check(
+      'reports_reason_check',
+      sql`${t.reason} in ('spam', 'harassment', 'hate', 'sexual', 'violence', 'other')`,
+    ),
+  ],
 );
 
 export const pushTokens = pgTable(

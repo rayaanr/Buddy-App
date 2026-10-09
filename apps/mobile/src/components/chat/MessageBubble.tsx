@@ -35,7 +35,14 @@ export function toChatRows(items: ChatItem[]): ChatRow[] {
 
 const openUser = (id: string) => router.push(`/user/${id}`);
 
-export function MessageBubble({ row, onRetry }: { row: ChatRow; onRetry: (id: string) => void }) {
+interface MessageBubbleProps {
+  row: ChatRow;
+  onRetry: (id: string) => void;
+  /** Long-pressing someone else's message offers to report it. */
+  onReport: (message: ChatRow['message']) => void;
+}
+
+export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
   const { message: m, mine, status, startsRun, gap, showMeta } = row;
 
   if (m.kind === 'system') {
@@ -63,9 +70,16 @@ export function MessageBubble({ row, onRetry }: { row: ChatRow; onRetry: (id: st
               <Text className="font-sans-medium text-[13px] text-muted">{sender.name}</Text>
             </Pressable>
           ) : null}
-          <View className="rounded-[18px] rounded-bl-md bg-surface px-4 py-3">
+          <Pressable
+            onLongPress={() => onReport(m)}
+            delayLongPress={350}
+            accessibilityHint="Long press to report this message"
+            accessibilityActions={[{ name: 'longpress', label: 'Report message' }]}
+            onAccessibilityAction={() => onReport(m)}
+            className="rounded-[18px] rounded-bl-md bg-surface px-4 py-3 active:opacity-80"
+          >
             <Text className="font-sans text-[15.5px] leading-[21.5px] text-ink">{m.body}</Text>
-          </View>
+          </Pressable>
         </View>
       </View>
     );
