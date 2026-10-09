@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 
 import { errorMessage } from '@/api/client';
 import { useReport, useSetBlocked } from '@/api/queries';
-import { Button, Footer, Heading, SectionLabel, TextField } from '@/components/ui';
+import { Button, CheckIcon, Footer, Heading, SectionLabel, TextField } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { firstName } from '@/lib/activity';
 import { cn } from '@/lib/cn';
@@ -145,7 +145,7 @@ export default function ReportScreen() {
                 alsoBlock ? 'border-lime bg-lime' : 'border-outline',
               )}
             >
-              {alsoBlock ? <Text className="font-sans-semibold text-[13px] text-bg">✓</Text> : null}
+              {alsoBlock ? <CheckIcon size={14} strokeWidth={3} /> : null}
             </View>
             <View className="flex-1">
               <Text className="font-sans-medium text-[15.5px] text-ink">Also block {who}</Text>

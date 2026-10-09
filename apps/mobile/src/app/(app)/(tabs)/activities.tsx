@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useFromCommunities, useMyActivities } from '@/api/queries';
 import { MyActivityCard } from '@/components/activity/ActivityCards';
 import {
+  ArrowRightIcon,
   EmptyState,
   Heading,
   LoadError,
@@ -81,7 +82,10 @@ export default function ActivitiesScreen() {
                   {activity.community?.name} · {whenLabel(activity)}
                 </Text>
               </View>
-              <Text className="self-center font-sans-medium text-[14px] text-lime">View →</Text>
+              <View className="flex-row items-center gap-1 self-center">
+                <Text className="font-sans-medium text-[14px] text-lime">View</Text>
+                <ArrowRightIcon size={14} />
+              </View>
             </Pressable>
           ))}
         </View>

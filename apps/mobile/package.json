@@ -28,6 +28,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-web-browser": "~57.0.3",
     "hono": "^4.13.13",
+    "lucide-react-native": "1.48.0",
     "nativewind": "^4.2.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",

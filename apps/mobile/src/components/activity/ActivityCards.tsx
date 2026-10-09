@@ -2,7 +2,7 @@ import type { ActivitySummary, MyActivity } from '@buddy/shared';
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
-import { Eyebrow, Photo, Scrim } from '@/components/ui';
+import { ArrowRightIcon, Eyebrow, Photo, Scrim } from '@/components/ui';
 import {
   availabilityColor,
   distanceLabel,
@@ -189,7 +189,10 @@ export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
         <Text className="min-w-0 flex-1 font-sans text-[14.5px] text-ink-soft" numberOfLines={1}>
           {lastMessagePreview(a)}
         </Text>
-        <Text className="font-sans-medium text-[14.5px] text-lime">Chat →</Text>
+        <View className="flex-row items-center gap-1">
+          <Text className="font-sans-medium text-[14.5px] text-lime">Chat</Text>
+          <ArrowRightIcon />
+        </View>
       </Pressable>
     </View>
   );

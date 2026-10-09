@@ -6,7 +6,7 @@ import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
-import { Button, Chip, Heading, SectionLabel, TextField } from '@/components/ui';
+import { ArrowRightIcon, Button, Chip, Heading, SectionLabel, TextField } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 
@@ -78,7 +78,10 @@ export default function EditProfileSheet() {
             <Text className="font-sans-medium text-[15px] text-ink">
               Interests &amp; availability
             </Text>
-            <Text className="font-sans-medium text-[15px] text-lime">Edit →</Text>
+            <View className="flex-row items-center gap-1">
+              <Text className="font-sans-medium text-[15px] text-lime">Edit</Text>
+              <ArrowRightIcon />
+            </View>
           </Pressable>
 
           <Button

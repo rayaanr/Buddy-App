@@ -58,7 +58,7 @@ export default function CommunityScreen() {
 
         {c.joined ? (
           <View className="mt-3.5 h-8 flex-row items-center gap-[7px] self-start rounded-2xl bg-lime-deep px-[13px]">
-            <TickIcon width={13} height={10} color={colors.lime} strokeWidth={1.8} />
+            <TickIcon size={14} color={colors.lime} />
             <Text className="font-sans-medium text-[13.5px] text-lime">You’re a member</Text>
           </View>
         ) : (

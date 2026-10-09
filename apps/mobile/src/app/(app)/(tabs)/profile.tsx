@@ -4,7 +4,16 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { unregisterPush } from '@/api/push';
 import { signOut, useHistory, useMe } from '@/api/queries';
-import { Avatar, Button, Heading, Loading, Refresh, SectionLabel, Tag } from '@/components/ui';
+import {
+  Avatar,
+  Button,
+  ChevronRightIcon,
+  Heading,
+  Loading,
+  Refresh,
+  SectionLabel,
+  Tag,
+} from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { dayMonth, locationLabel, monthYear } from '@/lib/activity';
 import { cn } from '@/lib/cn';
@@ -132,7 +141,7 @@ function SettingsRow({
       <Text className={cn('font-sans text-[15.5px]', danger ? 'text-danger' : 'text-ink')}>
         {label}
       </Text>
-      <Text className="font-sans text-[15.5px] text-subtle">›</Text>
+      <ChevronRightIcon />
     </Pressable>
   );
 }

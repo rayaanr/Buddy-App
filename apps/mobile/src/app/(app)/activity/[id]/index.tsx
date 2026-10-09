@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { ApiRequestError, errorMessage } from '@/api/client';
 import { useActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
 import {
+  ArrowRightIcon,
   Avatar,
   BackButton,
   Button,
@@ -91,7 +92,7 @@ export default function ActivityDetailScreen() {
             >
               <Text className="font-sans-medium text-[13.5px] text-muted">Part of</Text>
               <Text className="font-sans-medium text-[13.5px] text-ink">{a.community.name}</Text>
-              <Text className="font-sans-medium text-[13.5px] text-lime">→</Text>
+              <ArrowRightIcon size={14} />
             </Pressable>
           ) : null}
 
