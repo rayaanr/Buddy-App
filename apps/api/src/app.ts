@@ -7,7 +7,9 @@ import { loadSession } from './auth/middleware';
 import type { AppEnv, Deps } from './http/context';
 import { HttpError } from './lib/errors';
 import { activityRoutes } from './modules/activities/routes';
+import { communityRoutes } from './modules/communities/routes';
 import { meRoutes } from './modules/me/routes';
+import { userRoutes } from './modules/users/routes';
 
 /** Builds the HTTP app. Kept free of I/O setup so tests can pass their own deps. */
 export function createApp(deps: Deps) {
@@ -50,7 +52,9 @@ export function createApp(deps: Deps) {
   const v1 = new Hono<AppEnv>()
     .use(loadSession(deps))
     .route('/me', meRoutes(deps))
-    .route('/activities', activityRoutes(deps));
+    .route('/activities', activityRoutes(deps))
+    .route('/communities', communityRoutes(deps))
+    .route('/users', userRoutes(deps));
 
   return app.route('/v1', v1);
 }

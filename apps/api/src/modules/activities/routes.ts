@@ -1,64 +1,98 @@
-import { feedQuery, type ActivityDetail } from '@buddy/shared';
-import { eq, sql } from 'drizzle-orm';
+import { createActivityInput, feedQuery, myActivitiesQuery } from '@buddy/shared';
+import { eq, inArray, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import { currentUser, requireUser } from '../../auth/middleware';
-import { activities } from '../../db/schema';
+import { activities, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
-import { notFound } from '../../lib/errors';
 import { validate } from '../../lib/validate';
 import { originFor } from '../profiles/service';
+import { picksFor } from './picks';
+import { filterCondition, findActivitySummaries, pointSql, upcoming } from './queries';
 import {
-  countHosted,
-  filterCondition,
-  findActivitySummaries,
-  findAttendees,
-  pointSql,
-  upcoming,
-} from './queries';
+  createActivity,
+  getActivityDetail,
+  joinActivity,
+  leaveActivity,
+  myActivities,
+} from './service';
 
-export function activityRoutes({ db, urls }: Deps) {
-  return new Hono<AppEnv>()
-    .use(requireUser)
+const UUID = '{[0-9a-f-]{36}}';
 
-    .get('/', validate('query', feedQuery), async (c) => {
-      const me = currentUser(c);
-      const q = c.req.valid('query');
-      const near = await originFor(db, me.id, q);
-      const items = await findActivitySummaries(db, urls, {
-        viewerId: me.id,
-        near,
-        where: [
-          upcoming(),
-          filterCondition(q.filter),
-          sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${q.radiusKm * 1000})`,
-        ],
-        limit: q.limit,
-      });
-      return c.json({ activities: items });
-    })
+export function activityRoutes(deps: Deps) {
+  const { db, urls } = deps;
+  return (
+    new Hono<AppEnv>()
+      .use(requireUser)
 
-    .get('/:id{[0-9a-f-]{36}}', async (c) => {
-      const me = currentUser(c);
-      const id = c.req.param('id');
-      const near = await originFor(db, me.id);
-      const [summary] = await findActivitySummaries(db, urls, {
-        viewerId: me.id,
-        near,
-        where: [eq(activities.id, id)],
-      });
-      if (!summary) throw notFound('Activity');
+      // Discover feed.
+      .get('/', validate('query', feedQuery), async (c) => {
+        const me = currentUser(c);
+        const q = c.req.valid('query');
+        const near = await originFor(db, me.id, q);
+        const items = await findActivitySummaries(db, urls, {
+          viewerId: me.id,
+          near,
+          where: [
+            upcoming(),
+            filterCondition(q.filter),
+            sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${q.radiusKm * 1000})`,
+          ],
+          limit: q.limit,
+        });
+        return c.json({ activities: items });
+      })
 
-      const [extra] = await db
-        .select({ description: activities.description })
-        .from(activities)
-        .where(eq(activities.id, id));
-      const detail: ActivityDetail = {
-        ...summary,
-        description: extra?.description ?? '',
-        attendees: await findAttendees(db, urls, id),
-        host: { ...summary.host, hostedCount: await countHosted(db, summary.host.id) },
-      };
-      return c.json(detail);
-    });
+      // "From your communities": upcoming activities in communities you joined, not yet joined.
+      .get('/from-communities', async (c) => {
+        const me = currentUser(c);
+        const items = await findActivitySummaries(db, urls, {
+          viewerId: me.id,
+          near: await originFor(db, me.id),
+          where: [
+            upcoming(),
+            inArray(
+              activities.communityId,
+              db
+                .select({ id: communityMembers.communityId })
+                .from(communityMembers)
+                .where(eq(communityMembers.userId, me.id)),
+            ),
+            sql`not exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${me.id})`,
+          ],
+        });
+        return c.json({ activities: items });
+      })
+
+      .get('/picks', async (c) => c.json({ picks: await picksFor(db, urls, currentUser(c).id) }))
+
+      .get('/mine', validate('query', myActivitiesQuery), async (c) => {
+        const me = currentUser(c);
+        const { role } = c.req.valid('query');
+        return c.json({ activities: await myActivities(db, urls, me.id, role) });
+      })
+
+      .get(`/:id${UUID}`, async (c) =>
+        c.json(await getActivityDetail(db, urls, c.req.param('id'), currentUser(c).id)),
+      )
+
+      .post('/', validate('json', createActivityInput), async (c) => {
+        const me = currentUser(c);
+        return c.json(await createActivity(db, urls, me, c.req.valid('json')), 201);
+      })
+
+      .post(`/:id${UUID}/membership`, async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        await joinActivity(db, me, id);
+        return c.json(await getActivityDetail(db, urls, id, me.id));
+      })
+
+      .delete(`/:id${UUID}/membership`, async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        await leaveActivity(db, me, id);
+        return c.json(await getActivityDetail(db, urls, id, me.id));
+      })
+  );
 }
