@@ -5,6 +5,7 @@ import {
   type ActivityGroup,
   type CreateActivityInput,
   type MyActivity,
+  type UpdateActivityInput,
 } from '@buddy/shared';
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
@@ -63,18 +64,15 @@ export async function getActivityDetail(
   };
 }
 
-export async function createActivity(
-  db: Db,
-  urls: Urls,
-  host: { id: string; name: string },
-  input: CreateActivityInput & { description: string },
-) {
-  if (new Date(input.startsAt).getTime() <= Date.now()) {
+/** Start times must be in the future and within LIMITS.maxDaysAhead days. */
+function checkStartsAt(startsAt: string) {
+  const at = new Date(startsAt).getTime();
+  if (at <= Date.now()) {
     throw new HttpError(400, ERROR_CODES.validation, 'Pick a time in the future', {
       issues: [{ path: 'startsAt', message: 'Must be in the future' }],
     });
   }
-  if (new Date(input.startsAt).getTime() > Date.now() + LIMITS.maxDaysAhead * 86_400_000) {
+  if (at > Date.now() + LIMITS.maxDaysAhead * 86_400_000) {
     throw new HttpError(
       400,
       ERROR_CODES.validation,
@@ -82,6 +80,15 @@ export async function createActivity(
       { issues: [{ path: 'startsAt', message: 'Too far ahead' }] },
     );
   }
+}
+
+export async function createActivity(
+  db: Db,
+  urls: Urls,
+  host: { id: string; name: string },
+  input: CreateActivityInput & { description: string },
+) {
+  checkStartsAt(input.startsAt);
   if (input.coverKey && !input.coverKey.startsWith(coverKeyPrefix(host.id))) {
     throw forbidden('That image was not uploaded by you');
   }
@@ -124,11 +131,13 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
         capacity: activities.capacity,
         startsAt: activities.startsAt,
         hostBlocked: blockedBetween(me.id, activities.hostId).mapWith(Boolean),
+        cancelled: sql<boolean>`${activities.cancelledAt} is not null`,
       })
       .from(activities)
       .where(eq(activities.id, activityId))
       .for('update');
     if (!activity || activity.hostBlocked) throw notFound('Activity');
+    if (activity.cancelled) throw conflict('This activity was cancelled');
     if (activity.startsAt.getTime() < Date.now() - 60 * 60 * 1000) {
       throw conflict('This activity has already happened');
     }
@@ -150,6 +159,135 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
     await tx.insert(activityMembers).values({ activityId, userId: me.id, role: 'guest' });
     const message = await insertSystemMessage(tx, activityId, `${firstName(me.name)} joined`);
     return { joined: true, message };
+  });
+}
+
+/** "Sat 14 Nov, 17:45" in Sri Lanka time, for chat lines and notifications. */
+const whenText = (date: Date) =>
+  new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Colombo',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+
+/**
+ * Locks an activity the host is about to change. Only its host may, and only
+ * while it's still ahead and not cancelled.
+ */
+async function lockForHost(tx: Tx, hostId: string, activityId: string) {
+  const [row] = await tx
+    .select()
+    .from(activities)
+    .where(eq(activities.id, activityId))
+    .for('update');
+  if (!row) throw notFound('Activity');
+  if (row.hostId !== hostId) throw forbidden('Only the host can change this activity');
+  if (row.cancelledAt) throw conflict('This activity was cancelled');
+  if (row.startsAt.getTime() < Date.now()) throw conflict('This activity has already started');
+  return row;
+}
+
+/**
+ * Host edits. A new time or place is posted in the chat and pushed to
+ * everyone going (`notice`); other edits just update the page.
+ */
+export async function updateActivity(
+  db: Db,
+  host: { id: string; name: string },
+  activityId: string,
+  input: UpdateActivityInput,
+) {
+  if (input.startsAt !== undefined) checkStartsAt(input.startsAt);
+  return db.transaction(async (tx) => {
+    const row = await lockForHost(tx, host.id, activityId);
+
+    if (input.capacity !== undefined) {
+      const [going] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(activityMembers)
+        .where(eq(activityMembers.activityId, activityId));
+      if (input.capacity < (going?.n ?? 0)) {
+        throw new HttpError(
+          400,
+          ERROR_CODES.validation,
+          `${going!.n} people are going, so keep at least ${going!.n} spots`,
+          { issues: [{ path: 'capacity', message: 'Fewer than the people going' }] },
+        );
+      }
+    }
+
+    const startsAt = input.startsAt === undefined ? undefined : new Date(input.startsAt);
+    const timeChanged = !!startsAt && startsAt.getTime() !== row.startsAt.getTime();
+    const placeChanged = input.place !== undefined && input.place !== row.place;
+    const group = input.group ?? (row.group as ActivityGroup);
+    const groupChanged = group !== row.group;
+
+    await tx
+      .update(activities)
+      .set({
+        title: input.title,
+        description: input.description,
+        capacity: input.capacity,
+        place: input.place,
+        startsAt,
+        ...(groupChanged
+          ? {
+              group,
+              category: row.interest ? row.category : GROUP_CATEGORY[group],
+              // Swap the stock photo along with the type; keep an uploaded cover.
+              coverUrl:
+                row.coverUrl === stockCover(row.group as ActivityGroup)
+                  ? stockCover(group)
+                  : row.coverUrl,
+            }
+          : {}),
+      })
+      .where(eq(activities.id, activityId));
+
+    const changes = [
+      timeChanged && `the time to ${whenText(startsAt!)}`,
+      placeChanged && `the place to ${input.place}`,
+    ].filter(Boolean);
+    if (!changes.length) return { message: null, notice: null };
+
+    const message = await insertSystemMessage(
+      tx,
+      activityId,
+      `${firstName(host.name)} changed ${changes.join(' and ')}`,
+    );
+    const notice = {
+      title: input.title ?? row.title,
+      body: `Now ${[timeChanged && whenText(startsAt!), placeChanged && `at ${input.place}`].filter(Boolean).join(', ')}`,
+    };
+    return { message, notice };
+  });
+}
+
+/** Host calls it off. People who were going keep it (marked cancelled) and its chat. */
+export async function cancelActivity(
+  db: Db,
+  host: { id: string; name: string },
+  activityId: string,
+) {
+  return db.transaction(async (tx) => {
+    const row = await lockForHost(tx, host.id, activityId);
+    await tx
+      .update(activities)
+      .set({ cancelledAt: new Date() })
+      .where(eq(activities.id, activityId));
+    const message = await insertSystemMessage(
+      tx,
+      activityId,
+      `${firstName(host.name)} cancelled this activity`,
+    );
+    return {
+      message,
+      notice: { title: `Cancelled: ${row.title}`, body: `${firstName(host.name)} called it off.` },
+    };
   });
 }
 

@@ -27,6 +27,8 @@ export const activitySummary = z.object({
   host: userSummary,
   community: z.object({ id: z.uuid(), name: z.string() }).nullable(),
   viewer: z.object({ joined: z.boolean(), hosting: z.boolean() }),
+  /** Called off by the host. Only people who were going still see it. */
+  cancelled: z.boolean(),
 });
 export type ActivitySummary = z.infer<typeof activitySummary>;
 
@@ -68,6 +70,20 @@ export const createActivityInput = z.object({
   coverKey: z.string().optional(),
 });
 export type CreateActivityInput = z.input<typeof createActivityInput>;
+
+/** Host edits. Area and location stay as created; spots can't drop below who's going. */
+export const updateActivityInput = z
+  .object({
+    title: z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax),
+    group: activityGroup,
+    startsAt: isoDateTime,
+    place: z.string().trim().min(2).max(LIMITS.placeMax),
+    capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
+    description: z.string().trim().max(LIMITS.descriptionMax),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, 'Nothing to change');
+export type UpdateActivityInput = z.infer<typeof updateActivityInput>;
 
 /** An activity on "Your activities", with the latest chat line for the preview strip. */
 export const myActivity = activitySummary.extend({

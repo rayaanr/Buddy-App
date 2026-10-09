@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   const [signingOut, setSigningOut] = useState(false);
 
   if (!me.data) return <Loading className="flex-1 bg-bg" />;
-  const { name, area, createdAt, interests, avatarUrl, stats: s } = me.data;
+  const { name, area, bio, createdAt, interests, avatarUrl, stats: s } = me.data;
 
   const stats = [
     { value: s.joined, label: 'Joined' },
@@ -69,6 +69,11 @@ export default function ProfileScreen() {
       <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
         On Buddy since {monthYear(createdAt)}
       </Text>
+      {bio ? (
+        <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-[15px] leading-[22.5px] text-ink-dim">
+          {bio}
+        </Text>
+      ) : null}
 
       <View className="mt-5 flex-row gap-2">
         {stats.map((st) => (

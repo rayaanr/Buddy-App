@@ -3,6 +3,7 @@ import type { LucideIcon, LucideProps } from 'lucide-react-native';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Calendar from 'lucide-react-native/icons/calendar';
+import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
 import CheckCheck from 'lucide-react-native/icons/check-check';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
@@ -65,6 +66,11 @@ export const ChevronLeftIcon = icon(
   ChevronLeft,
   { size: 20, color: colors.ink, strokeWidth: 1.9 },
   'ChevronLeftIcon',
+);
+export const CameraIcon = icon(
+  Camera,
+  { size: 16, color: colors.bg, strokeWidth: 2 },
+  'CameraIcon',
 );
 export const ClockIcon = icon(
   Clock,

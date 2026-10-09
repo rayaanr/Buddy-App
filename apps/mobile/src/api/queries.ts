@@ -2,6 +2,7 @@ import type {
   ActivityDetail,
   CommunitySummary,
   CreateActivityInput,
+  UpdateActivityInput,
   CreateReportInput,
   DiscoverFilter,
   Me,
@@ -158,6 +159,23 @@ export function useCreateActivity() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateActivityInput) => unwrap(api.activities.$post({ json: input })),
+    onSuccess: (detail) => refreshActivityLists(qc, detail),
+  });
+}
+
+export function useUpdateActivity(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateActivityInput) =>
+      unwrap(api.activities[':id'].$patch({ param: { id }, json: input })),
+    onSuccess: (detail) => refreshActivityLists(qc, detail),
+  });
+}
+
+export function useCancelActivity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.activities[':id'].cancel.$post({ param: { id } })),
     onSuccess: (detail) => refreshActivityLists(qc, detail),
   });
 }

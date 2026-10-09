@@ -5,7 +5,7 @@ import type { Db } from '../../db/client';
 import { activities, communities, communityMembers, profiles, user } from '../../db/schema';
 import { notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
-import { findActivitySummaries, upcoming } from '../activities/queries';
+import { findActivitySummaries, notCancelled, upcoming } from '../activities/queries';
 import { originFor } from '../profiles/service';
 import { notBlockedBetween } from '../safety/blocks';
 
@@ -65,7 +65,7 @@ export async function getCommunity(
   const upcomingActivities = await findActivitySummaries(db, urls, {
     viewerId,
     near: await originFor(db, viewerId),
-    where: [upcoming(), eq(activities.communityId, id)],
+    where: [upcoming(), notCancelled(), eq(activities.communityId, id)],
   });
 
   return {

@@ -59,6 +59,10 @@ export default function AppLayout() {
         options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
       />
       <Stack.Screen
+        name="activity/[id]/edit"
+        options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
+      />
+      <Stack.Screen
         name="picks"
         options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
       />

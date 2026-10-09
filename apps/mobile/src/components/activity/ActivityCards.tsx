@@ -173,7 +173,13 @@ export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
           style={{ width: 74, height: 74, borderRadius: 14 }}
         />
         <View className="min-w-0 flex-1 gap-[3px]">
-          <Text className="font-sans-medium text-[13px] text-lime">{whenLabel(a)}</Text>
+          {a.cancelled ? (
+            <Text className="font-sans-medium text-[13px] text-danger">
+              Cancelled · {whenLabel(a)}
+            </Text>
+          ) : (
+            <Text className="font-sans-medium text-[13px] text-lime">{whenLabel(a)}</Text>
+          )}
           <Text className="font-sans-semibold text-[16.5px] leading-[21px] text-ink">
             {a.title}
           </Text>

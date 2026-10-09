@@ -12,7 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ApiRequestError, errorMessage } from '@/api/client';
-import { useActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
+import { useActivity, useCancelActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
 import {
   ActionSheet,
   AnimatedView,
@@ -34,8 +34,9 @@ import {
 } from '@/components/ui';
 import { MembersSheet } from '@/components/activity/MembersSheet';
 import { NotFound } from '@/components/ui/NotFound';
+import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { distanceLabel, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
+import { distanceLabel, firstName, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 import { spring } from '@/theme/motion';
@@ -66,8 +67,13 @@ const COVER_HEIGHT = 330;
 function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const join = useJoinActivity();
   const leave = useLeaveActivity();
+  const cancel = useCancelActivity();
   const { top } = useScreenInsets();
+  const now = useNow();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  // Hosts can change or call off an activity until it starts.
+  const canManage = a.viewer.hosting && !a.cancelled && new Date(a.startsAt) > now;
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -118,6 +124,11 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             : errorMessage(err),
         ),
     });
+  const onCancel = () =>
+    cancel.mutate(a.id, {
+      onSuccess: () => toast('Cancelled. Everyone going has been told.'),
+      onError: (err) => toast(errorMessage(err)),
+    });
   const onLeave = () =>
     leave.mutate(a.id, {
       onSuccess: () => toast('You left the activity.'),
@@ -136,6 +147,16 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
 
         <View className="bg-bg px-[22px] pb-6 pt-3">
           <Heading size="page">{a.title}</Heading>
+          {a.cancelled ? (
+            <View className="mt-3 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3">
+              <Text className="font-sans-semibold text-[15px] text-danger">Cancelled</Text>
+              <Text className="mt-0.5 font-sans text-[14px] leading-[20px] text-ink-dim">
+                {a.viewer.hosting
+                  ? 'You called this off. The group chat stays open.'
+                  : `${firstName(a.host.name)} called this off. The group chat stays open.`}
+              </Text>
+            </View>
+          ) : null}
           {a.community ? (
             <PressableScale
               onPress={() => router.push(`/community/${a.community!.id}`)}
@@ -192,7 +213,9 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               {a.title}
             </Text>
           </AnimatedView>
-          {a.viewer.hosting ? null : <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />}
+          {!a.viewer.hosting || canManage ? (
+            <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />
+          ) : null}
         </View>
       </View>
 
@@ -233,17 +256,36 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
       <ActionSheet
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
-        actions={[
-          {
-            label: 'Report activity',
-            destructive: true,
-            onPress: () =>
-              router.push({
-                pathname: '/report',
-                params: { type: 'activity', id: a.id, userId: a.host.id, name: a.host.name },
-              }),
-          },
-        ]}
+        actions={
+          a.viewer.hosting
+            ? [
+                { label: 'Edit activity', onPress: () => router.push(`/activity/${a.id}/edit`) },
+                {
+                  label: 'Cancel activity',
+                  destructive: true,
+                  onPress: () => setConfirmCancel(true),
+                },
+              ]
+            : [
+                {
+                  label: 'Report activity',
+                  destructive: true,
+                  onPress: () =>
+                    router.push({
+                      pathname: '/report',
+                      params: { type: 'activity', id: a.id, userId: a.host.id, name: a.host.name },
+                    }),
+                },
+              ]
+        }
+      />
+      <ActionSheet
+        visible={confirmCancel}
+        onClose={() => setConfirmCancel(false)}
+        title="Cancel this activity?"
+        message="Everyone going gets a notification. You can’t undo this."
+        cancelLabel="Keep it"
+        actions={[{ label: 'Cancel activity', destructive: true, onPress: onCancel }]}
       />
     </View>
   );

@@ -7,7 +7,7 @@ import { activities, activityMembers, blocks, profiles, user } from '../../db/sc
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { idParam } from '../../lib/validate';
-import { countHosted, findActivitySummaries, upcoming } from '../activities/queries';
+import { countHosted, findActivitySummaries, notCancelled, upcoming } from '../activities/queries';
 import { originFor } from '../profiles/service';
 import { blockUser, unblockUser } from '../safety/service';
 
@@ -43,7 +43,7 @@ export function userRoutes({ db, urls }: Deps) {
         findActivitySummaries(db, urls, {
           viewerId: viewer.id,
           near: await originFor(db, viewer.id),
-          where: [upcoming(), eq(activities.hostId, id)],
+          where: [upcoming(), notCancelled(), eq(activities.hostId, id)],
         }),
         countHosted(db, id),
       ]);

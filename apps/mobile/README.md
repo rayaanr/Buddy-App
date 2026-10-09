@@ -90,8 +90,9 @@ src/
 ## Notes
 
 - Signed out, the server can't personalise anything, so the "Good to see you" screen shows a picks preview saved on the device at the last session.
-- Edit profile is one page (name, area, interests, when you're free) saved together. Area is a chip choice, not free text: distances are measured from a known area.
+- Edit profile is one page (photo, name, bio, area, interests, when you're free) saved together. Area is a chip choice, not free text: distances are measured from a known area.
 - Activities are placed at their area's centre until the Create screen gets a map picker.
-- Photo uploads are ready in the API but not in the UI yet (no picker in the design).
+- Profile photos upload straight to Cloudflare R2 (`src/api/upload.ts`). Without the API's `R2_*` settings, uploads are off and picking a photo shows “Photo uploads are not available yet”. `expo-image-picker` is a native module, so a development build is needed after installing (Expo Go has it built in).
+- Hosts can edit or cancel an activity from its ⋯ menu until it starts. A new time or place, or a cancellation, is posted in the group chat and pushed to everyone going; cancelled activities stay visible only to the people who were going.
 - Bundle ID / package is the placeholder `com.buddyapp.mobile`. Change it in `app.json` before the first EAS build.
 - App icon and splash are still Expo defaults. Logo directions are in [`design/project/Buddy Logo.dc.html`](../../design/project/Buddy%20Logo.dc.html); none has been chosen yet.

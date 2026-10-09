@@ -87,6 +87,8 @@ export const activities = pgTable(
     capacity: integer().notNull(),
     description: text().notNull().default(''),
     coverUrl: text(),
+    /** Set when the host calls it off. */
+    cancelledAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

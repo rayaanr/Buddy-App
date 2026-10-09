@@ -1,5 +1,10 @@
-import { createActivityInput, feedQuery, myActivitiesQuery } from '@buddy/shared';
-import { desc, eq, inArray, sql } from 'drizzle-orm';
+import {
+  createActivityInput,
+  feedQuery,
+  myActivitiesQuery,
+  updateActivityInput,
+} from '@buddy/shared';
+import { desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import { currentUser, requireUser } from '../../auth/middleware';
@@ -15,21 +20,38 @@ import {
   findActivitySummaries,
   findActivitySummary,
   findMembers,
+  notCancelled,
   pointSql,
   upcoming,
 } from './queries';
 import {
+  cancelActivity,
   createActivity,
   getActivityDetail,
   joinActivity,
   leaveActivity,
   myActivities,
+  updateActivity,
 } from './service';
 
 const HISTORY_LIMIT = 10;
 
 export function activityRoutes(deps: Deps) {
-  const { db, urls, hub } = deps;
+  const { db, urls, hub, push } = deps;
+
+  /** Posts a host change in the chat and tells everyone else who's going. */
+  const announce = async (
+    id: string,
+    hostId: string,
+    result: Awaited<ReturnType<typeof cancelActivity>> | Awaited<ReturnType<typeof updateActivity>>,
+  ) => {
+    if (result.message) {
+      hub.publish(id, { type: 'message', message: await toChatMessage(db, urls, result.message) });
+    }
+    if (result.notice) {
+      void push.notifyActivity(id, { ...result.notice, data: { activityId: id } }, [hostId]);
+    }
+  };
   return (
     new Hono<AppEnv>()
       .use(requireUser)
@@ -44,6 +66,7 @@ export function activityRoutes(deps: Deps) {
           near,
           where: [
             upcoming(),
+            notCancelled(),
             filterCondition(q.filter),
             sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${q.radiusKm * 1000})`,
           ],
@@ -88,6 +111,7 @@ export function activityRoutes(deps: Deps) {
           viewerId: me.id,
           where: [
             sql`${activities.startsAt} < now() - interval '1 hour'`,
+            isNull(activities.cancelledAt),
             inArray(
               activities.id,
               db
@@ -117,6 +141,20 @@ export function activityRoutes(deps: Deps) {
       .post('/', validate('json', createActivityInput), async (c) => {
         const me = currentUser(c);
         return c.json(await createActivity(db, urls, me, c.req.valid('json')), 201);
+      })
+
+      .patch('/:id', idParam(), validate('json', updateActivityInput), async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        await announce(id, me.id, await updateActivity(db, me, id, c.req.valid('json')));
+        return c.json(await getActivityDetail(db, urls, id, me.id));
+      })
+
+      .post('/:id/cancel', idParam(), async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        await announce(id, me.id, await cancelActivity(db, me, id));
+        return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
       .post('/:id/membership', idParam(), async (c) => {

@@ -19,6 +19,8 @@ interface ActionSheetProps {
   /** Optional heading and explanation, e.g. for a confirmation. */
   title?: string;
   message?: string;
+  /** Label for the dismiss button; "Cancel" unless an action is itself a cancel. */
+  cancelLabel?: string;
 }
 
 /**
@@ -26,7 +28,14 @@ interface ActionSheetProps {
  * (report, block). The chosen action runs once the drawer has slid away, so
  * a follow-up (a confirmation, a new screen) never appears under it.
  */
-export function ActionSheet({ visible, onClose, actions, title, message }: ActionSheetProps) {
+export function ActionSheet({
+  visible,
+  onClose,
+  actions,
+  title,
+  message,
+  cancelLabel = 'Cancel',
+}: ActionSheetProps) {
   const pending = useRef<(() => void) | null>(null);
 
   return (
@@ -77,7 +86,13 @@ export function ActionSheet({ visible, onClose, actions, title, message }: Actio
             </Pressable>
           ))}
         </View>
-        <Button label="Cancel" variant="outline" size="md" onPress={onClose} className="mt-3" />
+        <Button
+          label={cancelLabel}
+          variant="outline"
+          size="md"
+          onPress={onClose}
+          className="mt-3"
+        />
       </View>
     </Sheet>
   );

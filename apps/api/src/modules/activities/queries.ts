@@ -1,5 +1,5 @@
 import type { ActivitySummary, DiscoverFilter } from '@buddy/shared';
-import { and, asc, eq, gte, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
 import type { LatLng } from '../../db/geography';
@@ -9,6 +9,9 @@ import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 
 /** Activities stay listed until an hour after they start. */
 export const upcoming = () => gte(activities.startsAt, sql`now() - interval '1 hour'`);
+
+/** For browsing lists (Discover, communities, profiles); "Your activities" keeps cancelled ones. */
+export const notCancelled = () => isNull(activities.cancelledAt);
 
 /** Discover filters, evaluated in Sri Lanka time. */
 export function filterCondition(filter: DiscoverFilter): SQL | undefined {
@@ -40,11 +43,14 @@ export interface SummaryOptions {
   limit?: number;
 }
 
+const isMember = (viewerId: string) =>
+  sql`exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId})`;
+
 /**
  * Selects activities in the shape of ActivitySummary. Every list in the API
  * goes through here so counts, viewer flags and blocking apply one way:
- * activities hosted by someone the viewer blocked (or who blocked them) are
- * left out, unless the viewer is already going.
+ * activities hosted by someone the viewer blocked (or who blocked them), and
+ * cancelled activities, are left out unless the viewer is already going.
  */
 export async function findActivitySummaries(
   db: Db | Tx,
@@ -64,6 +70,7 @@ export async function findActivitySummaries(
       location: activities.location,
       capacity: activities.capacity,
       coverUrl: activities.coverUrl,
+      cancelledAt: activities.cancelledAt,
       hostId: user.id,
       hostName: user.name,
       hostAvatarKey: profiles.avatarKey,
@@ -88,8 +95,11 @@ export async function findActivitySummaries(
       and(
         ...where,
         viewerId
-          ? sql`(not ${blockedBetween(viewerId, activities.hostId)} or exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId}))`
+          ? sql`(not ${blockedBetween(viewerId, activities.hostId)} or ${isMember(viewerId)})`
           : undefined,
+        viewerId
+          ? sql`(${activities.cancelledAt} is null or ${isMember(viewerId)})`
+          : isNull(activities.cancelledAt),
       ),
     )
     .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));
@@ -118,6 +128,7 @@ export async function findActivitySummaries(
     community:
       r.communityId && r.communityName ? { id: r.communityId, name: r.communityName } : null,
     viewer: { joined: r.viewerRole === 'guest', hosting: r.viewerRole === 'host' },
+    cancelled: r.cancelledAt !== null,
   }));
 }
 
