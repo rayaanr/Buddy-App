@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Text } from 'react-native';
 
 import { cn } from '@/lib/cn';
@@ -12,6 +13,10 @@ interface ChipProps {
   mono?: boolean;
   className?: string;
   testID?: string;
+  /** Shown before the label (or alone, with an empty label). */
+  icon?: ReactNode;
+  /** Needed when the chip shows only an icon. */
+  accessibilityLabel?: string;
 }
 
 const SHAPE = {
@@ -29,30 +34,36 @@ export function Chip({
   mono,
   className,
   testID,
+  icon,
+  accessibilityLabel,
 }: ChipProps) {
   return (
     <PressableScale
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       testID={testID}
       haptic="selection"
       scale="strong"
       className={cn(
-        'items-center justify-center border',
+        'flex-row items-center justify-center gap-1.5 border',
         SHAPE[shape],
         selected ? 'border-lime bg-lime' : 'border-chip-border bg-transparent',
         className,
       )}
     >
-      <Text
-        className={cn(
-          mono ? 'font-mono-medium text-[14.5px]' : 'font-sans-medium text-[15px]',
-          selected ? 'text-bg' : 'text-ink',
-        )}
-      >
-        {label}
-      </Text>
+      {icon}
+      {label ? (
+        <Text
+          className={cn(
+            mono ? 'font-mono-medium text-[14.5px]' : 'font-sans-medium text-[15px]',
+            selected ? 'text-bg' : 'text-ink',
+          )}
+        >
+          {label}
+        </Text>
+      ) : null}
     </PressableScale>
   );
 }

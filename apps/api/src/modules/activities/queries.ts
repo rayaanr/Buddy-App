@@ -134,20 +134,21 @@ export async function findActivitySummary(
   return row ?? null;
 }
 
-/** Up to `limit` people going, host first, then by join time; blocked people left out. */
-export async function findAttendees(
+/** People going, host first, then by join time; blocked people left out. */
+export async function findMembers(
   db: Db | Tx,
   urls: Urls,
   activityId: string,
   viewerId: string,
-  limit = 5,
+  limit?: number,
 ) {
-  const rows = await db
+  const query = db
     .select({
       id: user.id,
       name: user.name,
       avatarKey: profiles.avatarKey,
       avatarUrl: profiles.avatarUrl,
+      role: activityMembers.role,
     })
     .from(activityMembers)
     .innerJoin(user, eq(user.id, activityMembers.userId))
@@ -161,13 +162,26 @@ export async function findAttendees(
     .orderBy(
       sql`case when ${activityMembers.role} = 'host' then 0 else 1 end`,
       asc(activityMembers.joinedAt),
-    )
-    .limit(limit);
+    );
+  const rows = limit ? await query.limit(limit) : await query;
   return rows.map((r) => ({
     id: r.id,
     name: r.name,
     avatarUrl: urls.avatar(r.avatarKey, r.avatarUrl),
+    role: r.role as 'host' | 'guest',
   }));
+}
+
+/** The first few people going, for the activity page's face pile. */
+export async function findAttendees(
+  db: Db | Tx,
+  urls: Urls,
+  activityId: string,
+  viewerId: string,
+  limit = 5,
+) {
+  const members = await findMembers(db, urls, activityId, viewerId, limit);
+  return members.map(({ role: _role, ...person }) => person);
 }
 
 export async function countHosted(db: Db | Tx, userId: string) {

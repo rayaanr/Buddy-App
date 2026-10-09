@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  atLocalDay,
   atLocalTime,
   clockLabel,
   dayLabel,
+  daysBetween,
   daysUntilWeekday,
   isToday,
   isWeekend,
+  localDay,
   whenLabel,
 } from './time';
 
@@ -58,5 +61,26 @@ describe('atLocalTime', () => {
     expect(daysUntilWeekday(6, now)).toBe(1); // Saturday
     expect(daysUntilWeekday(5, now)).toBe(0); // Friday is today
     expect(daysUntilWeekday(0, now)).toBe(2); // Sunday
+  });
+});
+
+describe('calendar days in Sri Lanka time', () => {
+  // 2026-10-09 20:00 UTC is 2026-10-10 01:30 in Colombo.
+  const lateUtc = new Date('2026-10-09T20:00:00Z');
+
+  it('names the local day, even when UTC is still on the previous one', () => {
+    expect(localDay(lateUtc)).toBe('2026-10-10');
+    expect(localDay(lateUtc, 1)).toBe('2026-10-11');
+    expect(localDay(new Date('2026-12-31T19:00:00Z'), 1)).toBe('2027-01-02');
+  });
+
+  it('builds the instant for a local day and time', () => {
+    expect(atLocalDay('2026-10-10', '18:30').toISOString()).toBe('2026-10-10T13:00:00.000Z');
+    expect(clockLabel(atLocalDay('2026-10-10', '07:05'))).toBe('07:05');
+  });
+
+  it('counts days between local days', () => {
+    expect(daysBetween('2026-10-10', '2026-10-10')).toBe(0);
+    expect(daysBetween('2026-10-10', '2027-01-08')).toBe(90);
   });
 });

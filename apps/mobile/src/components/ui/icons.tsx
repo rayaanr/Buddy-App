@@ -5,7 +5,9 @@ import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Check from 'lucide-react-native/icons/check';
 import CheckCheck from 'lucide-react-native/icons/check-check';
+import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
+import Clock from 'lucide-react-native/icons/clock';
 import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Plus from 'lucide-react-native/icons/plus';
@@ -57,6 +59,17 @@ export const ChevronRightIcon = icon(
   ChevronRight,
   { size: 18, color: colors.subtle, strokeWidth: 1.8 },
   'ChevronRightIcon',
+);
+
+export const ChevronLeftIcon = icon(
+  ChevronLeft,
+  { size: 20, color: colors.ink, strokeWidth: 1.9 },
+  'ChevronLeftIcon',
+);
+export const ClockIcon = icon(
+  Clock,
+  { size: 17, color: colors.ink, strokeWidth: 1.8 },
+  'ClockIcon',
 );
 
 export const MoreIcon = icon(Ellipsis, { size: 20, color: colors.ink, strokeWidth: 2 }, 'MoreIcon');

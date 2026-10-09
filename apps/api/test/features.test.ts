@@ -85,6 +85,18 @@ describe('creating activities', () => {
     expect(res.body).toMatchObject({ error: { details: { issues: [{ path: 'startsAt' }] } } });
   });
 
+  it('rejects start times more than 90 days ahead', async () => {
+    const { headers } = await t.signIn();
+    const tooFar = new Date(Date.now() + 91 * 86_400_000).toISOString();
+    const res = await t.call('/v1/activities', {
+      method: 'POST',
+      headers,
+      body: { ...newActivity, startsAt: tooFar },
+    });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: { details: { issues: [{ path: 'startsAt' }] } } });
+  });
+
   it('shows up under hosting, with no chat preview until someone writes', async () => {
     const { headers } = await t.signIn();
     await t.call('/v1/activities', { method: 'POST', headers, body: newActivity });
@@ -287,5 +299,41 @@ describe('picks', () => {
     });
     expect(picks.slice(1, 4).every((p) => p.reason.startsWith('Because you’re into'))).toBe(true);
     expect(picks.some((p) => p.activity.title.startsWith('Padel'))).toBe(false);
+  });
+});
+
+describe('activity members', () => {
+  it('lists everyone going, host first, with roles', async () => {
+    const { headers } = await t.signIn();
+    const run = byTitle(await feed(headers), 'Saturday 10K');
+    const res = await t.call<{ members: { name: string; role: string }[] }>(
+      `/v1/activities/${run.id}/members`,
+      { headers },
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.members).toHaveLength(run.goingCount);
+    expect(res.body.members[0]).toMatchObject({ name: 'Nethmi', role: 'host' });
+    expect(res.body.members.slice(1).every((m) => m.role === 'guest')).toBe(true);
+  });
+
+  it('leaves out blocked people and hides activities the activity page hides', async () => {
+    const { headers } = await t.signIn();
+    const shehani = await t.signIn('shehani@buddy.test');
+    const nethmi = await t.signIn('nethmi@buddy.test');
+    const padel = byTitle(await feed(headers), 'Padel');
+    const run = byTitle(await feed(headers), 'Saturday 10K');
+
+    // Blocking a guest removes them from the list.
+    await t.call(`/v1/users/${shehani.userId}/block`, { method: 'POST', headers });
+    const list = await t.call<{ members: { name: string }[] }>(
+      `/v1/activities/${padel.id}/members`,
+      { headers },
+    );
+    expect(list.body.members.map((m) => m.name)).not.toContain('Shehani');
+
+    // Blocking the host of an activity you're not in hides it entirely.
+    await t.call(`/v1/users/${nethmi.userId}/block`, { method: 'POST', headers });
+    const hidden = await t.call(`/v1/activities/${run.id}/members`, { headers });
+    expect(hidden.status).toBe(404);
   });
 });

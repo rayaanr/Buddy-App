@@ -38,6 +38,11 @@ export const activityDetail = activitySummary.extend({
 });
 export type ActivityDetail = z.infer<typeof activityDetail>;
 
+/** Everyone going, host first (people you've blocked, or who blocked you, left out). */
+export const activityMember = userSummary.extend({ role: z.enum(['host', 'guest']) });
+export type ActivityMember = z.infer<typeof activityMember>;
+export const activityMembers = z.object({ members: z.array(activityMember) });
+
 /** Query for the Discover feed. Query-string values arrive as strings, hence coerce. */
 export const feedQuery = z.object({
   filter: discoverFilter.default('All'),

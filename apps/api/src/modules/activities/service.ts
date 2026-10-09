@@ -1,5 +1,6 @@
 import {
   ERROR_CODES,
+  LIMITS,
   type ActivityDetail,
   type ActivityGroup,
   type CreateActivityInput,
@@ -72,6 +73,14 @@ export async function createActivity(
     throw new HttpError(400, ERROR_CODES.validation, 'Pick a time in the future', {
       issues: [{ path: 'startsAt', message: 'Must be in the future' }],
     });
+  }
+  if (new Date(input.startsAt).getTime() > Date.now() + LIMITS.maxDaysAhead * 86_400_000) {
+    throw new HttpError(
+      400,
+      ERROR_CODES.validation,
+      `Pick a date within ${LIMITS.maxDaysAhead} days`,
+      { issues: [{ path: 'startsAt', message: 'Too far ahead' }] },
+    );
   }
   if (input.coverKey && !input.coverKey.startsWith(coverKeyPrefix(host.id))) {
     throw forbidden('That image was not uploaded by you');

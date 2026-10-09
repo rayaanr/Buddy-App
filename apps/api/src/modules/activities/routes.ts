@@ -5,11 +5,19 @@ import { Hono } from 'hono';
 import { currentUser, requireUser } from '../../auth/middleware';
 import { activities, activityMembers, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
+import { notFound } from '../../lib/errors';
 import { idParam, validate } from '../../lib/validate';
 import { toChatMessage } from '../chat/service';
 import { originFor } from '../profiles/service';
 import { picksFor } from './picks';
-import { filterCondition, findActivitySummaries, pointSql, upcoming } from './queries';
+import {
+  filterCondition,
+  findActivitySummaries,
+  findActivitySummary,
+  findMembers,
+  pointSql,
+  upcoming,
+} from './queries';
 import {
   createActivity,
   getActivityDetail,
@@ -97,6 +105,14 @@ export function activityRoutes(deps: Deps) {
       .get('/:id', idParam(), async (c) =>
         c.json(await getActivityDetail(db, urls, c.req.param('id'), currentUser(c).id)),
       )
+
+      // Everyone going (the "6 of 8 going" card). Hidden wherever the activity is.
+      .get('/:id/members', idParam(), async (c) => {
+        const viewerId = currentUser(c).id;
+        const id = c.req.param('id');
+        if (!(await findActivitySummary(db, urls, id, viewerId))) throw notFound('Activity');
+        return c.json({ members: await findMembers(db, urls, id, viewerId) });
+      })
 
       .post('/', validate('json', createActivityInput), async (c) => {
         const me = currentUser(c);

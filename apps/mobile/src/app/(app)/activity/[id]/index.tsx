@@ -32,6 +32,7 @@ import {
   successHaptic,
   useEnterOnChange,
 } from '@/components/ui';
+import { MembersSheet } from '@/components/activity/MembersSheet';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { distanceLabel, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
@@ -269,37 +270,53 @@ function Attendance({ activity: a }: { activity: ActivityDetail }) {
   }, [pct, fill]);
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.get()}%` }));
   const countStyle = useEnterOnChange(a.goingCount);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const going = `${a.goingCount} of ${a.capacity} going`;
 
   return (
-    <View className="mt-2.5 rounded-[18px] bg-surface p-4">
-      <View className="flex-row justify-between">
-        <AnimatedView style={countStyle}>
-          <Text className="font-sans-semibold text-[15.5px] text-ink">
-            {a.goingCount} of {a.capacity} going
-          </Text>
-        </AnimatedView>
-        <Text className="font-sans text-[14px] text-muted">{spotsLabel(a)}</Text>
-      </View>
-      <View className="mt-3.5 h-1.5 overflow-hidden rounded-[3px] bg-track">
-        <AnimatedView style={[styles.fill, fillStyle]} />
-      </View>
-      <View className="mt-3.5 flex-row items-center">
-        {a.attendees.slice(0, MAX_FACES).map((p) => (
-          <Avatar
-            key={p.id}
-            uri={p.avatarUrl ?? undefined}
-            size={32}
-            ring={colors.surface}
-            style={{ marginRight: -6 }}
-            onPress={() => router.push(`/user/${p.id}`)}
-            accessibilityLabel={p.name}
-          />
-        ))}
-        {extra > 0 ? (
-          <Text className="ml-[18px] font-sans text-[14px] text-muted">+{extra} more</Text>
-        ) : null}
-      </View>
-    </View>
+    <>
+      <PressableScale
+        scale="dim"
+        onPress={() => setMembersOpen(true)}
+        accessibilityRole="button"
+        accessibilityLabel={`${going}. See who's going`}
+        className="mt-2.5 rounded-[18px] bg-surface p-4"
+      >
+        <View className="flex-row justify-between">
+          <AnimatedView style={countStyle}>
+            <Text className="font-sans-semibold text-[15.5px] text-ink">{going}</Text>
+          </AnimatedView>
+          <Text className="font-sans text-[14px] text-muted">{spotsLabel(a)}</Text>
+        </View>
+        <View className="mt-3.5 h-1.5 overflow-hidden rounded-[3px] bg-track">
+          <AnimatedView style={[styles.fill, fillStyle]} />
+        </View>
+        <View className="mt-3.5 flex-row items-center">
+          {a.attendees.slice(0, MAX_FACES).map((p) => (
+            <Avatar
+              key={p.id}
+              uri={p.avatarUrl ?? undefined}
+              size={32}
+              ring={colors.surface}
+              style={{ marginRight: -6 }}
+            />
+          ))}
+          {extra > 0 ? (
+            <Text className="ml-[18px] font-sans text-[14px] text-muted">+{extra} more</Text>
+          ) : null}
+          <View className="ml-auto flex-row items-center gap-1">
+            <Text className="font-sans-medium text-[14px] text-lime">See all</Text>
+            <ArrowRightIcon size={14} />
+          </View>
+        </View>
+      </PressableScale>
+      <MembersSheet
+        activityId={a.id}
+        title={going}
+        open={membersOpen}
+        onClose={() => setMembersOpen(false)}
+      />
+    </>
   );
 }
 

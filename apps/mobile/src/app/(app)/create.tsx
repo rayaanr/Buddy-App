@@ -1,13 +1,17 @@
-import { LIMITS } from '@buddy/shared';
+import { atLocalDay, LIMITS, localDay } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useCreateActivity, useMe } from '@/api/queries';
+import { DatePickerSheet } from '@/components/create/DatePickerSheet';
+import { TimePickerSheet } from '@/components/create/TimePickerSheet';
 import {
   Button,
+  CalendarIcon,
   Chip,
+  ClockIcon,
   Footer,
   KeyboardAwareScrollView,
   KeyboardScreen,
@@ -17,14 +21,16 @@ import {
 import { ACTIVITY_TYPES, CREATE_DAYS, CREATE_TIMES, type CreateDay } from '@/data/constants';
 import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { createStartsAt } from '@/lib/activity';
+import { presetDay, shortDay } from '@/lib/activity';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
 interface Draft {
   title: string;
   type: string;
-  day: CreateDay;
+  /** A preset chip, or 'custom' for a day picked on the calendar. */
+  day: CreateDay | 'custom';
+  customDay: string | null;
   time: string;
   where: string;
   spots: number;
@@ -35,6 +41,7 @@ const newDraft = (): Draft => ({
   title: '',
   type: 'Social',
   day: 'Today',
+  customDay: null,
   time: '18:30',
   where: '',
   spots: 6,
@@ -49,7 +56,19 @@ export default function CreateActivityScreen() {
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const now = useNow();
-  const startsAt = createStartsAt(draft.day, draft.time, now);
+  const day =
+    draft.day === 'custom' && draft.customDay
+      ? draft.customDay
+      : presetDay(draft.day === 'custom' ? 'Today' : draft.day, now);
+  const startsAt = atLocalDay(day, draft.time);
+  const customTime = !(CREATE_TIMES as readonly string[]).includes(draft.time);
+  // A new key per opening resets the picker to the current choice.
+  const [picker, setPicker] = useState<{ kind: 'date' | 'time' | null; key: number }>({
+    kind: null,
+    key: 0,
+  });
+  const openPicker = (kind: 'date' | 'time') => setPicker((p) => ({ kind, key: p.key + 1 }));
+  const closePicker = () => setPicker((p) => ({ ...p, kind: null }));
   const inPast = startsAt <= now;
   const ready = !!draft.title.trim() && !!draft.where.trim() && !inPast && !create.isPending;
 
@@ -124,6 +143,18 @@ export default function CreateActivityScreen() {
               onPress={() => set({ day: d })}
             />
           ))}
+          <Chip
+            label={draft.day === 'custom' && draft.customDay ? shortDay(draft.customDay) : ''}
+            icon={draft.day === 'custom' ? null : <CalendarIcon size={18} color={colors.ink} />}
+            accessibilityLabel={
+              draft.day === 'custom' && draft.customDay
+                ? `${shortDay(draft.customDay)}, change date`
+                : 'Pick a date'
+            }
+            shape="tile"
+            selected={draft.day === 'custom'}
+            onPress={() => openPicker('date')}
+          />
         </View>
         <ScrollView
           horizontal
@@ -131,6 +162,15 @@ export default function CreateActivityScreen() {
           className="-mx-[22px] mt-2"
           contentContainerStyle={{ gap: 8, paddingHorizontal: 22 }}
         >
+          <Chip
+            label={customTime ? draft.time : 'Other'}
+            icon={<ClockIcon color={customTime ? colors.bg : colors.ink} />}
+            accessibilityLabel={customTime ? `${draft.time}, change time` : 'Pick another time'}
+            mono={customTime}
+            selected={customTime}
+            onPress={() => openPicker('time')}
+            className="px-[15px]"
+          />
           {CREATE_TIMES.map((t) => (
             <Chip
               key={t}
@@ -183,6 +223,23 @@ export default function CreateActivityScreen() {
           className="mt-3 h-24 py-3.5 leading-[22px]"
         />
       </KeyboardAwareScrollView>
+
+      <DatePickerSheet
+        key={`date-${picker.key}`}
+        open={picker.kind === 'date'}
+        onClose={closePicker}
+        value={day}
+        min={localDay(now)}
+        max={localDay(now, LIMITS.maxDaysAhead)}
+        onChange={(picked) => set({ day: 'custom', customDay: picked })}
+      />
+      <TimePickerSheet
+        key={`time-${picker.key}`}
+        open={picker.kind === 'time'}
+        onClose={closePicker}
+        value={draft.time}
+        onChange={(time) => set({ time })}
+      />
 
       <Footer>
         {inPast ? (

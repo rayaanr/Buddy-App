@@ -90,6 +90,15 @@ export const useActivity = (id: string) =>
     enabled: !!id,
   });
 
+/** Everyone going; fetched when the members drawer opens. */
+export const useActivityMembers = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: [...keys.activity(id), 'members'],
+    queryFn: async () =>
+      (await unwrap(api.activities[':id'].members.$get({ param: { id } }))).members,
+    enabled,
+  });
+
 export const useCommunities = () =>
   useQuery({
     queryKey: keys.communities,

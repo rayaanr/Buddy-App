@@ -71,3 +71,23 @@ export function atLocalTime(daysFromToday: number, time: string, now: Date = new
 export function daysUntilWeekday(weekday: number, now: Date = new Date()) {
   return (weekday - local(now).weekday + 7) % 7;
 }
+
+/** A Sri Lanka calendar day as "YYYY-MM-DD" (`daysFromToday` 0 is today). */
+export function localDay(now: Date = new Date(), daysFromToday = 0) {
+  const shifted = new Date(now.getTime() + OFFSET_MS + daysFromToday * DAY_MS);
+  return `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`;
+}
+
+/** The instant for a Sri Lanka calendar day ("YYYY-MM-DD") at "HH:MM". */
+export function atLocalDay(day: string, time: string) {
+  const [y = 1970, mo = 1, d = 1] = day.split('-').map(Number);
+  const [h = 0, m = 0] = time.split(':').map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, h, m) - OFFSET_MS);
+}
+
+/** Whole days from one "YYYY-MM-DD" to another. */
+export function daysBetween(from: string, to: string) {
+  return Math.round(
+    (atLocalDay(to, '00:00').getTime() - atLocalDay(from, '00:00').getTime()) / DAY_MS,
+  );
+}

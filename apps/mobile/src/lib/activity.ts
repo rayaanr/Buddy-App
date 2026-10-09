@@ -1,10 +1,10 @@
 import {
-  atLocalTime,
+  type ActivitySummary,
   daysUntilWeekday,
+  localDay,
+  type MyActivity,
   whenLabel as formatWhen,
   whenLong as formatWhenLong,
-  type ActivitySummary,
-  type MyActivity,
 } from '@buddy/shared';
 
 import { GROUP_HUES, type CreateDay } from '@/data/constants';
@@ -60,10 +60,32 @@ export function lastMessagePreview(a: MyActivity) {
 }
 
 /** Start time for the Create screen's day chip and time chip, in Sri Lanka time. */
-export function createStartsAt(day: CreateDay, time: string, now = new Date()) {
+/** The Sri Lanka calendar day ("YYYY-MM-DD") a Create-screen day chip stands for. */
+export function presetDay(day: CreateDay, now = new Date()) {
   const offset =
     day === 'Today' ? 0 : day === 'Tmrw' ? 1 : daysUntilWeekday(day === 'Sat' ? 6 : 0, now);
-  return atLocalTime(offset, time, now);
+  return localDay(now, offset);
+}
+
+const MONTHS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/** "16 Oct" from "YYYY-MM-DD". */
+export function shortDay(day: string) {
+  const [, m, d] = day.split('-').map(Number);
+  return `${d} ${MONTHS_SHORT[(m ?? 1) - 1]}`;
 }
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;

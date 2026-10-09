@@ -69,7 +69,10 @@ export default function ProfileScreen() {
           {name}
         </Heading>
         <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">
-          {locationLabel(area)} · on Buddy since {monthYear(createdAt)}
+          {locationLabel(area)}
+        </Text>
+        <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
+          On Buddy since {monthYear(createdAt)}
         </Text>
 
         <View className="mt-5 flex-row gap-2">

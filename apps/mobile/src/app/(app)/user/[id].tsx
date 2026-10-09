@@ -66,8 +66,9 @@ export default function UserProfileScreen() {
         <Heading size="section" className="mt-4 text-center">
           {u.name}
         </Heading>
-        <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">
-          {u.area} · on Buddy since {monthYear(u.memberSince)}
+        <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">{u.area}</Text>
+        <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
+          On Buddy since {monthYear(u.memberSince)}
         </Text>
         {u.bio ? (
           <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-[15px] leading-[22.5px] text-ink-dim">

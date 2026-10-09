@@ -68,6 +68,8 @@ export const LIMITS = {
   descriptionMax: 1000,
   capacityMin: 2,
   capacityMax: 30,
+  /** Furthest ahead an activity can be scheduled. */
+  maxDaysAhead: 90,
   messageMax: 2000,
   reportDetailsMax: 1000,
   /** Largest image the app may upload, in bytes. */
