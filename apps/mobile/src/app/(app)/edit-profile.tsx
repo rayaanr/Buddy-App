@@ -1,12 +1,20 @@
 import { AREA_NAMES, type Area } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
-import { ArrowRightIcon, Button, Chip, Heading, SectionLabel, TextField } from '@/components/ui';
+import {
+  ArrowRightIcon,
+  Button,
+  Chip,
+  Heading,
+  KeyboardScreen,
+  SectionLabel,
+  TextField,
+} from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 
@@ -33,10 +41,7 @@ export default function EditProfileSheet() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 justify-end"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardScreen className="flex-1 justify-end">
       {/* Reanimated views carry the motion only; NativeWind classes go on plain Views. */}
       <Animated.View entering={FadeIn.duration(200)} style={StyleSheet.absoluteFill}>
         <Pressable
@@ -92,6 +97,6 @@ export default function EditProfileSheet() {
           />
         </View>
       </Animated.View>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

@@ -1,21 +1,13 @@
 import type { ChatMessage } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
 
 import { useChat } from '@/api/chat';
 import { ApiRequestError } from '@/api/client';
 import { useActivity, useMe } from '@/api/queries';
 import { MessageBubble, toChatRows, type ChatRow } from '@/components/chat/MessageBubble';
-import { BackButton, LoadError, Loading } from '@/components/ui';
+import { BackButton, KeyboardScreen, LoadError, Loading } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { whenLong } from '@/lib/activity';
@@ -57,10 +49,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-bg"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardScreen className="flex-1 bg-bg">
       <View
         className="flex-row items-center gap-3.5 border-b border-line px-[18px] pb-3"
         style={{ paddingTop: top(56) }}
@@ -158,6 +147,6 @@ export default function ChatScreen() {
           </Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

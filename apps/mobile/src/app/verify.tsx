@@ -1,12 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { sendSignInCode, verifySignInCode } from '@/api/auth';
 import { api, errorMessage, unwrap } from '@/api/client';
 import { keys } from '@/api/queries';
-import { BackButton, Button, Heading } from '@/components/ui';
+import { BackButton, Button, Heading, KeyboardScreen } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { useAccountStore } from '@/store/account';
@@ -85,10 +85,7 @@ export default function VerifyScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-bg"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardScreen className="flex-1 bg-bg">
       <View className="flex-1 px-[22px]" style={{ paddingTop: top(56), paddingBottom: bottom(34) }}>
         <BackButton
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/sign-in'))}
@@ -147,6 +144,6 @@ export default function VerifyScreen() {
           className="mt-2.5"
         />
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

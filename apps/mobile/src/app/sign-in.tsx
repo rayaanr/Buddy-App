@@ -1,18 +1,20 @@
 import type { ActivityGroup } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { Pressable, Text, View, type ViewStyle } from 'react-native';
 
 import { isEmail, sendSignInCode } from '@/api/auth';
 import { errorMessage } from '@/api/client';
-import { BrandMark, Button, Heading, Photo, Scrim, SectionLabel, TextField } from '@/components/ui';
+import {
+  BrandMark,
+  Button,
+  Heading,
+  KeyboardScreen,
+  Photo,
+  Scrim,
+  SectionLabel,
+  TextField,
+} from '@/components/ui';
 import { GROUP_HUES } from '@/data/constants';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { firstName, whenLabel } from '@/lib/activity';
@@ -107,10 +109,7 @@ function EmailSignIn() {
   const valid = isEmail(email);
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-bg"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardScreen className="flex-1 bg-bg">
       <View className="flex-1 px-[22px]" style={{ paddingTop: top(64), paddingBottom: bottom(34) }}>
         <BrandMark />
         <Heading size="hero" className="mt-7">
@@ -150,7 +149,7 @@ function EmailSignIn() {
           </Pressable>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }
 

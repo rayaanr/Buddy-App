@@ -12,3 +12,4 @@ export * from './TextField';
 export * from './Toast';
 export * from './Typography';
 export * from './QueryState';
+export * from './Keyboard';

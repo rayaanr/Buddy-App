@@ -75,6 +75,7 @@ src/
 - **Types come from `@buddy/shared`** (Zod schemas) and the typed Hono client. The app imports the API's _type_ only; no server code is bundled.
 - **Tokens, not hex.** Colours and fonts live in `src/theme/tokens.js` and are exposed as Tailwind classes. Use `colors` from `@/theme` only where a class can't go (SVG strokes, gradients, shadows).
 - **No conflicting classes.** NativeWind doesn't merge classes, so components expose props (`variant`, `size`, `tone`, `weight`) instead of letting callers override the same property through `className`.
+- **Screens with text fields use `KeyboardScreen`** (and `KeyboardAwareScrollView` for scrolling forms) from `@/components/ui`. Android is edge-to-edge, so the system no longer moves content above the keyboard; a plain `KeyboardAvoidingView` that's iOS-only leaves Android inputs hidden.
 - **Icons are Lucide**, added to `src/components/ui/icons.tsx` with a deep import (`lucide-react-native/icons/<name>`) so only the icons in use are bundled. Screens use those wrappers, not text glyphs like → or ✓.
 - **Reanimated views carry motion only.** `className` isn't applied to `Animated.View`, so put styles on an inner `View`.
 - **Wrappers forward everything.** Android and web clone a ScrollView's `refreshControl` and pass the scroll view in as `children`; a wrapper that drops props blanks the screen (see `Refresh`).

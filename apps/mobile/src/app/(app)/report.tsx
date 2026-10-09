@@ -1,11 +1,20 @@
 import { LIMITS, REPORT_REASONS, type CreateReportInput, type ReportReason } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useReport, useSetBlocked } from '@/api/queries';
-import { Button, CheckIcon, Footer, Heading, SectionLabel, TextField } from '@/components/ui';
+import {
+  Button,
+  CheckIcon,
+  Footer,
+  Heading,
+  KeyboardAwareScrollView,
+  KeyboardScreen,
+  SectionLabel,
+  TextField,
+} from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { firstName } from '@/lib/activity';
 import { cn } from '@/lib/cn';
@@ -65,11 +74,8 @@ export default function ReportScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-bg"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <KeyboardScreen className="flex-1 bg-bg">
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
@@ -155,7 +161,7 @@ export default function ReportScreen() {
             </View>
           </Pressable>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <Footer>
         <Button
@@ -164,6 +170,6 @@ export default function ReportScreen() {
           onPress={submit}
         />
       </Footer>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

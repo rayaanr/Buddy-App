@@ -1,11 +1,21 @@
 import { AREA_NAMES, DEFAULT_AREA, type Area } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { isEmail, sendSignInCode } from '@/api/auth';
 import { errorMessage } from '@/api/client';
-import { BrandMark, Button, Chip, Footer, Heading, SectionLabel, TextField } from '@/components/ui';
+import {
+  BrandMark,
+  Button,
+  Chip,
+  Footer,
+  Heading,
+  KeyboardAwareScrollView,
+  KeyboardScreen,
+  SectionLabel,
+  TextField,
+} from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useAccountStore } from '@/store/account';
 
@@ -42,11 +52,8 @@ export default function SignUpScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-bg"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <KeyboardScreen className="flex-1 bg-bg">
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ paddingTop: top(64), paddingHorizontal: 22, paddingBottom: 20 }}
         keyboardShouldPersistTaps="handled"
@@ -97,7 +104,7 @@ export default function SignUpScreen() {
           ))}
         </View>
         {error ? <Text className="mt-4 font-sans text-[13.5px] text-danger">{error}</Text> : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <Footer>
         <Button
@@ -116,6 +123,6 @@ export default function SignUpScreen() {
           </Pressable>
         </View>
       </Footer>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

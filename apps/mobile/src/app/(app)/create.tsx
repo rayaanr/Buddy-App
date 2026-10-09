@@ -1,19 +1,19 @@
 import { LIMITS } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useCreateActivity, useMe } from '@/api/queries';
-import { Button, Chip, Footer, SectionLabel, TextField } from '@/components/ui';
+import {
+  Button,
+  Chip,
+  Footer,
+  KeyboardAwareScrollView,
+  KeyboardScreen,
+  SectionLabel,
+  TextField,
+} from '@/components/ui';
 import { ACTIVITY_TYPES, CREATE_DAYS, CREATE_TIMES, type CreateDay } from '@/data/constants';
 import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -77,11 +77,8 @@ export default function CreateActivityScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-bg"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
+    <KeyboardScreen className="flex-1 bg-bg">
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
@@ -185,7 +182,7 @@ export default function CreateActivityScreen() {
           size="md"
           className="mt-3 h-24 py-3.5 leading-[22px]"
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <Footer>
         {inPast ? (
@@ -199,7 +196,7 @@ export default function CreateActivityScreen() {
           onPress={onPublish}
         />
       </Footer>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }
 
