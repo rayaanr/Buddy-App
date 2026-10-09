@@ -14,6 +14,14 @@ export default function AppLayout() {
   const picks = usePicks();
   const picksPending = useUiStore((s) => s.picksPending);
 
+  // A link that arrived before sign-in opens now (and skips the picks deck).
+  useEffect(() => {
+    const link = useUiStore.getState().consumeLink();
+    if (!link) return;
+    useUiStore.getState().consumePicks();
+    requestAnimationFrame(() => router.push(link));
+  }, []);
+
   // Returning users land on Discover with the "Picked for you" deck on top.
   useEffect(() => {
     if (!picksPending || !picks.data) return;

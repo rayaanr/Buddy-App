@@ -9,6 +9,7 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider, usePathname } from 'expo-router';
+import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
@@ -21,11 +22,15 @@ import { ApiRequestError } from '@/api/client';
 import { queryClient, signOut, useMe } from '@/api/queries';
 import { ToastHost } from '@/components/ui';
 import { useHydrated } from '@/hooks/useHydrated';
+import { activityPathFrom } from '@/lib/pendingLink';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
+
+/** The launch link is only ever remembered once (not again after signing out). */
+let initialLinkSeen = false;
 
 const navTheme = {
   ...DarkTheme,
@@ -105,7 +110,25 @@ function RootNavigator() {
     }
   }, [onboarded]);
 
+  // A link to an activity that opened the app before you could see it (signed
+  // out, or still onboarding) opens once you're in (see the app layout).
   const loading = session.isPending || (signedIn && !me.data && !me.error);
+  const ready = signedIn && onboarded;
+  useEffect(() => {
+    // Wait for the session: until then everyone looks signed out.
+    if (ready || loading) return;
+    const remember = (url: string | null) => {
+      const path = activityPathFrom(url);
+      if (path) useUiStore.getState().rememberLink(path);
+    };
+    if (!initialLinkSeen) {
+      initialLinkSeen = true;
+      void Linking.getInitialURL().then(remember);
+    }
+    const sub = Linking.addEventListener('url', (e) => remember(e.url));
+    return () => sub.remove();
+  }, [ready, loading]);
+
   useEffect(() => {
     if (!loading) void SplashScreen.hideAsync();
   }, [loading]);
