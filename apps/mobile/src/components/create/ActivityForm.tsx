@@ -1,7 +1,15 @@
 import { atLocalDay, clockLabel, LIMITS, localDay, type ActivityGroup } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { DatePickerSheet } from '@/components/create/DatePickerSheet';
 import { TimePickerSheet } from '@/components/create/TimePickerSheet';
@@ -29,7 +37,7 @@ import {
 import { useNow } from '@/hooks/useNow';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { presetDay, shortDay } from '@/lib/activity';
+import { presetDay, shortDay, weekday } from '@/lib/activity';
 import { colors } from '@/theme';
 
 export interface Draft {
@@ -42,6 +50,8 @@ export interface Draft {
   where: string;
   spots: number;
   notes: string;
+  /** Post a new one each week. */
+  repeat: boolean;
 }
 
 export const newDraft = (): Draft => ({
@@ -53,6 +63,7 @@ export const newDraft = (): Draft => ({
   where: '',
   spots: 6,
   notes: '',
+  repeat: false,
 });
 
 /** A draft holding an existing activity, for editing. */
@@ -64,6 +75,7 @@ export function draftFrom(
     place: string;
     capacity: number;
     description: string;
+    repeatsWeekly: boolean;
   },
   now = new Date(),
 ): Draft {
@@ -79,6 +91,7 @@ export function draftFrom(
     where: a.place,
     spots: a.capacity,
     notes: a.description,
+    repeat: a.repeatsWeekly,
   };
 }
 
@@ -91,6 +104,7 @@ export interface ActivityValues {
   place: string;
   capacity: number;
   description: string;
+  repeatsWeekly: boolean;
 }
 
 interface ActivityFormProps {
@@ -152,6 +166,7 @@ export function ActivityForm({
       place: draft.where.trim(),
       capacity: draft.spots,
       description: draft.notes.trim(),
+      repeatsWeekly: draft.repeat,
     });
   };
 
@@ -282,6 +297,27 @@ export function ActivityForm({
           size="md"
           className="mt-3 h-24 py-3.5 leading-[22px]"
         />
+
+        <View className="mt-3 flex-row items-center gap-4 rounded-2xl bg-surface py-3 pl-4 pr-3">
+          <View className="flex-1">
+            <Text className="font-sans-semibold text-[15.5px] text-ink">
+              Repeat every {weekday(startsAt)}
+            </Text>
+            <Text className="mt-0.5 font-sans text-[13px] leading-[18px] text-muted">
+              Next week’s goes up once this one starts, and this group hears about it.
+            </Text>
+          </View>
+          <Switch
+            value={draft.repeat}
+            onValueChange={(repeat) => set({ repeat })}
+            accessibilityLabel="Repeat every week"
+            trackColor={{ false: colors.outline, true: colors.lime }}
+            thumbColor={draft.repeat ? colors.bg : colors.ink}
+            ios_backgroundColor={colors.outline}
+            // react-native-web colours the "on" thumb with its own prop.
+            {...{ activeThumbColor: colors.bg }}
+          />
+        </View>
 
         <SectionLabel className="mb-2.5 mt-[22px]">Cover photo</SectionLabel>
         {cover.uri ? (

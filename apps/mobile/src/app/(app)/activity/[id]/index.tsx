@@ -53,6 +53,7 @@ import {
   ordinal,
   spotsLabel,
   spotsLeft,
+  weekday,
   whenLong,
 } from '@/lib/activity';
 import { shareActivity } from '@/lib/share';
@@ -249,7 +250,11 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           ) : null}
 
           <View className="mt-5 flex-row gap-[9px]">
-            <InfoTile label="When" value={whenLong(a)} />
+            <InfoTile
+              label="When"
+              value={whenLong(a)}
+              sub={a.repeatsWeekly ? `Every ${weekday(new Date(a.startsAt))}` : undefined}
+            />
             <InfoTile label="Where" value={a.place} sub={`${a.area} · ${distanceLabel(a)}`} />
           </View>
 

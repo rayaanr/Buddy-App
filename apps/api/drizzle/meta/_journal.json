@@ -57,6 +57,13 @@
       "when": 1791585565255,
       "tag": "0007_activity_removals",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791585806321,
+      "tag": "0008_weekly_series",
+      "breakpoints": true
     }
   ]
 }

@@ -34,6 +34,7 @@ export default function EditActivityScreen() {
           ...(v.place !== a.place && { place: v.place }),
           ...(v.capacity !== a.capacity && { capacity: v.capacity }),
           ...(v.description !== a.description && { description: v.description }),
+          ...(v.repeatsWeekly !== a.repeatsWeekly && { repeatsWeekly: v.repeatsWeekly }),
         };
         // Opened from a link, there's no screen behind it to go back to.
         const done = () => (router.canGoBack() ? router.back() : router.replace(`/activity/${id}`));

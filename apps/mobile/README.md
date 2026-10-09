@@ -98,6 +98,7 @@ src/
 - Share (activity header) sends a link to the API's `/a/:id` preview page, which opens `buddy://activity/:id`. Set `EXPO_PUBLIC_SHARE_URL` to share from another domain. Universal/App Links (opening the app straight from an https link) need a real domain and are not set up yet. Opened while signed out (or before onboarding), the link is remembered and the activity opens once you're in (`src/lib/pendingLink.ts`).
 - Full activities offer **Join waitlist** (an outline button, not the primary one). Waiting people see their place in line in the footer and the waitlist in the going drawer, and are moved in automatically when a spot opens.
 - Hosts can remove a guest (or someone waiting) from the going drawer, picking a reason that's kept private. The person is told they're no longer going and the next in line moves in.
+- New/Edit activity: "Repeat every Saturday" posts next week's automatically once this one starts (and tells this week's group); the activity page shows "Every Saturday" under When.
 - Hosts can edit or cancel an activity from its ⋯ menu until it starts. A new time or place, or a cancellation, is posted in the group chat and pushed to everyone going; cancelled activities stay visible only to the people who were going.
 - Bundle ID / package is the placeholder `com.buddyapp.mobile`. Change it in `app.json` before the first EAS build.
 - App icon and splash are still Expo defaults. Logo directions are in [`design/project/Buddy Logo.dc.html`](../../design/project/Buddy%20Logo.dc.html); none has been chosen yet.

@@ -88,6 +88,21 @@ export function shortDay(day: string) {
   return `${d} ${MONTHS_SHORT[(m ?? 1) - 1]}`;
 }
 
+const WEEKDAY_NAMES = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+const COLOMBO_OFFSET_MS = 330 * 60 * 1000;
+
+/** "Saturday": the day of the week in Sri Lanka time. */
+export const weekday = (date: Date) =>
+  WEEKDAY_NAMES[new Date(date.getTime() + COLOMBO_OFFSET_MS).getUTCDay()]!;
+
 /** 1st, 2nd, 3rd, 4th… (waitlist places). */
 export function ordinal(n: number) {
   const tens = n % 100;

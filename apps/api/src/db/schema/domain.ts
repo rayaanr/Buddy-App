@@ -8,6 +8,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -96,6 +97,9 @@ export const activities = pgTable(
     /** When the "coming up" and "how was it?" notifications went out (see jobs/reminders). */
     reminderSentAt: timestamp({ withTimezone: true }),
     followUpSentAt: timestamp({ withTimezone: true }),
+    /** Weekly activities: every occurrence shares a series (see jobs/series). */
+    seriesId: uuid(),
+    repeatsWeekly: boolean().notNull().default(false),
     ...timestamps,
   },
   (t) => [
@@ -103,6 +107,8 @@ export const activities = pgTable(
     index('activities_host_idx').on(t.hostId),
     index('activities_community_idx').on(t.communityId),
     index('activities_location_gix').using('gist', t.location),
+    // One occurrence per series per start time, so the job can't double-post.
+    uniqueIndex('activities_series_starts_at_idx').on(t.seriesId, t.startsAt),
     check('activities_capacity_check', sql`${t.capacity} between 2 and 30`),
     check(
       'activities_group_check',

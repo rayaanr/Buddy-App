@@ -79,6 +79,7 @@ export async function findActivitySummaries(
       capacity: activities.capacity,
       coverUrl: activities.coverUrl,
       cancelledAt: activities.cancelledAt,
+      repeatsWeekly: activities.repeatsWeekly,
       hostId: user.id,
       hostName: user.name,
       hostAvatarKey: profiles.avatarKey,
@@ -156,6 +157,7 @@ export async function findActivitySummaries(
       chatMuted: r.chatMuted,
     },
     cancelled: r.cancelledAt !== null,
+    repeatsWeekly: r.repeatsWeekly,
   }));
 }
 

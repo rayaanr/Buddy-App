@@ -8,6 +8,8 @@ import {
   type RemovalReason,
   type UpdateActivityInput,
 } from '@buddy/shared';
+import { randomUUID } from 'node:crypto';
+
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
@@ -117,6 +119,7 @@ export async function createActivity(
         capacity: input.capacity,
         description: input.description,
         coverUrl: urls.fromKey(input.coverKey) ?? stockCover(input.group),
+        ...(input.repeatsWeekly && { seriesId: randomUUID(), repeatsWeekly: true }),
       })
       .returning({ id: activities.id });
     await tx.insert(activityMembers).values({ activityId: row!.id, userId: host.id, role: 'host' });
@@ -377,32 +380,50 @@ export async function updateActivity(
     const group = input.group ?? (row.group as ActivityGroup);
     const groupChanged = group !== row.group;
 
-    await tx
-      .update(activities)
-      .set({
-        title: input.title,
-        description: input.description,
-        capacity: input.capacity,
-        place: input.place,
-        startsAt,
-        // A new time gets its own reminders.
-        ...(timeChanged && { reminderSentAt: null, followUpSentAt: null }),
-        ...(groupChanged
-          ? {
-              group,
-              category: row.interest ? row.category : GROUP_CATEGORY[group],
-              // Swap the stock photo along with the type; keep an uploaded cover.
-              coverUrl:
-                row.coverUrl === stockCover(row.group as ActivityGroup)
-                  ? stockCover(group)
-                  : row.coverUrl,
-            }
-          : {}),
-        ...(input.coverKey !== undefined && {
-          coverUrl: (input.coverKey && urls.fromKey(input.coverKey)) || stockCover(group),
-        }),
-      })
-      .where(eq(activities.id, activityId));
+    const patch = {
+      title: input.title,
+      description: input.description,
+      capacity: input.capacity,
+      place: input.place,
+      startsAt,
+      // A new time gets its own reminders.
+      ...(timeChanged && { reminderSentAt: null, followUpSentAt: null }),
+      ...(groupChanged
+        ? {
+            group,
+            category: row.interest ? row.category : GROUP_CATEGORY[group],
+            // Swap the stock photo along with the type; keep an uploaded cover.
+            coverUrl:
+              row.coverUrl === stockCover(row.group as ActivityGroup)
+                ? stockCover(group)
+                : row.coverUrl,
+          }
+        : {}),
+      ...(input.coverKey !== undefined && {
+        coverUrl: (input.coverKey && urls.fromKey(input.coverKey)) || stockCover(group),
+      }),
+    };
+    // Some edits (e.g. only repeating) have nothing to set here.
+    if (Object.values(patch).some((v) => v !== undefined)) {
+      await tx.update(activities).set(patch).where(eq(activities.id, activityId));
+    }
+
+    if (input.repeatsWeekly !== undefined && input.repeatsWeekly !== row.repeatsWeekly) {
+      if (input.repeatsWeekly) {
+        await tx
+          .update(activities)
+          .set({ repeatsWeekly: true, seriesId: row.seriesId ?? randomUUID() })
+          .where(eq(activities.id, activityId));
+      } else {
+        // Stops the series: no more weeks after this one.
+        await tx
+          .update(activities)
+          .set({ repeatsWeekly: false })
+          .where(
+            row.seriesId ? eq(activities.seriesId, row.seriesId) : eq(activities.id, activityId),
+          );
+      }
+    }
 
     // More spots: people waiting move in.
     const moved =

@@ -38,6 +38,8 @@ export const activitySummary = z.object({
   }),
   /** Called off by the host. Only people who were going still see it. */
   cancelled: z.boolean(),
+  /** A new one is posted each week once this one starts. */
+  repeatsWeekly: z.boolean(),
 });
 export type ActivitySummary = z.infer<typeof activitySummary>;
 
@@ -81,6 +83,7 @@ export const createActivityInput = z.object({
   description: z.string().trim().max(LIMITS.descriptionMax).default(''),
   /** Key returned by the upload endpoint, if a cover photo was uploaded. */
   coverKey: z.string().optional(),
+  repeatsWeekly: z.boolean().default(false),
 });
 export type CreateActivityInput = z.input<typeof createActivityInput>;
 
@@ -95,6 +98,8 @@ export const updateActivityInput = z
     description: z.string().trim().max(LIMITS.descriptionMax),
     /** A new uploaded cover; null goes back to the stock photo for the type. */
     coverKey: z.string().nullable(),
+    /** Turning it off stops the whole series after this one. */
+    repeatsWeekly: z.boolean(),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to change');
