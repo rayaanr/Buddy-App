@@ -4,7 +4,6 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { unregisterPush } from '@/api/push';
 import { signOut, useHistory, useMe } from '@/api/queries';
-import { EditProfileSheet } from '@/components/profile/EditProfileSheet';
 import {
   Avatar,
   Button,
@@ -25,9 +24,6 @@ export default function ProfileScreen() {
   const me = useMe();
   const history = useHistory();
   const [signingOut, setSigningOut] = useState(false);
-  const [editing, setEditing] = useState(false);
-  // A fresh key per opening resets the drawer's fields to the saved profile.
-  const [editKey, setEditKey] = useState(0);
 
   if (!me.data) return <Loading className="flex-1 bg-bg" />;
   const { name, area, createdAt, interests, avatarUrl, stats: s } = me.data;
@@ -45,92 +41,86 @@ export default function ProfileScreen() {
   };
 
   return (
-    <>
-      <ScrollView
-        className="flex-1 bg-bg"
-        contentContainerStyle={{ paddingTop: top(68), paddingHorizontal: 22, paddingBottom: 24 }}
-        refreshControl={
-          <Refresh
-            refreshing={me.isRefetching}
-            onRefresh={() => void Promise.all([me.refetch(), history.refetch()])}
-          />
-        }
-      >
-        <View className="items-center">
-          <Avatar uri={avatarUrl ?? undefined} size={86} fallback={colors.me} />
-          <IconButton
-            icon={<SettingsIcon />}
-            label="Settings"
-            onPress={() => router.push('/settings')}
-            className="absolute right-0 top-0"
-          />
-        </View>
-        <Heading size="page" className="mt-4 text-center">
-          {name}
-        </Heading>
-        <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">
-          {locationLabel(area)}
-        </Text>
-        <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
-          On Buddy since {monthYear(createdAt)}
-        </Text>
+    <ScrollView
+      className="flex-1 bg-bg"
+      contentContainerStyle={{ paddingTop: top(68), paddingHorizontal: 22, paddingBottom: 24 }}
+      refreshControl={
+        <Refresh
+          refreshing={me.isRefetching}
+          onRefresh={() => void Promise.all([me.refetch(), history.refetch()])}
+        />
+      }
+    >
+      <View className="items-center">
+        <Avatar uri={avatarUrl ?? undefined} size={86} fallback={colors.me} />
+        <IconButton
+          icon={<SettingsIcon />}
+          label="Settings"
+          onPress={() => router.push('/settings')}
+          className="absolute right-0 top-0"
+        />
+      </View>
+      <Heading size="page" className="mt-4 text-center">
+        {name}
+      </Heading>
+      <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">
+        {locationLabel(area)}
+      </Text>
+      <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
+        On Buddy since {monthYear(createdAt)}
+      </Text>
 
-        <View className="mt-5 flex-row gap-2">
-          {stats.map((st) => (
-            <View key={st.label} className="flex-1 rounded-2xl bg-surface px-3.5 pb-4 pt-3.5">
-              <Text className="font-display text-[22px] text-ink">{st.value}</Text>
-              <Text className="mt-1 font-sans text-[13px] text-muted">{st.label}</Text>
-            </View>
-          ))}
-        </View>
-
-        <SectionLabel className="mb-2.5 mt-6">Into</SectionLabel>
-        <View className="flex-row flex-wrap gap-2">
-          {interests.map((i) => (
-            <Tag key={i} label={i} />
-          ))}
-        </View>
-
-        <SectionLabel className="mb-1 mt-6">Recent</SectionLabel>
-        {history.data?.length === 0 ? (
-          <Text className="py-3.5 font-sans text-[14.5px] text-muted">
-            Activities you’ve been to will show up here.
-          </Text>
-        ) : null}
-        {history.data?.map((a) => (
-          <Pressable
-            key={a.id}
-            onPress={() => router.push(`/activity/${a.id}`)}
-            className="flex-row items-center justify-between gap-3 border-b border-divider py-3.5 active:opacity-80"
-          >
-            <Text className="flex-1 font-sans text-[15.5px] text-ink" numberOfLines={1}>
-              {a.title}
-            </Text>
-            <Text className="font-sans text-[14px] text-muted">{dayMonth(a.startsAt)}</Text>
-          </Pressable>
+      <View className="mt-5 flex-row gap-2">
+        {stats.map((st) => (
+          <View key={st.label} className="flex-1 rounded-2xl bg-surface px-3.5 pb-4 pt-3.5">
+            <Text className="font-display text-[22px] text-ink">{st.value}</Text>
+            <Text className="mt-1 font-sans text-[13px] text-muted">{st.label}</Text>
+          </View>
         ))}
+      </View>
 
-        <Button
-          label="Edit profile"
-          variant="outline"
-          size="md"
-          onPress={() => {
-            setEditKey((k) => k + 1);
-            setEditing(true);
-          }}
-          className="mt-[22px]"
-        />
-        <Button
-          label={signingOut ? 'Logging out…' : 'Log out'}
-          variant="danger"
-          size="md"
-          disabled={signingOut}
-          onPress={logOut}
-          className="mt-2.5"
-          weight="medium"
-        />
-      </ScrollView>
-      <EditProfileSheet key={editKey} open={editing} onClose={() => setEditing(false)} />
-    </>
+      <SectionLabel className="mb-2.5 mt-6">Into</SectionLabel>
+      <View className="flex-row flex-wrap gap-2">
+        {interests.map((i) => (
+          <Tag key={i} label={i} />
+        ))}
+      </View>
+
+      <SectionLabel className="mb-1 mt-6">Recent</SectionLabel>
+      {history.data?.length === 0 ? (
+        <Text className="py-3.5 font-sans text-[14.5px] text-muted">
+          Activities you’ve been to will show up here.
+        </Text>
+      ) : null}
+      {history.data?.map((a) => (
+        <Pressable
+          key={a.id}
+          onPress={() => router.push(`/activity/${a.id}`)}
+          className="flex-row items-center justify-between gap-3 border-b border-divider py-3.5 active:opacity-80"
+        >
+          <Text className="flex-1 font-sans text-[15.5px] text-ink" numberOfLines={1}>
+            {a.title}
+          </Text>
+          <Text className="font-sans text-[14px] text-muted">{dayMonth(a.startsAt)}</Text>
+        </Pressable>
+      ))}
+
+      <Button
+        label="Edit profile"
+        variant="outline"
+        size="md"
+        onPress={() => router.push('/edit-profile')}
+        className="mt-[22px]"
+      />
+      <Button
+        label={signingOut ? 'Logging out…' : 'Log out'}
+        variant="danger"
+        size="md"
+        disabled={signingOut}
+        onPress={logOut}
+        className="mt-2.5"
+        weight="medium"
+      />
+    </ScrollView>
   );
 }

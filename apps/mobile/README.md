@@ -90,7 +90,7 @@ src/
 ## Notes
 
 - Signed out, the server can't personalise anything, so the "Good to see you" screen shows a picks preview saved on the device at the last session.
-- Edit profile picks the area from chips (not free text): distances are measured from a known area.
+- Edit profile is one page (name, area, interests, when you're free) saved together. Area is a chip choice, not free text: distances are measured from a known area.
 - Activities are placed at their area's centre until the Create screen gets a map picker.
 - Photo uploads are ready in the API but not in the UI yet (no picker in the design).
 - Bundle ID / package is the placeholder `com.buddyapp.mobile`. Change it in `app.json` before the first EAS build.

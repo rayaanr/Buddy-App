@@ -22,10 +22,10 @@ interface InterestPickerProps {
   onSubmit: (interests: Interest[], availability: Availability[]) => void;
 }
 
-const toggle = <T extends string>(list: T[], item: T) =>
+export const toggle = <T extends string>(list: T[], item: T) =>
   list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 
-/** "What are you into?" — used for first-run onboarding and for editing interests later. */
+/** "What are you into?" — first-run onboarding. Profile → Edit profile reuses its tiles. */
 export function InterestPicker({
   initialInterests,
   initialAvailability,
@@ -88,7 +88,8 @@ export function InterestPicker({
   );
 }
 
-function InterestTile({
+/** A half-width interest tile with a check circle. */
+export function InterestTile({
   label,
   selected,
   onPress,

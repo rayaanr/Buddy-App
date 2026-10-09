@@ -62,7 +62,6 @@ export default function AppLayout() {
         name="picks"
         options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
       />
-      <Stack.Screen name="interests" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
     </Stack>
   );
