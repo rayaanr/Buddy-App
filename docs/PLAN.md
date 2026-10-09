@@ -14,6 +14,21 @@
 | Push           | Expo Push                                      | Free; covers backgrounded apps                        |
 | Contracts      | Zod schemas in `packages/shared`               | One source of truth for app and API                   |
 
+## Status
+
+Phases 0–7 are done (M1–M4). Next: Phase 8 (store readiness), then Phase 9 (deploy).
+
+Changes from the original plan, decided while building:
+
+- **Mobile sign-in screens moved from Phase 3 to Phase 7**, so the app switched from mock data to real accounts in one step instead of mixing both.
+- **Code-entry screen added** (`verify.tsx`): email sign-in needs one, and the design had none.
+- **"Good to see you" works offline**: the device remembers the last account and a picks preview, since the server can't personalise anything for a signed-out user.
+- **`GET /v1/activities/history`** added for Profile → Recent.
+- **Sign-in rate limiting is production-only** (Better Auth's default).
+- **`@hono/node-ws` dropped**: `@hono/node-server` v2 has WebSockets built in.
+
+Known gaps carried forward: no photo picker in the UI yet (API ready); activity locations use area centres until a map picker exists; orphaned R2 uploads aren't cleaned up; the WebSocket heartbeat has no automated test.
+
 ## Phases
 
 ### Phase 0: Monorepo

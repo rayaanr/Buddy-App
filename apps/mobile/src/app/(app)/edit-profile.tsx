@@ -1,28 +1,35 @@
+import { AREA_NAMES, type Area } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 
-import { Button, Heading, SectionLabel, TextField } from '@/components/ui';
+import { errorMessage } from '@/api/client';
+import { useMe, useUpdateMe } from '@/api/queries';
+import { Button, Chip, Heading, SectionLabel, TextField } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { useAccount, useSessionStore } from '@/store/session';
 import { toast } from '@/store/ui';
 
 /** Bottom sheet over the profile tab. */
 export default function EditProfileSheet() {
-  const account = useAccount();
-  const updateProfile = useSessionStore((s) => s.updateProfile);
+  const me = useMe();
+  const update = useUpdateMe();
   const { bottom } = useScreenInsets();
-  const [name, setName] = useState(account.name);
-  const [location, setLocation] = useState(account.location);
+  const [name, setName] = useState(me.data?.name ?? '');
+  const [area, setArea] = useState<Area>(me.data?.area ?? 'Colombo 07');
 
   const save = () => {
-    updateProfile({
-      name: name.trim() || account.name,
-      location: location.trim() || account.location,
-    });
-    router.back();
-    toast('Profile saved.');
+    if (!me.data) return;
+    update.mutate(
+      { name: name.trim() || me.data.name, area },
+      {
+        onSuccess: () => {
+          router.back();
+          toast('Profile saved.');
+        },
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
   };
 
   return (
@@ -56,8 +63,13 @@ export default function EditProfileSheet() {
             autoCapitalize="words"
           />
 
+          {/* Distances are measured from a known area, so this is a choice, not free text. */}
           <SectionLabel className="mb-2 mt-4">Area</SectionLabel>
-          <TextField value={location} onChangeText={setLocation} tone="inset" size="md" />
+          <View className="flex-row flex-wrap gap-2">
+            {AREA_NAMES.map((a) => (
+              <Chip key={a} label={a} selected={a === area} onPress={() => setArea(a)} />
+            ))}
+          </View>
 
           <Pressable
             onPress={() => router.replace('/interests')}
@@ -69,7 +81,12 @@ export default function EditProfileSheet() {
             <Text className="font-sans-medium text-[15px] text-lime">Edit →</Text>
           </Pressable>
 
-          <Button label="Save" onPress={save} className="mt-[18px]" />
+          <Button
+            label={update.isPending ? 'Saving…' : 'Save'}
+            inactive={update.isPending}
+            onPress={save}
+            className="mt-[18px]"
+          />
         </View>
       </Animated.View>
     </KeyboardAvoidingView>

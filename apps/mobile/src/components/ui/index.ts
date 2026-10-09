@@ -11,3 +11,4 @@ export * from './SegmentedControl';
 export * from './TextField';
 export * from './Toast';
 export * from './Typography';
+export * from './QueryState';

@@ -11,7 +11,7 @@ import { atLocalTime } from '@buddy/shared';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { messages } from '../src/db/schema';
+import { activities as activitiesTable, activityMembers, messages } from '../src/db/schema';
 import type { HttpError } from '../src/lib/errors';
 import { joinActivity } from '../src/modules/activities/service';
 import { useTestApp } from './harness';
@@ -178,6 +178,37 @@ describe('joining and leaving', () => {
       body: 'Perfect. Meet at reception at 06:20.',
       mine: false,
     });
+  });
+});
+
+describe('history', () => {
+  it('lists past activities you were part of, newest first', async () => {
+    const { headers, userId } = await t.signIn();
+    const { db } = t.deps;
+    const past = async (title: string, daysAgo: number) => {
+      const [row] = await db
+        .insert(activitiesTable)
+        .values({
+          hostId: userId,
+          title,
+          category: 'RUNNING',
+          group: 'Running',
+          startsAt: new Date(Date.now() - daysAgo * 86_400_000),
+          place: 'Galle Face Green',
+          area: 'Colombo 03',
+          location: { lat: 6.9271, lng: 79.845 },
+          capacity: 10,
+        })
+        .returning({ id: activitiesTable.id });
+      await db.insert(activityMembers).values({ activityId: row!.id, userId, role: 'host' });
+    };
+    await past('Older run', 14);
+    await past('Last week run', 7);
+
+    const res = await t.call<{ activities: ActivitySummary[] }>('/v1/activities/history', {
+      headers,
+    });
+    expect(res.body.activities.map((a) => a.title)).toEqual(['Last week run', 'Older run']);
   });
 });
 

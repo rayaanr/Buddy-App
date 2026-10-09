@@ -1,35 +1,44 @@
+import { AREA_NAMES, DEFAULT_AREA, type Area } from '@buddy/shared';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
+import { isEmail, sendSignInCode } from '@/api/auth';
+import { errorMessage } from '@/api/client';
 import { BrandMark, Button, Chip, Footer, Heading, SectionLabel, TextField } from '@/components/ui';
-import { DEFAULT_AREA, SIGNUP_AREAS } from '@/data/constants';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { useSessionStore } from '@/store/session';
-
-const PHONE_DIGITS = 9;
-
-/** Strips formatting and a leading trunk 0, so "077 123 4567" and "77 123 4567" both validate. */
-const normalisePhone = (raw: string) => raw.replace(/\D/g, '').replace(/^0/, '');
+import { useAccountStore } from '@/store/account';
 
 export default function SignUpScreen() {
   const { top } = useScreenInsets();
-  const createAccount = useSessionStore((s) => s.createAccount);
-  const restoreAccount = useSessionStore((s) => s.restoreAccount);
+  const setPendingSignUp = useAccountStore((s) => s.setPendingSignUp);
 
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [area, setArea] = useState<string>(DEFAULT_AREA);
+  const [email, setEmail] = useState('');
+  const [area, setArea] = useState<Area>(DEFAULT_AREA);
   const [tried, setTried] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const phoneValid = normalisePhone(phone).length === PHONE_DIGITS;
-  const canSubmit = !!name.trim() && phoneValid;
+  const emailValid = isEmail(email);
+  const canSubmit = !!name.trim() && emailValid;
 
-  const submit = () => {
+  const submit = async () => {
     if (!canSubmit) {
       setTried(true);
       return;
     }
-    createAccount(name, area);
+    setSending(true);
+    setError(null);
+    try {
+      await sendSignInCode(email);
+      setPendingSignUp({ name: name.trim(), email: email.trim().toLowerCase(), area });
+      router.push({ pathname: '/verify', params: { email: email.trim().toLowerCase() } });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -61,41 +70,48 @@ export default function SignUpScreen() {
           returnKeyType="next"
         />
 
-        <SectionLabel className="mb-2 mt-[18px]">Mobile number</SectionLabel>
-        <View className="flex-row gap-2">
-          <View className="h-[54px] justify-center rounded-2xl border border-field bg-surface-sunken px-4">
-            <Text className="font-mono-medium text-[16px] text-ink-soft">+94</Text>
-          </View>
-          <TextField
-            value={phone}
-            onChangeText={(t) => setPhone(t.replace(/[^\d ]/g, '').slice(0, 12))}
-            placeholder="77 123 4567"
-            keyboardType="number-pad"
-            textContentType="telephoneNumber"
-            autoComplete="tel"
-            mono
-            className="min-w-0 flex-1"
-          />
-        </View>
-        {tried && !phoneValid ? (
+        <SectionLabel className="mb-2 mt-[18px]">Email</SectionLabel>
+        <TextField
+          value={email}
+          onChangeText={setEmail}
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          textContentType="emailAddress"
+          autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        {tried && !emailValid ? (
           <Text className="mt-2 font-sans text-[13.5px] text-danger">
-            Enter a 9-digit mobile number.
+            Enter a valid email address.
           </Text>
         ) : null}
+        <Text className="mt-2 font-sans text-[13.5px] leading-[19px] text-muted">
+          We’ll email you a 6-digit code. No password needed.
+        </Text>
 
         <SectionLabel className="mb-2.5 mt-[18px]">Your area</SectionLabel>
         <View className="flex-row flex-wrap gap-2">
-          {SIGNUP_AREAS.map((a) => (
+          {AREA_NAMES.map((a) => (
             <Chip key={a} label={a} selected={a === area} onPress={() => setArea(a)} />
           ))}
         </View>
+        {error ? <Text className="mt-4 font-sans text-[13.5px] text-danger">{error}</Text> : null}
       </ScrollView>
 
       <Footer>
-        <Button label="Create account" inactive={!canSubmit} onPress={submit} />
+        <Button
+          label={sending ? 'Sending code…' : 'Create account'}
+          inactive={!canSubmit || sending}
+          onPress={submit}
+        />
         <View className="mt-3.5 flex-row justify-center gap-1.5">
           <Text className="font-sans text-[14.5px] text-muted">Already on Buddy?</Text>
-          <Pressable onPress={restoreAccount} accessibilityRole="link" hitSlop={8}>
+          <Pressable
+            onPress={() => router.replace('/sign-in')}
+            accessibilityRole="link"
+            hitSlop={8}
+          >
             <Text className="font-sans-medium text-[14.5px] text-lime">Sign in</Text>
           </Pressable>
         </View>

@@ -1,17 +1,22 @@
+import { errorMessage } from '@/api/client';
+import { useMe, useUpdateMe } from '@/api/queries';
 import { InterestPicker } from '@/components/onboarding/InterestPicker';
-import { useSessionStore } from '@/store/session';
+import { toast } from '@/store/ui';
 
 export default function OnboardingScreen() {
-  const interests = useSessionStore((s) => s.interests);
-  const availability = useSessionStore((s) => s.availability);
-  const completeOnboarding = useSessionStore((s) => s.completeOnboarding);
+  const me = useMe();
+  const update = useUpdateMe();
 
   return (
     <InterestPicker
-      initialInterests={interests}
-      initialAvailability={availability}
+      initialInterests={me.data?.interests ?? []}
+      initialAvailability={me.data?.availability ?? []}
       submitLabel="Continue"
-      onSubmit={completeOnboarding}
+      busy={update.isPending}
+      // Saving interests completes onboarding; the root navigator then opens the app.
+      onSubmit={(interests, availability) =>
+        update.mutate({ interests, availability }, { onError: (err) => toast(errorMessage(err)) })
+      }
     />
   );
 }

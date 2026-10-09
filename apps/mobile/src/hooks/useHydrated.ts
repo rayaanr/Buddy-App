@@ -1,20 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
-import { useActivitiesStore } from '@/store/activities';
-import { useSessionStore } from '@/store/session';
+import { useAccountStore } from '@/store/account';
 
-const stores = [useSessionStore, useActivitiesStore];
+const subscribe = (onChange: () => void) => useAccountStore.persist.onFinishHydration(onChange);
+const getSnapshot = () => useAccountStore.persist.hasHydrated();
 
-/** True once every persisted store has finished loading from AsyncStorage. */
+/** True once the remembered account has loaded from device storage. */
 export function useHydrated() {
-  const [hydrated, setHydrated] = useState(() => stores.every((s) => s.persist.hasHydrated()));
-
-  useEffect(() => {
-    const check = () => setHydrated(stores.every((s) => s.persist.hasHydrated()));
-    const unsubs = stores.map((s) => s.persist.onFinishHydration(check));
-    check();
-    return () => unsubs.forEach((u) => u());
-  }, []);
-
-  return hydrated;
+  return useSyncExternalStore(subscribe, getSnapshot);
 }

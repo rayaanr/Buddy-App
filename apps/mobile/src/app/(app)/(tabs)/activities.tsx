@@ -1,13 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { useFromCommunities, useMyActivities } from '@/api/queries';
 import { MyActivityCard } from '@/components/activity/ActivityCards';
-import { EmptyState, Heading, SegmentedControl } from '@/components/ui';
-import { useCommunityFeed } from '@/hooks/useCommunityFeed';
+import {
+  EmptyState,
+  Heading,
+  LoadError,
+  Loading,
+  Refresh,
+  SegmentedControl,
+} from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { whenLabel } from '@/lib/activity';
 import { cn } from '@/lib/cn';
-import { useActivitiesStore } from '@/store/activities';
 
 type Segment = 'joined' | 'hosting';
 
@@ -16,18 +22,28 @@ export default function ActivitiesScreen() {
   // The selected segment lives in the URL so "Publish" can deep-link to ?segment=hosting.
   const { segment = 'joined' } = useLocalSearchParams<{ segment?: Segment }>();
   const setSegment = (value: Segment) => router.setParams({ segment: value });
-  const activities = useActivitiesStore((s) => s.activities);
-  const communityFeed = useCommunityFeed();
+  const joined = useMyActivities('joined');
+  const hosting = useMyActivities('hosting');
+  const fromCommunities = useFromCommunities();
 
-  const joined = activities.filter((a) => a.joined);
-  const hosting = activities.filter((a) => a.hosting);
   const isJoined = segment === 'joined';
-  const list = isJoined ? joined : hosting;
+  const current = isJoined ? joined : hosting;
+  const list = current.data ?? [];
+  const news = fromCommunities.data ?? [];
+  const count = (q: typeof joined) => (q.data ? ` · ${q.data.length}` : '');
 
   return (
     <ScrollView
       className="flex-1 bg-bg"
       contentContainerStyle={{ paddingTop: top(62), paddingHorizontal: 22, paddingBottom: 24 }}
+      refreshControl={
+        <Refresh
+          refreshing={current.isRefetching}
+          onRefresh={() =>
+            void Promise.all([joined.refetch(), hosting.refetch(), fromCommunities.refetch()])
+          }
+        />
+      }
     >
       <Heading>Your activities</Heading>
       <SegmentedControl
@@ -35,20 +51,20 @@ export default function ActivitiesScreen() {
         value={segment}
         onChange={setSegment}
         segments={[
-          { value: 'joined', label: `Joined · ${joined.length}` },
-          { value: 'hosting', label: `Hosting · ${hosting.length}` },
+          { value: 'joined', label: `Joined${count(joined)}` },
+          { value: 'hosting', label: `Hosting${count(hosting)}` },
         ]}
       />
 
-      {communityFeed.length > 0 ? (
+      {news.length > 0 ? (
         <View className="mt-4 rounded-[20px] border border-lime-panel-border bg-lime-panel px-4 pb-1.5 pt-3.5">
           <View className="flex-row items-center gap-2">
             <View className="h-2 w-2 rounded-full bg-lime" />
             <Text className="font-sans-semibold text-[15px] text-ink">
-              {communityFeed.length} new from your communities
+              {news.length} new from your communities
             </Text>
           </View>
-          {communityFeed.slice(0, 3).map(({ activity, communityName }, k) => (
+          {news.slice(0, 3).map((activity, k) => (
             <Pressable
               key={activity.id}
               onPress={() => router.push(`/activity/${activity.id}`)}
@@ -62,7 +78,7 @@ export default function ActivitiesScreen() {
                   {activity.title}
                 </Text>
                 <Text className="mt-[3px] font-sans text-[13px] text-lime-panel-muted">
-                  {communityName} · {whenLabel(activity)}
+                  {activity.community?.name} · {whenLabel(activity)}
                 </Text>
               </View>
               <Text className="self-center font-sans-medium text-[14px] text-lime">View →</Text>
@@ -72,10 +88,14 @@ export default function ActivitiesScreen() {
       ) : null}
 
       <View className="mt-4 gap-3">
+        {current.isLoading ? <Loading /> : null}
+        {current.error ? (
+          <LoadError error={current.error} onRetry={() => void current.refetch()} />
+        ) : null}
         {list.map((a) => (
           <MyActivityCard key={a.id} activity={a} />
         ))}
-        {list.length === 0 ? (
+        {current.data && list.length === 0 ? (
           isJoined ? (
             <EmptyState
               title="Nothing joined yet"

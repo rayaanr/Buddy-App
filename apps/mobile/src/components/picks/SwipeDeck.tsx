@@ -1,3 +1,4 @@
+import type { ActivitySummary as Activity } from '@buddy/shared';
 import * as Haptics from 'expo-haptics';
 import { useLayoutEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -13,9 +14,8 @@ import Animated, {
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import { CheckIcon, CloseIcon, Eyebrow, Photo, Scrim } from '@/components/ui';
-import { availabilityColor, spotsLabel, whenLong } from '@/lib/activity';
+import { availabilityColor, distanceLabel, hueFor, spotsLabel, whenLong } from '@/lib/activity';
 import { colors, EASE_OUT } from '@/theme';
-import type { Activity } from '@/types/models';
 
 /** Drag distance past which a release counts as a decision. */
 const THRESHOLD = 100;
@@ -129,8 +129,8 @@ function BackCard({ activity, tx }: { activity: Activity; tx: SharedValue<number
   return (
     <Animated.View style={[StyleSheet.absoluteFill, style]}>
       <Photo
-        uri={activity.image}
-        hue={activity.hue}
+        uri={activity.coverUrl ?? undefined}
+        hue={hueFor(activity)}
         className="flex-1 rounded-[28px] border border-line"
       >
         <View className="absolute inset-0 bg-[rgba(11,12,11,0.45)]" />
@@ -165,7 +165,7 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
     <Animated.View
       style={[
         StyleSheet.absoluteFill,
-        { borderRadius: 28, backgroundColor: a.hue },
+        { borderRadius: 28, backgroundColor: hueFor(a) },
         {
           shadowColor: '#000',
           shadowOpacity: 0.5,
@@ -176,10 +176,14 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
         cardStyle,
       ]}
     >
-      <Photo uri={a.image} hue={a.hue} className="flex-1 rounded-[28px] border border-[#2a2c29]">
+      <Photo
+        uri={a.coverUrl ?? undefined}
+        hue={hueFor(a)}
+        className="flex-1 rounded-[28px] border border-[#2a2c29]"
+      >
         <Scrim from={0.35} opacity={0.92} />
         <View className="absolute right-3.5 top-3.5 h-7 justify-center rounded-[14px] bg-lime px-[11px]">
-          <Text className="font-sans-semibold text-[13px] text-bg">{a.distance}</Text>
+          <Text className="font-sans-semibold text-[13px] text-bg">{distanceLabel(a)}</Text>
         </View>
 
         <Animated.View
@@ -212,7 +216,7 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
               {whenLong(a)} · {a.place}
             </Text>
             <Text className="font-sans text-[14.5px]" style={{ color: availabilityColor(a) }}>
-              {a.going} going · {spotsLabel(a)}
+              {a.goingCount} going · {spotsLabel(a)}
             </Text>
           </View>
         </View>

@@ -1,7 +1,7 @@
 import { ERROR_CODES } from '@buddy/shared';
 import { zValidator } from '@hono/zod-validator';
 import type { ValidationTargets } from 'hono';
-import type { ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 
 import { HttpError } from './errors';
 
@@ -20,3 +20,6 @@ export const validate = <Target extends keyof ValidationTargets, Schema extends 
       });
     }
   });
+
+/** Validates the `:id` path parameter as a UUID (otherwise 400, never a database error). */
+export const idParam = () => validate('param', z.object({ id: z.uuid() }));

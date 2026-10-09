@@ -1,45 +1,47 @@
+import { DISCOVER_FILTERS, type DiscoverFilter } from '@buddy/shared';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { useFeed, useFromCommunities, useMe } from '@/api/queries';
 import {
   ActivityHeroCard,
   ActivityRow,
   CommunityPickCard,
 } from '@/components/activity/ActivityCards';
-import { Avatar, Chip, EmptyState, Heading } from '@/components/ui';
-import { DISCOVER_FILTERS, type DiscoverFilter } from '@/data/constants';
-import { MY_AVATAR } from '@/data/images';
-import { useCommunityFeed } from '@/hooks/useCommunityFeed';
+import { Avatar, Chip, EmptyState, Heading, LoadError, Loading, Refresh } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { matchesFilter } from '@/lib/activity';
-import { useActivitiesStore } from '@/store/activities';
-import { useAccount } from '@/store/session';
+import { locationLabel } from '@/lib/activity';
 import { colors } from '@/theme';
 
 export default function DiscoverScreen() {
   const { top } = useScreenInsets();
-  const account = useAccount();
-  const activities = useActivitiesStore((s) => s.activities);
-  const communityFeed = useCommunityFeed();
   const [filter, setFilter] = useState<DiscoverFilter>('All');
+  const me = useMe();
+  const feed = useFeed(filter);
+  const fromCommunities = useFromCommunities();
 
-  const feed = useMemo(
-    () => activities.filter((a) => matchesFilter(a, filter)),
-    [activities, filter],
-  );
-  const [hero, ...rows] = feed;
-  const showCommunityRow = filter === 'All' && communityFeed.length > 0;
+  const [hero, ...rows] = feed.data ?? [];
+  const communityItems = fromCommunities.data ?? [];
+  const showCommunityRow = filter === 'All' && communityItems.length > 0;
 
   return (
     <ScrollView
       className="flex-1 bg-bg"
       contentContainerStyle={{ paddingTop: top(58), paddingBottom: 24 }}
+      refreshControl={
+        <Refresh
+          refreshing={feed.isRefetching}
+          onRefresh={() => void Promise.all([feed.refetch(), fromCommunities.refetch()])}
+        />
+      }
     >
       <View className="flex-row items-center justify-between px-[22px]">
-        <Text className="font-sans text-[14px] text-muted">{account.location}</Text>
+        <Text className="font-sans text-[14px] text-muted">
+          {me.data ? locationLabel(me.data.area) : ''}
+        </Text>
         <Avatar
-          uri={MY_AVATAR}
+          uri={me.data?.avatarUrl ?? undefined}
           size={42}
           fallback={colors.me}
           onPress={() => router.navigate('/profile')}
@@ -77,23 +79,21 @@ export default function DiscoverScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 10, paddingHorizontal: 22, paddingBottom: 20 }}
           >
-            {communityFeed.map(({ activity, communityName }) => (
-              <CommunityPickCard
-                key={activity.id}
-                activity={activity}
-                communityName={communityName}
-              />
+            {communityItems.map((activity) => (
+              <CommunityPickCard key={activity.id} activity={activity} />
             ))}
           </ScrollView>
         </>
       ) : null}
 
       <View className="gap-3 px-[22px]">
+        {feed.isLoading ? <Loading /> : null}
+        {feed.error ? <LoadError error={feed.error} onRetry={() => void feed.refetch()} /> : null}
         {hero ? <ActivityHeroCard activity={hero} /> : null}
         {rows.map((a) => (
           <ActivityRow key={a.id} activity={a} />
         ))}
-        {!hero ? (
+        {feed.data && !hero ? (
           <EmptyState
             card
             title="Nothing here yet"

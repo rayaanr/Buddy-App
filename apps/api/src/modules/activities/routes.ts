@@ -1,11 +1,11 @@
 import { createActivityInput, feedQuery, myActivitiesQuery } from '@buddy/shared';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import { currentUser, requireUser } from '../../auth/middleware';
-import { activities, communityMembers } from '../../db/schema';
+import { activities, activityMembers, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
-import { validate } from '../../lib/validate';
+import { idParam, validate } from '../../lib/validate';
 import { toChatMessage } from '../chat/service';
 import { originFor } from '../profiles/service';
 import { picksFor } from './picks';
@@ -18,7 +18,7 @@ import {
   myActivities,
 } from './service';
 
-const UUID = '{[0-9a-f-]{36}}';
+const HISTORY_LIMIT = 10;
 
 export function activityRoutes(deps: Deps) {
   const { db, urls, hub } = deps;
@@ -73,7 +73,28 @@ export function activityRoutes(deps: Deps) {
         return c.json({ activities: await myActivities(db, urls, me.id, role) });
       })
 
-      .get(`/:id${UUID}`, async (c) =>
+      // Past activities you joined or hosted, newest first (Profile → Recent).
+      .get('/history', async (c) => {
+        const me = currentUser(c);
+        const items = await findActivitySummaries(db, urls, {
+          viewerId: me.id,
+          where: [
+            sql`${activities.startsAt} < now() - interval '1 hour'`,
+            inArray(
+              activities.id,
+              db
+                .select({ id: activityMembers.activityId })
+                .from(activityMembers)
+                .where(eq(activityMembers.userId, me.id)),
+            ),
+          ],
+          orderBy: [desc(activities.startsAt)],
+          limit: HISTORY_LIMIT,
+        });
+        return c.json({ activities: items });
+      })
+
+      .get('/:id', idParam(), async (c) =>
         c.json(await getActivityDetail(db, urls, c.req.param('id'), currentUser(c).id)),
       )
 
@@ -82,7 +103,7 @@ export function activityRoutes(deps: Deps) {
         return c.json(await createActivity(db, urls, me, c.req.valid('json')), 201);
       })
 
-      .post(`/:id${UUID}/membership`, async (c) => {
+      .post('/:id/membership', idParam(), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         const result = await joinActivity(db, me, id);
@@ -95,7 +116,7 @@ export function activityRoutes(deps: Deps) {
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
-      .delete(`/:id${UUID}/membership`, async (c) => {
+      .delete('/:id/membership', idParam(), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         const result = await leaveActivity(db, me, id);

@@ -90,6 +90,13 @@ describe('activity detail', () => {
     expect(res.body.attendees[0]!.name).toBe('Nethmi');
   });
 
+  it('rejects malformed ids with a validation error', async () => {
+    const { headers } = await t.signIn();
+    const res = await t.call('/v1/activities/not-a-uuid', { headers });
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({ error: { code: 'validation_error' } });
+  });
+
   it('returns 404 for an unknown activity', async () => {
     const { headers } = await t.signIn();
     const res = await t.call(`/v1/activities/00000000-0000-4000-8000-000000000000`, { headers });

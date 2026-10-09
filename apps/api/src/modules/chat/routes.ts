@@ -6,7 +6,7 @@ import type { WebSocket } from 'ws';
 
 import { currentUser, requireUser } from '../../auth/middleware';
 import type { AppEnv, Deps } from '../../http/context';
-import { validate } from '../../lib/validate';
+import { idParam, validate } from '../../lib/validate';
 import type { Peer } from '../../realtime/hub';
 import { listMessages, markRead, requireMember, sendMessage } from './service';
 
@@ -26,7 +26,7 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
 
   return (
     new Hono<ChatEnv>()
-      .use(requireUser, memberOnly)
+      .use(requireUser, idParam(), memberOnly)
 
       .get('/messages', validate('query', messagesQuery), async (c) => {
         const q = c.req.valid('query');

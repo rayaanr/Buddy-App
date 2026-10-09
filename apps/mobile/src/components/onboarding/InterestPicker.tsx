@@ -2,18 +2,27 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { BrandMark, Button, Chip, Footer, Heading, SectionLabel } from '@/components/ui';
-import { AVAILABILITY, INTERESTS, MIN_INTERESTS } from '@/data/constants';
+import {
+  AVAILABILITY,
+  INTERESTS,
+  MIN_INTERESTS,
+  type Availability,
+  type Interest,
+} from '@buddy/shared';
+
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 
 interface InterestPickerProps {
-  initialInterests: string[];
-  initialAvailability: string[];
+  initialInterests: Interest[];
+  initialAvailability: Availability[];
   submitLabel: string;
-  onSubmit: (interests: string[], availability: string[]) => void;
+  /** Disables the button while saving. */
+  busy?: boolean;
+  onSubmit: (interests: Interest[], availability: Availability[]) => void;
 }
 
-const toggle = (list: string[], item: string) =>
+const toggle = <T extends string>(list: T[], item: T) =>
   list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 
 /** "What are you into?" — used for first-run onboarding and for editing interests later. */
@@ -21,6 +30,7 @@ export function InterestPicker({
   initialInterests,
   initialAvailability,
   submitLabel,
+  busy,
   onSubmit,
 }: InterestPickerProps) {
   const { top } = useScreenInsets();
@@ -70,7 +80,8 @@ export function InterestPicker({
         <Button
           label={need > 0 ? `Pick ${need} more` : submitLabel}
           inactive={need > 0}
-          onPress={() => need <= 0 && onSubmit(interests, availability)}
+          disabled={busy}
+          onPress={() => need <= 0 && !busy && onSubmit(interests, availability)}
         />
       </Footer>
     </View>

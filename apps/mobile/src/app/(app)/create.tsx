@@ -1,3 +1,4 @@
+import { LIMITS } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -10,15 +11,27 @@ import {
   View,
 } from 'react-native';
 
+import { errorMessage } from '@/api/client';
+import { useCreateActivity, useMe } from '@/api/queries';
 import { Button, Chip, Footer, SectionLabel, TextField } from '@/components/ui';
-import { ACTIVITY_TYPES, CREATE_DAYS, CREATE_TIMES, SPOTS_MAX, SPOTS_MIN } from '@/data/constants';
+import { ACTIVITY_TYPES, CREATE_DAYS, CREATE_TIMES, type CreateDay } from '@/data/constants';
+import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { useActivitiesStore, type ActivityDraft } from '@/store/activities';
-import { useAccount } from '@/store/session';
+import { createStartsAt } from '@/lib/activity';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
-const newDraft = (): ActivityDraft => ({
+interface Draft {
+  title: string;
+  type: string;
+  day: CreateDay;
+  time: string;
+  where: string;
+  spots: number;
+  notes: string;
+}
+
+const newDraft = (): Draft => ({
   title: '',
   type: 'Social',
   day: 'Today',
@@ -30,18 +43,37 @@ const newDraft = (): ActivityDraft => ({
 
 export default function CreateActivityScreen() {
   const { top } = useScreenInsets();
-  const account = useAccount();
-  const publish = useActivitiesStore((s) => s.publish);
+  const me = useMe();
+  const create = useCreateActivity();
   const [draft, setDraft] = useState(newDraft);
-  const set = (patch: Partial<ActivityDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
-  const ready = !!draft.title.trim() && !!draft.where.trim();
+  const now = useNow();
+  const startsAt = createStartsAt(draft.day, draft.time, now);
+  const inPast = startsAt <= now;
+  const ready = !!draft.title.trim() && !!draft.where.trim() && !inPast && !create.isPending;
 
   const onPublish = () => {
-    if (!ready) return;
-    publish(draft, account);
-    router.dismissTo({ pathname: '/activities', params: { segment: 'hosting' } });
-    toast('Published. It’s live on Discover.');
+    if (!ready || !me.data) return;
+    const group = ACTIVITY_TYPES.find((t) => t.label === draft.type)?.group ?? 'Social';
+    create.mutate(
+      {
+        title: draft.title.trim(),
+        group,
+        startsAt: startsAt.toISOString(),
+        place: draft.where.trim(),
+        area: me.data.area,
+        capacity: draft.spots,
+        description: draft.notes.trim(),
+      },
+      {
+        onSuccess: () => {
+          router.dismissTo({ pathname: '/activities', params: { segment: 'hosting' } });
+          toast('Published. It’s live on Discover.');
+        },
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
   };
 
   return (
@@ -131,7 +163,7 @@ export default function CreateActivityScreen() {
             <Stepper
               label="−"
               accessibilityLabel="Fewer"
-              onPress={() => set({ spots: Math.max(SPOTS_MIN, draft.spots - 1) })}
+              onPress={() => set({ spots: Math.max(LIMITS.capacityMin, draft.spots - 1) })}
             />
             <Text className="w-[26px] text-center font-mono-medium text-[19px] text-ink">
               {draft.spots}
@@ -139,7 +171,7 @@ export default function CreateActivityScreen() {
             <Stepper
               label="+"
               accessibilityLabel="More"
-              onPress={() => set({ spots: Math.min(SPOTS_MAX, draft.spots + 1) })}
+              onPress={() => set({ spots: Math.min(LIMITS.capacityMax, draft.spots + 1) })}
             />
           </View>
         </View>
@@ -156,7 +188,16 @@ export default function CreateActivityScreen() {
       </ScrollView>
 
       <Footer>
-        <Button label="Publish activity" inactive={!ready} onPress={onPublish} />
+        {inPast ? (
+          <Text className="mb-2.5 text-center font-sans text-[13.5px] text-warning">
+            That time has passed. Pick a later time or another day.
+          </Text>
+        ) : null}
+        <Button
+          label={create.isPending ? 'Publishing…' : 'Publish activity'}
+          inactive={!ready}
+          onPress={onPublish}
+        />
       </Footer>
     </KeyboardAvoidingView>
   );

@@ -17,6 +17,18 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   /** Deep-link scheme of the mobile app, trusted for auth redirects. */
   APP_SCHEME: z.string().default('buddy'),
+  /** Comma-separated browser origins allowed to call the API (Expo web in development). */
+  WEB_ORIGINS: z
+    .string()
+    .optional()
+    .transform((v) =>
+      v
+        ? v
+            .split(',')
+            .map((o) => o.trim())
+            .filter(Boolean)
+        : [],
+    ),
 
   /** Without a key, sign-in codes are written to the log instead (development only). */
   RESEND_API_KEY: z.string().optional(),

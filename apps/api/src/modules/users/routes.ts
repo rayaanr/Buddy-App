@@ -6,11 +6,12 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import { activities, activityMembers, profiles, user } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
+import { idParam } from '../../lib/validate';
 import { countHosted, findActivitySummaries, upcoming } from '../activities/queries';
 import { originFor } from '../profiles/service';
 
 export function userRoutes({ db, urls }: Deps) {
-  return new Hono<AppEnv>().use(requireUser).get('/:id{[0-9a-f-]{36}}', async (c) => {
+  return new Hono<AppEnv>().use(requireUser).get('/:id', idParam(), async (c) => {
     const viewer = currentUser(c);
     const id = c.req.param('id');
 

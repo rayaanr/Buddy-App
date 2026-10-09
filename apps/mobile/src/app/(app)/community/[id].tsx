@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
+import { ApiRequestError } from '@/api/client';
+import { useCommunity } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
@@ -8,32 +10,42 @@ import {
   BackButton,
   Button,
   Heading,
+  LoadError,
+  Loading,
   Photo,
   Scrim,
   SectionLabel,
   TickIcon,
 } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
-import { getUser } from '@/data/users';
-import { useCommunityActions } from '@/hooks/useCommunityActions';
+import { COMMUNITY_HUE } from '@/data/constants';
+import { useCommunityToggle } from '@/hooks/useCommunityToggle';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { useActivitiesStore, useCommunity } from '@/store/activities';
 import { colors } from '@/theme';
 
 export default function CommunityScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const community = useCommunity(id);
-  const activities = useActivitiesStore((s) => s.activities);
-  const { toggle } = useCommunityActions();
+  const { toggle, pending } = useCommunityToggle();
   const { top } = useScreenInsets();
 
-  if (!community) return <NotFound message="This community no longer exists." />;
-  const c = community;
-  const upcoming = activities.filter((a) => a.communityId === c.id);
+  if (community.isLoading) return <Loading className="flex-1 bg-bg" />;
+  if (community.error instanceof ApiRequestError && community.error.status === 404) {
+    return <NotFound message="This community no longer exists." />;
+  }
+  if (!community.data) {
+    return (
+      <View className="flex-1 justify-center bg-bg px-[22px]">
+        <LoadError error={community.error} onRetry={() => void community.refetch()} />
+      </View>
+    );
+  }
+  const c = community.data;
+  const others = c.memberCount - c.members.length;
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ paddingBottom: 30 }}>
-      <Photo uri={c.image} hue={c.hue} style={{ height: 250 }}>
+      <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: 250 }}>
         <Scrim from={0.3} topOpacity={0.2} opacity={1} />
         <View className="absolute left-[18px]" style={{ top: top(56) }}>
           <BackButton tone="glass" />
@@ -50,30 +62,40 @@ export default function CommunityScreen() {
             <Text className="font-sans-medium text-[13.5px] text-lime">You’re a member</Text>
           </View>
         ) : (
-          <Button label="Join community" size="md" onPress={() => toggle(c)} className="mt-4" />
+          <Button
+            label={pending ? 'Joining…' : 'Join community'}
+            size="md"
+            inactive={pending}
+            onPress={() => toggle(c)}
+            className="mt-4"
+          />
         )}
 
         <View className="mt-5 flex-row items-center">
-          {c.people.map((name) => (
+          {c.members.map((m) => (
             <Avatar
-              key={name}
-              uri={getUser(name).avatar}
+              key={m.id}
+              uri={m.avatarUrl ?? undefined}
               size={38}
               ring={colors.bg}
               style={{ marginRight: -8 }}
-              onPress={() => router.push({ pathname: '/user/[name]', params: { name } })}
-              accessibilityLabel={name}
+              onPress={() => router.push(`/user/${m.id}`)}
+              accessibilityLabel={m.name}
             />
           ))}
-          <Text className="ml-[18px] font-sans text-[14px] text-muted">+{c.members} members</Text>
+          {others > 0 ? (
+            <Text className="ml-[18px] font-sans text-[14px] text-muted">
+              +{others} member{others === 1 ? '' : 's'}
+            </Text>
+          ) : null}
         </View>
 
         <SectionLabel className="mb-2.5 mt-[26px]">Upcoming</SectionLabel>
         <View className="gap-2.5">
-          {upcoming.map((a) => (
+          {c.upcoming.map((a) => (
             <ActivityRow key={a.id} activity={a} thumb={72} />
           ))}
-          {upcoming.length === 0 ? (
+          {c.upcoming.length === 0 ? (
             <View className="rounded-[18px] bg-surface p-5">
               <Text className="text-center font-sans text-[14.5px] text-muted">
                 No upcoming activities this week.
@@ -82,25 +104,34 @@ export default function CommunityScreen() {
           ) : null}
         </View>
 
-        <SectionLabel className="mb-2 mt-[26px]">About</SectionLabel>
-        <Text className="font-sans text-[15px] leading-[22.5px] text-ink-dim">{c.about}</Text>
+        {c.about ? (
+          <>
+            <SectionLabel className="mb-2 mt-[26px]">About</SectionLabel>
+            <Text className="font-sans text-[15px] leading-[22.5px] text-ink-dim">{c.about}</Text>
+          </>
+        ) : null}
 
-        <SectionLabel className="mb-1 mt-6">Group rules</SectionLabel>
-        {c.rules.map((rule, k) => (
-          <View key={rule} className="flex-row gap-3 border-b border-divider py-3">
-            <Text className="font-mono-medium text-[13px] leading-[21px] text-muted">
-              {String(k + 1).padStart(2, '0')}
-            </Text>
-            <Text className="flex-1 font-sans text-[15px] leading-[21px] text-ink">{rule}</Text>
-          </View>
-        ))}
+        {c.rules.length ? (
+          <>
+            <SectionLabel className="mb-1 mt-6">Group rules</SectionLabel>
+            {c.rules.map((rule, k) => (
+              <View key={rule} className="flex-row gap-3 border-b border-divider py-3">
+                <Text className="font-mono-medium text-[13px] leading-[21px] text-muted">
+                  {String(k + 1).padStart(2, '0')}
+                </Text>
+                <Text className="flex-1 font-sans text-[15px] leading-[21px] text-ink">{rule}</Text>
+              </View>
+            ))}
+          </>
+        ) : null}
 
         {c.joined ? (
           <Button
-            label="Leave community"
+            label={pending ? 'Leaving…' : 'Leave community'}
             variant="danger-outline"
             size="md"
             weight="medium"
+            disabled={pending}
             onPress={() => toggle(c)}
             className="mt-[22px]"
           />

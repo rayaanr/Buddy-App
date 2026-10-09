@@ -1,15 +1,19 @@
+import type { ActivitySummary, MyActivity } from '@buddy/shared';
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import { Eyebrow, Photo, Scrim } from '@/components/ui';
 import {
   availabilityColor,
+  distanceLabel,
+  hueFor,
   lastMessagePreview,
   leftLabel,
   spotsLabel,
   whenLabel,
 } from '@/lib/activity';
-import type { Activity } from '@/types/models';
+
+type Activity = ActivitySummary;
 
 const openActivity = (id: string) => router.push(`/activity/${id}`);
 
@@ -22,7 +26,11 @@ export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
       accessibilityLabel={a.title}
       className="active:opacity-90"
     >
-      <Photo uri={a.image} hue={a.hue} className="h-[410px] rounded-[26px] border border-line">
+      <Photo
+        uri={a.coverUrl ?? undefined}
+        hue={hueFor(a)}
+        className="h-[410px] rounded-[26px] border border-line"
+      >
         <Scrim from={0.45} opacity={0.8} />
         <View className="absolute right-3.5 top-3.5 h-7 justify-center rounded-[14px] bg-lime px-[11px]">
           <Text className="font-sans-semibold text-[13px] text-bg">{whenLabel(a)}</Text>
@@ -34,7 +42,7 @@ export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
           </Text>
           <View className="mt-2.5 flex-row justify-between gap-2.5">
             <Text className="flex-1 font-sans text-[14.5px] text-ink-faint" numberOfLines={1}>
-              {a.place} · {a.distance}
+              {a.place} · {distanceLabel(a)}
             </Text>
             <Text
               className="font-sans-medium text-[14.5px]"
@@ -71,8 +79,8 @@ export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: 
       }
     >
       <Photo
-        uri={a.image}
-        hue={a.hue}
+        uri={a.coverUrl ?? undefined}
+        hue={hueFor(a)}
         style={{ width: thumb, height: thumb, borderRadius: big ? 14 : 12 }}
       />
       <View className={big ? 'min-w-0 flex-1 py-0.5 pr-1' : 'min-w-0 flex-1 justify-center gap-1'}>
@@ -119,13 +127,7 @@ export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: 
 }
 
 /** Horizontal card in the "From your communities" row. */
-export function CommunityPickCard({
-  activity: a,
-  communityName,
-}: {
-  activity: Activity;
-  communityName: string;
-}) {
+export function CommunityPickCard({ activity: a }: { activity: Activity }) {
   return (
     <Pressable
       onPress={() => openActivity(a.id)}
@@ -134,13 +136,13 @@ export function CommunityPickCard({
       className="active:opacity-90"
     >
       <Photo
-        uri={a.image}
-        hue={a.hue}
+        uri={a.coverUrl ?? undefined}
+        hue={hueFor(a)}
         className="h-[150px] w-[230px] rounded-[20px] border border-line"
       >
         <Scrim from={0.2} topOpacity={0.1} opacity={0.9} />
         <View className="absolute left-2.5 top-2.5 h-6 justify-center rounded-xl bg-[rgba(11,12,11,0.7)] px-2.5">
-          <Text className="font-sans-medium text-[12px] text-ink">{communityName}</Text>
+          <Text className="font-sans-medium text-[12px] text-ink">{a.community?.name}</Text>
         </View>
         <View className="absolute inset-x-3 bottom-3">
           <Text className="font-sans-medium text-[12.5px] text-lime">{whenLabel(a)}</Text>
@@ -154,7 +156,7 @@ export function CommunityPickCard({
 }
 
 /** Card on "Your activities" with a chat preview strip. */
-export function MyActivityCard({ activity: a }: { activity: Activity }) {
+export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
   return (
     <View className="overflow-hidden rounded-[20px] bg-surface">
       <Pressable
@@ -163,14 +165,18 @@ export function MyActivityCard({ activity: a }: { activity: Activity }) {
         accessibilityLabel={a.title}
         className="flex-row gap-3.5 p-3 active:opacity-80"
       >
-        <Photo uri={a.image} hue={a.hue} style={{ width: 74, height: 74, borderRadius: 14 }} />
+        <Photo
+          uri={a.coverUrl ?? undefined}
+          hue={hueFor(a)}
+          style={{ width: 74, height: 74, borderRadius: 14 }}
+        />
         <View className="min-w-0 flex-1 gap-[3px]">
           <Text className="font-sans-medium text-[13px] text-lime">{whenLabel(a)}</Text>
           <Text className="font-sans-semibold text-[16.5px] leading-[21px] text-ink">
             {a.title}
           </Text>
           <Text className="font-sans text-[13.5px] text-muted">
-            {a.place} · {a.going} of {a.capacity} going
+            {a.place} · {a.goingCount} of {a.capacity} going
           </Text>
         </View>
       </Pressable>

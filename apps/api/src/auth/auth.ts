@@ -28,7 +28,12 @@ export function createAuth({ db, env, mailer, logger }: AuthDeps) {
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
     database: drizzleAdapter(db, { provider: 'pg', schema }),
-    trustedOrigins: [`${env.APP_SCHEME}://`],
+    trustedOrigins: [
+      `${env.APP_SCHEME}://`,
+      // Expo Go uses exp:// links while developing.
+      ...(env.NODE_ENV === 'development' ? ['exp://'] : []),
+      ...env.WEB_ORIGINS,
+    ],
     session: {
       // Phones stay signed in; activity extends the session.
       expiresIn: 30 * DAY_SECONDS,
@@ -40,7 +45,8 @@ export function createAuth({ db, env, mailer, logger }: AuthDeps) {
       ipAddress: { ipAddressHeaders: ['x-forwarded-for'] },
     },
     rateLimit: {
-      enabled: env.NODE_ENV !== 'test',
+      // Production only (Better Auth's default): local testing shouldn't lock you out.
+      enabled: env.NODE_ENV === 'production',
       customRules: {
         // Each code request sends an email; keep abuse expensive.
         '/email-otp/send-verification-otp': { window: 60, max: 3 },

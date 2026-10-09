@@ -1,6 +1,7 @@
 import { ERROR_CODES } from '@buddy/shared';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
 
 import { loadSession } from './auth/middleware';
@@ -15,7 +16,7 @@ import { userRoutes } from './modules/users/routes';
 
 /** Builds the HTTP app. Kept free of I/O setup so tests can pass their own deps. */
 export function createApp(deps: Deps) {
-  const { auth, db, logger } = deps;
+  const { auth, db, env, logger } = deps;
 
   const app = new Hono<AppEnv>().use(requestId()).use(async (c, next) => {
     const start = performance.now();
@@ -38,6 +39,19 @@ export function createApp(deps: Deps) {
     return c.json({ error: { code: ERROR_CODES.internal, message: 'Something went wrong' } }, 500);
   });
 
+  // Native apps don't need CORS; browsers (Expo web) do, with cookies.
+  if (env.WEB_ORIGINS.length) {
+    app.use(
+      '*',
+      cors({
+        origin: env.WEB_ORIGINS,
+        credentials: true,
+        allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowHeaders: ['content-type'],
+      }),
+    );
+  }
+
   app.notFound((c) =>
     c.json({ error: { code: ERROR_CODES.notFound, message: 'Route not found' } }, 404),
   );
@@ -54,7 +68,7 @@ export function createApp(deps: Deps) {
   const v1 = new Hono<AppEnv>()
     .use(loadSession(deps))
     .route('/me', meRoutes(deps))
-    .route('/activities/:id{[0-9a-f-]{36}}/chat', chatRoutes(deps))
+    .route('/activities/:id/chat', chatRoutes(deps))
     .route('/activities', activityRoutes(deps))
     .route('/communities', communityRoutes(deps))
     .route('/users', userRoutes(deps))

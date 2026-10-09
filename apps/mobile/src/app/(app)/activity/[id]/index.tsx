@@ -1,6 +1,9 @@
+import { ERROR_CODES, type ActivityDetail } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { ApiRequestError, errorMessage } from '@/api/client';
+import { useActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
 import {
   Avatar,
   BackButton,
@@ -8,52 +11,70 @@ import {
   Eyebrow,
   Footer,
   Heading,
+  LoadError,
+  Loading,
   Photo,
   Scrim,
 } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
-import { MY_AVATAR } from '@/data/images';
-import { ATTENDEE_FACES, USERS } from '@/data/users';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
-import { useActivitiesStore, useActivity, useCommunity } from '@/store/activities';
-import { useAccount } from '@/store/session';
+import { distanceLabel, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
-import type { Activity } from '@/types/models';
 
 const MAX_FACES = 5;
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const activity = useActivity(id);
-  const community = useCommunity(activity?.communityId);
-  const account = useAccount();
-  const join = useActivitiesStore((s) => s.join);
-  const leave = useActivitiesStore((s) => s.leave);
+  const join = useJoinActivity();
+  const leave = useLeaveActivity();
   const { top } = useScreenInsets();
 
-  if (!activity) return <NotFound message="This activity is no longer available." />;
-  const a = activity;
+  if (activity.isLoading) return <Loading className="flex-1 bg-bg" />;
+  if (activity.error instanceof ApiRequestError && activity.error.status === 404) {
+    return <NotFound message="This activity is no longer available." />;
+  }
+  if (!activity.data) {
+    return (
+      <View className="flex-1 justify-center bg-bg px-[22px]">
+        <LoadError error={activity.error} onRetry={() => void activity.refetch()} />
+      </View>
+    );
+  }
+  const a = activity.data;
 
   const left = spotsLeft(a);
-  const isIn = !!(a.joined || a.hosting);
-  const canJoin = !isIn && left > 0;
-  const hostAvatar = a.hosting ? MY_AVATAR : USERS[a.host]?.avatar;
+  const isIn = a.viewer.joined || a.viewer.hosting;
+  const busy = join.isPending || leave.isPending;
+  const hosted = a.host.hostedCount;
+  const hostMeta = [
+    `Hosted ${hosted} ${hosted === 1 ? 'activity' : 'activities'}`,
+    a.community?.name,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
-  const onJoin = () => {
-    join(a.id, account.name);
-    toast('You’re in. Say hi in the group chat.');
-  };
-  const onLeave = () => {
-    leave(a.id, account.name);
-    toast('You left the activity.');
-  };
+  const onJoin = () =>
+    join.mutate(a.id, {
+      onSuccess: () => toast('You’re in. Say hi in the group chat.'),
+      onError: (err) =>
+        toast(
+          err instanceof ApiRequestError && err.code === ERROR_CODES.activityFull
+            ? 'This activity just filled up.'
+            : errorMessage(err),
+        ),
+    });
+  const onLeave = () =>
+    leave.mutate(a.id, {
+      onSuccess: () => toast('You left the activity.'),
+      onError: (err) => toast(errorMessage(err)),
+    });
 
   return (
     <View className="flex-1 bg-bg">
       <ScrollView className="flex-1">
-        <Photo uri={a.image} hue={a.hue} style={{ height: 330 }}>
+        <Photo uri={a.coverUrl ?? undefined} hue={hueFor(a)} style={{ height: 330 }}>
           <Scrim from={0.5} opacity={1} />
           <View className="absolute left-[18px]" style={{ top: top(56) }}>
             <BackButton tone="glass" />
@@ -63,34 +84,36 @@ export default function ActivityDetailScreen() {
 
         <View className="px-[22px] pb-6 pt-3">
           <Heading size="page">{a.title}</Heading>
-          {community ? (
+          {a.community ? (
             <Pressable
-              onPress={() => router.push(`/community/${community.id}`)}
+              onPress={() => router.push(`/community/${a.community!.id}`)}
               className="mt-3 h-8 flex-row items-center gap-1.5 self-start rounded-2xl border border-outline px-[13px] active:opacity-80"
             >
               <Text className="font-sans-medium text-[13.5px] text-muted">Part of</Text>
-              <Text className="font-sans-medium text-[13.5px] text-ink">{community.name}</Text>
+              <Text className="font-sans-medium text-[13.5px] text-ink">{a.community.name}</Text>
               <Text className="font-sans-medium text-[13.5px] text-lime">→</Text>
             </Pressable>
           ) : null}
 
           <View className="mt-5 flex-row gap-[9px]">
             <InfoTile label="When" value={whenLong(a)} />
-            <InfoTile label="Where" value={a.place} sub={a.placeDetail} />
+            <InfoTile label="Where" value={a.place} sub={`${a.area} · ${distanceLabel(a)}`} />
           </View>
 
           <Attendance activity={a} />
 
           <Pressable
-            disabled={a.hosting}
-            onPress={() => router.push({ pathname: '/user/[name]', params: { name: a.host } })}
+            disabled={a.viewer.hosting}
+            onPress={() => router.push(`/user/${a.host.id}`)}
             className="mt-[18px] flex-row items-center gap-3.5 active:opacity-80"
-            accessibilityRole={a.hosting ? undefined : 'button'}
+            accessibilityRole={a.viewer.hosting ? undefined : 'button'}
           >
-            <Avatar uri={hostAvatar} size={46} fallback={a.hosting ? colors.me : a.hostColor} />
+            <Avatar uri={a.host.avatarUrl ?? undefined} size={46} />
             <View>
-              <Text className="font-sans-semibold text-[16px] text-ink">Hosted by {a.host}</Text>
-              <Text className="mt-[3px] font-sans text-[13.5px] text-muted">{a.hostMeta}</Text>
+              <Text className="font-sans-semibold text-[16px] text-ink">
+                Hosted by {a.viewer.hosting ? 'you' : a.host.name}
+              </Text>
+              <Text className="mt-[3px] font-sans text-[13.5px] text-muted">{hostMeta}</Text>
             </View>
           </Pressable>
 
@@ -103,7 +126,14 @@ export default function ActivityDetailScreen() {
       </ScrollView>
 
       <Footer className="flex-row gap-2.5">
-        {canJoin ? <Button label="Join activity" onPress={onJoin} className="flex-1" /> : null}
+        {!isIn && left > 0 ? (
+          <Button
+            label={join.isPending ? 'Joining…' : 'Join activity'}
+            inactive={busy}
+            onPress={onJoin}
+            className="flex-1"
+          />
+        ) : null}
         {!isIn && left <= 0 ? (
           <Button label="Activity full" inactive disabled className="flex-1" />
         ) : null}
@@ -114,8 +144,14 @@ export default function ActivityDetailScreen() {
               onPress={() => router.push(`/activity/${a.id}/chat`)}
               className="flex-1"
             />
-            {a.joined ? (
-              <Button label="Leave" variant="outline" onPress={onLeave} className="px-5" />
+            {a.viewer.joined ? (
+              <Button
+                label={leave.isPending ? 'Leaving…' : 'Leave'}
+                variant="outline"
+                disabled={busy}
+                onPress={onLeave}
+                className="px-5"
+              />
             ) : null}
           </>
         ) : null}
@@ -134,22 +170,15 @@ function InfoTile({ label, value, sub }: { label: string; value: string; sub?: s
   );
 }
 
-function Attendance({ activity: a }: { activity: Activity }) {
-  const pct = Math.min(100, (a.going / a.capacity) * 100);
-  const n = Math.min(a.going, MAX_FACES);
-
-  let faces: { uri?: string; fallback: string }[] = [
-    { uri: USERS[a.host]?.avatar, fallback: a.hostColor },
-    ...ATTENDEE_FACES.map((uri) => ({ uri, fallback: colors['avatar-fallback'] })),
-  ].slice(0, n);
-  if (a.joined && n) faces[n - 1] = { uri: MY_AVATAR, fallback: colors.me };
-  if (a.hosting) faces = [{ uri: MY_AVATAR, fallback: colors.me }];
+function Attendance({ activity: a }: { activity: ActivityDetail }) {
+  const pct = Math.min(100, (a.goingCount / a.capacity) * 100);
+  const extra = a.goingCount - a.attendees.length;
 
   return (
     <View className="mt-2.5 rounded-[18px] bg-surface p-4">
       <View className="flex-row justify-between">
         <Text className="font-sans-semibold text-[15.5px] text-ink">
-          {a.going} of {a.capacity} going
+          {a.goingCount} of {a.capacity} going
         </Text>
         <Text className="font-sans text-[14px] text-muted">{spotsLabel(a)}</Text>
       </View>
@@ -157,20 +186,19 @@ function Attendance({ activity: a }: { activity: Activity }) {
         <View className="h-full rounded-[3px] bg-lime" style={{ width: `${pct}%` }} />
       </View>
       <View className="mt-3.5 flex-row items-center">
-        {faces.map((f, k) => (
+        {a.attendees.slice(0, MAX_FACES).map((p) => (
           <Avatar
-            key={k}
-            uri={f.uri}
+            key={p.id}
+            uri={p.avatarUrl ?? undefined}
             size={32}
-            fallback={f.fallback}
             ring={colors.surface}
             style={{ marginRight: -6 }}
+            onPress={() => router.push(`/user/${p.id}`)}
+            accessibilityLabel={p.name}
           />
         ))}
-        {a.going > MAX_FACES ? (
-          <Text className="ml-[18px] font-sans text-[14px] text-muted">
-            +{a.going - MAX_FACES} more
-          </Text>
+        {extra > 0 ? (
+          <Text className="ml-[18px] font-sans text-[14px] text-muted">+{extra} more</Text>
         ) : null}
       </View>
     </View>

@@ -1,51 +1,64 @@
 import { router } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { Avatar, Button, Heading, SectionLabel, Tag } from '@/components/ui';
-import { RECENT_ACTIVITY } from '@/data/constants';
-import { MY_AVATAR } from '@/data/images';
+import { unregisterPush } from '@/api/push';
+import { signOut, useHistory, useMe } from '@/api/queries';
+import { Avatar, Button, Heading, Loading, Refresh, SectionLabel, Tag } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { useActivitiesStore } from '@/store/activities';
-import { useAccount, useSessionStore } from '@/store/session';
+import { dayMonth, locationLabel, monthYear } from '@/lib/activity';
 import { colors } from '@/theme';
-
-/** Historical counts from before this device, added to live counts. */
-const PAST_JOINED = 7;
-const PAST_HOSTED = 2;
 
 export default function ProfileScreen() {
   const { top } = useScreenInsets();
-  const account = useAccount();
-  const interests = useSessionStore((s) => s.interests);
-  const signOut = useSessionStore((s) => s.signOut);
-  const joined = useActivitiesStore((s) => s.activities.filter((a) => a.joined).length);
-  const hosted = useActivitiesStore((s) => s.activities.filter((a) => a.hosting).length);
-  const communities = useActivitiesStore((s) => s.communities.filter((c) => c.joined).length);
+  const me = useMe();
+  const history = useHistory();
+  const [signingOut, setSigningOut] = useState(false);
+
+  if (!me.data) return <Loading className="flex-1 bg-bg" />;
+  const { name, area, createdAt, interests, avatarUrl, stats: s } = me.data;
 
   const stats = [
-    { value: PAST_JOINED + joined, label: 'Joined' },
-    { value: PAST_HOSTED + hosted, label: 'Hosted' },
-    { value: communities, label: communities === 1 ? 'Community' : 'Communities' },
+    { value: s.joined, label: 'Joined' },
+    { value: s.hosted, label: 'Hosted' },
+    { value: s.communities, label: s.communities === 1 ? 'Community' : 'Communities' },
   ];
+
+  const logOut = async () => {
+    setSigningOut(true);
+    await unregisterPush();
+    await signOut();
+  };
 
   return (
     <ScrollView
       className="flex-1 bg-bg"
       contentContainerStyle={{ paddingTop: top(68), paddingHorizontal: 22, paddingBottom: 24 }}
+      refreshControl={
+        <Refresh
+          refreshing={me.isRefetching}
+          onRefresh={() => void Promise.all([me.refetch(), history.refetch()])}
+        />
+      }
     >
-      <Avatar uri={MY_AVATAR} size={86} fallback={colors.me} style={{ alignSelf: 'center' }} />
+      <Avatar
+        uri={avatarUrl ?? undefined}
+        size={86}
+        fallback={colors.me}
+        style={{ alignSelf: 'center' }}
+      />
       <Heading size="page" className="mt-4 text-center">
-        {account.name}
+        {name}
       </Heading>
       <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">
-        {account.location} · on Buddy since March
+        {locationLabel(area)} · on Buddy since {monthYear(createdAt)}
       </Text>
 
       <View className="mt-5 flex-row gap-2">
-        {stats.map((s) => (
-          <View key={s.label} className="flex-1 rounded-2xl bg-surface px-3.5 pb-4 pt-3.5">
-            <Text className="font-display text-[22px] text-ink">{s.value}</Text>
-            <Text className="mt-1 font-sans text-[13px] text-muted">{s.label}</Text>
+        {stats.map((st) => (
+          <View key={st.label} className="flex-1 rounded-2xl bg-surface px-3.5 pb-4 pt-3.5">
+            <Text className="font-display text-[22px] text-ink">{st.value}</Text>
+            <Text className="mt-1 font-sans text-[13px] text-muted">{st.label}</Text>
           </View>
         ))}
       </View>
@@ -58,14 +71,22 @@ export default function ProfileScreen() {
       </View>
 
       <SectionLabel className="mb-1 mt-6">Recent</SectionLabel>
-      {RECENT_ACTIVITY.map((r) => (
-        <View
-          key={r.title}
-          className="flex-row items-center justify-between border-b border-divider py-3.5"
+      {history.data?.length === 0 ? (
+        <Text className="py-3.5 font-sans text-[14.5px] text-muted">
+          Activities you’ve been to will show up here.
+        </Text>
+      ) : null}
+      {history.data?.map((a) => (
+        <Pressable
+          key={a.id}
+          onPress={() => router.push(`/activity/${a.id}`)}
+          className="flex-row items-center justify-between gap-3 border-b border-divider py-3.5 active:opacity-80"
         >
-          <Text className="font-sans text-[15.5px] text-ink">{r.title}</Text>
-          <Text className="font-sans text-[14px] text-muted">{r.date}</Text>
-        </View>
+          <Text className="flex-1 font-sans text-[15.5px] text-ink" numberOfLines={1}>
+            {a.title}
+          </Text>
+          <Text className="font-sans text-[14px] text-muted">{dayMonth(a.startsAt)}</Text>
+        </Pressable>
       ))}
 
       <Button
@@ -76,10 +97,11 @@ export default function ProfileScreen() {
         className="mt-[22px]"
       />
       <Button
-        label="Log out"
+        label={signingOut ? 'Logging out…' : 'Log out'}
         variant="danger"
         size="md"
-        onPress={signOut}
+        disabled={signingOut}
+        onPress={logOut}
         className="mt-2.5"
         weight="medium"
       />
