@@ -5,9 +5,19 @@ Request and response shapes live in [`packages/shared`](../../packages/shared).
 
 ## Local setup
 
+Everything in Docker (from the repo root; see [`compose.yaml`](../../compose.yaml)):
+
+```bash
+docker compose up -d --build                # Postgres + PostGIS, and the API on :3000
+docker compose exec api node dist/seed.js   # sample data; wipes existing data
+docker compose logs -f api                  # sign-in codes appear here
+```
+
+Or only the database in Docker, with the API running from source for reloads and tests:
+
 ```bash
 # 1. Postgres + PostGIS (creates the buddy and buddy_test databases)
-docker compose -f infra/docker-compose.dev.yml up -d     # from the repo root
+docker compose up -d db
 
 # 2. Configuration
 cp apps/api/.env.example apps/api/.env
@@ -15,13 +25,37 @@ cp apps/api/.env.example apps/api/.env
 
 # 3. Schema and sample data
 npm run db:migrate -w @buddy/api
-npm run db:seed -w @buddy/api        # Colombo sample data; wipes existing data
+npm run db:seed -w @buddy/api        # wipes existing data
 
 # 4. Run
 npm run dev -w @buddy/api            # http://localhost:3000/health
 ```
 
-**Signing in during development:** without `RESEND_API_KEY`, sign-in codes are printed to the API log instead of emailed. The seed creates a demo user, `kavindu@buddy.test`.
+Both images are Alpine: `postgis/postgis:16-3.4-alpine` and `node:22-alpine`. The API image ([`Dockerfile`](Dockerfile)) contains only the bundled `dist/` and the migrations, with no `node_modules`; it applies migrations on start. Compose runs it with `NODE_ENV=development`; override settings (R2 keys, `RESEND_API_KEY`) in a `.env` next to `compose.yaml`.
+
+**Signing in during development:** without `RESEND_API_KEY`, sign-in codes are printed to the API log instead of emailed.
+
+## Sample data
+
+[`scripts/seed`](scripts/seed) loads Colombo data in two layers:
+
+| File             | Contents                                                     |
+| ---------------- | ------------------------------------------------------------ |
+| `people.ts`      | 16 people with areas, bios and interests                     |
+| `communities.ts` | 4 core communities, 2 demo ones, and extra demo memberships  |
+| `activities.ts`  | 9 core activities and 12 demo ones (3 of them in the past)   |
+| `index.ts`       | `seed(db, { demo })`: wipes the tables and inserts the above |
+| `run.ts`         | The `db:seed` command (`dist/seed.js` in the Docker image)   |
+
+The **core** layer is the design's data; the integration tests seed it before every test and assert on it, so change it together with the tests. The **demo** layer, loaded by default, adds what you need to click through the app as Kavindu:
+
+| Sign in as           | What's there                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kavindu@buddy.test` | Hosting _Wingspan and coffee_ with three guests chatting; joined _Padel_ and _Crag day trip_; three past activities in Profile → Recent; picks |
+| `nethmi@buddy.test`  | Hosts two runs (the other side of a chat)                                                                                                      |
+| `sanduni@buddy.test` | Hosts _Sunrise yoga_, which is full: anyone else sees "Activity full"                                                                          |
+
+Everyone else signs in as `<first name>@buddy.test`. Pass `--core` for the test data only: `npm run db:seed -w @buddy/api -- --core`.
 
 ## Real-time chat
 
@@ -55,7 +89,7 @@ Not yet handled: files uploaded but never attached, and replaced avatars, stay i
 | Script            | What it does                                                |
 | ----------------- | ----------------------------------------------------------- |
 | `dev`             | Run with reload (`tsx watch`)                               |
-| `build` / `start` | Bundle to `dist/` with tsup, then run it                    |
+| `build` / `start` | Bundle to `dist/` with tsup (all dependencies), then run it |
 | `test`            | Integration tests against `buddy_test` (real Postgres)      |
 | `db:generate`     | Create a migration from schema changes in `src/db/schema`   |
 | `db:migrate`      | Apply migrations                                            |
@@ -76,7 +110,7 @@ src/
   db/                Drizzle client, schema, PostGIS column type
   modules/<feature>/ routes + queries/service per feature
   lib/               errors, validation, mailer, URL helpers
-scripts/seed.ts      sample data
+scripts/seed/        sample data (see above)
 drizzle/             SQL migrations (generated; see note below)
 test/                integration tests and harness
 ```

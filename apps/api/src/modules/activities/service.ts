@@ -31,7 +31,7 @@ const DEFAULT_COVERS: Record<ActivityGroup, string> = {
   Creative: '1460661419201-fd4cecdf8a8b',
   Food: '1488459716781-31db52582fe9',
 };
-const stockCover = (group: ActivityGroup) =>
+export const stockCover = (group: ActivityGroup) =>
   `https://images.unsplash.com/photo-${DEFAULT_COVERS[group]}?w=800&q=70&auto=format&fit=crop`;
 
 export const coverKeyPrefix = (userId: string) => `covers/${userId}/`;

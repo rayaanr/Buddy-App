@@ -25,4 +25,18 @@ npm run test         # run every package's tests
 npm run format       # format with Prettier
 ```
 
+## Run the backend locally
+
+Needs Docker. From the repo root:
+
+```bash
+docker compose up -d --build                # Postgres + PostGIS on :5432, API on :3000
+docker compose exec api node dist/seed.js   # sample data (wipes the database)
+docker compose logs -f api                  # sign-in codes are printed here
+```
+
+Sign in as `kavindu@buddy.test`, or any seeded person as `<first name>@buddy.test` (`nethmi@`, `dilan@`, `shehani@`…). No email is sent in development: the 6-digit code shows up in the API log.
+
+Then `npm run mobile`. The app finds the API on the machine running the Expo dev server, so a phone on the same Wi-Fi needs no setup.
+
 Each app has its own README with setup details.

@@ -16,7 +16,7 @@
 
 ## Status
 
-Phases 0–7 are done (M1–M4). Next: Phase 8 (store readiness), then Phase 9 (deploy).
+Phases 0–7 are done (M1–M4). Next: testing locally with Docker Compose, then Phase 8 (store readiness). Phase 9 (deploy) is on hold until local testing is done.
 
 Changes from the original plan, decided while building:
 
@@ -26,6 +26,8 @@ Changes from the original plan, decided while building:
 - **`GET /v1/activities/history`** added for Profile → Recent.
 - **Sign-in rate limiting is production-only** (Better Auth's default).
 - **`@hono/node-ws` dropped**: `@hono/node-server` v2 has WebSockets built in.
+- **Local backend in Docker Compose** (`compose.yaml` at the root): Postgres + PostGIS and the API, both on Alpine images. The API image holds only the bundled `dist/` (no `node_modules`), and runs migrations on start.
+- **Seed data in two layers**: the core set the tests assert on, plus demo extras for local testing (hosting, a full activity, every area, past activities).
 
 Known gaps carried forward: no photo picker in the UI yet (API ready); activity locations use area centres until a map picker exists; orphaned R2 uploads aren't cleaned up; the WebSocket heartbeat has no automated test.
 
@@ -48,7 +50,7 @@ Known gaps carried forward: no photo picker in the UI yet (API ready); activity 
 - Hono on Node: validated environment, structured logs, one error format, `/health`.
 - Drizzle schema and migrations: users and sessions (Better Auth), `profiles`, `communities`, `community_members`, `activities` (PostGIS point), `activity_members`, `messages`, `chat_reads`, `blocks`, `reports`, `push_tokens`.
 - Seed script with the Colombo data.
-- `infra/docker-compose.dev.yml` for local Postgres + PostGIS.
+- `compose.yaml` for local Postgres + PostGIS and the API.
 - Integration tests against real Postgres.
 - **Done when** the API runs locally and serves the seeded activities.
 
@@ -96,7 +98,9 @@ Known gaps carried forward: no photo picker in the UI yet (API ready); activity 
 - Store data declarations (email, location); App Review demo account.
 - Final icon and splash, real bundle ID, EAS build profiles per environment.
 
-### Phase 9: Deploy
+### Phase 9: Deploy (on hold)
+
+Deferred until the app has been tested locally.
 
 - VPS hardening: only 80/443 open, SSH keys only, automatic security updates, Postgres private.
 - `infra/docker-compose.yml` (API, Postgres, Caddy); migrations run on deploy.

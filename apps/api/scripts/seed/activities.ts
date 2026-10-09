@@ -1,0 +1,430 @@
+import type { ActivityGroup, Area, Interest } from '@buddy/shared';
+
+/**
+ * When an activity starts, in Colombo time. Day labels resolve to their next
+ * occurrence (never in the past); `inDays`/`daysAgo` count from today.
+ */
+export type When =
+  | { day: 'Tonight' | 'Tomorrow' | 'Sat' | 'Sun'; time: string }
+  | { inDays: number; time: string }
+  | { daysAgo: number; time: string };
+
+/** A chat line: [sender name, text], or ['system', text] for lines like "Kavindu joined". */
+export type SeedMessage = [from: string, text: string];
+
+export interface SeedActivity {
+  title: string;
+  category: string;
+  group: ActivityGroup;
+  interest?: Interest;
+  when: When;
+  place: string;
+  area: Area;
+  /** Exact spot; defaults to the area centre. */
+  at?: { lat: number; lng: number };
+  capacity: number;
+  /** Everyone going, host included. */
+  going: number;
+  host: string;
+  /** Community key; see communities.ts. */
+  community?: string;
+  /** Unsplash photo id; defaults to the stock cover for the group. */
+  cover?: string;
+  description: string;
+  /** Oldest first. Senders are added as guests. */
+  messages: SeedMessage[];
+  /** The demo user is a guest. */
+  demoJoined?: boolean;
+}
+
+/** The activities the tests rely on: counts, titles and members are asserted there. */
+export const ACTIVITIES: SeedActivity[] = [
+  {
+    title: 'Sunset 5K at Galle Face',
+    category: 'RUNNING',
+    group: 'Running',
+    interest: 'Running',
+    when: { day: 'Tonight', time: '18:00' },
+    place: 'Galle Face Green',
+    area: 'Colombo 03',
+    at: { lat: 6.9271, lng: 79.845 },
+    capacity: 15,
+    going: 9,
+    host: 'Nethmi',
+    community: 'runners',
+    cover: '1552674605-db6ffd4facb5',
+    description:
+      'Easy conversational pace along the promenade, around 6 min/km. We finish near the lighthouse and grab king coconut after.',
+    messages: [['Nethmi', 'Hi all, meeting by the flag post at the Kollupitiya end.']],
+  },
+  {
+    title: 'Board games night',
+    category: 'SOCIAL',
+    group: 'Social',
+    interest: 'Board games',
+    when: { day: 'Tonight', time: '19:30' },
+    place: 'The Commons',
+    area: 'Colombo 03',
+    at: { lat: 6.91, lng: 79.852 },
+    capacity: 8,
+    going: 6,
+    host: 'Dilan',
+    community: 'gamers',
+    cover: '1529156069898-49953e39b3ac',
+    description: 'Bringing Catan and Codenames. Beginners very welcome.',
+    messages: [['Dilan', 'Table booked upstairs under Dilan. See you at 7.30.']],
+  },
+  {
+    title: 'Padel doubles, need one more',
+    category: 'PADEL',
+    group: 'Sports',
+    interest: 'Padel',
+    when: { day: 'Tomorrow', time: '06:30' },
+    place: 'Padel Lanka',
+    area: 'Colombo 05',
+    at: { lat: 6.885, lng: 79.866 },
+    capacity: 4,
+    going: 4,
+    host: 'Shehani',
+    cover: '1554068865-24cecd4e34b8',
+    description:
+      'Intermediate level. Early slot before the heat. Court is split four ways, about Rs 2,500 each.',
+    messages: [
+      ['Shehani', 'Court 2 booked for 06:30.'],
+      ['system', 'Kavindu joined'],
+      ['Shehani', 'Perfect. Meet at reception at 06:20.'],
+    ],
+    demoJoined: true,
+  },
+  {
+    title: 'Life drawing, untutored session',
+    category: 'LIFE DRAWING',
+    group: 'Creative',
+    interest: 'Life drawing',
+    when: { day: 'Sat', time: '10:00' },
+    place: 'Lionel Wendt Art Centre',
+    area: 'Colombo 07',
+    at: { lat: 6.9045, lng: 79.862 },
+    capacity: 12,
+    going: 5,
+    host: 'Amaya',
+    community: 'sketch',
+    cover: '1513364776144-60967b0f800f',
+    description:
+      'Two hours with a model, short and long poses. Paper provided, bring your own pencils.',
+    messages: [['Amaya', 'Doors open 9.45. Studio is at the back of the gallery.']],
+  },
+  {
+    title: 'Bouldering social',
+    category: 'CLIMBING',
+    group: 'Sports',
+    interest: 'Climbing',
+    when: { day: 'Sat', time: '16:00' },
+    place: 'Climb Colombo',
+    area: 'Rajagiriya',
+    at: { lat: 6.91, lng: 79.896 },
+    capacity: 10,
+    going: 3,
+    host: 'Ravindu',
+    community: 'climb',
+    cover: '1522163182402-834f871fd851',
+    description: 'All grades. Shoe hire available at the desk.',
+    messages: [['Ravindu', 'I’ll be by the lockers in a blue t-shirt.']],
+  },
+  {
+    title: 'Pettah market food walk',
+    category: 'FOOD MARKETS',
+    group: 'Food',
+    interest: 'Food markets',
+    when: { day: 'Sun', time: '08:30' },
+    place: 'Pettah Floating Market',
+    area: 'Colombo 03',
+    at: { lat: 6.9335, lng: 79.853 },
+    capacity: 8,
+    going: 4,
+    host: 'Fathima',
+    cover: '1488459716781-31db52582fe9',
+    description:
+      'Slow wander through the stalls. Kiribath and plain tea first, then short eats along the way.',
+    messages: [['Fathima', 'Meet at the main entrance near Bastian Mawatha.']],
+  },
+  {
+    title: 'Beach cricket, softball',
+    category: 'CRICKET',
+    group: 'Sports',
+    interest: 'Cricket',
+    when: { day: 'Sun', time: '16:30' },
+    place: 'Mount Lavinia Beach',
+    area: 'Mount Lavinia',
+    at: { lat: 6.838, lng: 79.862 },
+    capacity: 12,
+    going: 8,
+    host: 'Kasun',
+    cover: '1531415074968-036ba1b575da',
+    description: 'Friendly tape-ball game, mixed ability. Bring water and a hat.',
+    messages: [['Kasun', 'Bat and stumps sorted. Meet near the hotel steps.']],
+  },
+  {
+    title: 'Saturday 10K, Viharamahadevi Park',
+    category: 'RUNNING',
+    group: 'Running',
+    interest: 'Running',
+    when: { day: 'Sat', time: '06:00' },
+    place: 'Viharamahadevi Park',
+    area: 'Colombo 07',
+    at: { lat: 6.913, lng: 79.861 },
+    capacity: 20,
+    going: 11,
+    host: 'Nethmi',
+    community: 'runners',
+    cover: '1476480862126-209bfaa8edc8',
+    description: 'Two loops of the park before it gets hot. Two pace groups, 5:30 and 6:30 min/km.',
+    messages: [['Nethmi', 'Meeting at the Town Hall entrance.']],
+  },
+  {
+    title: 'Sketching at Gangaramaya',
+    category: 'SKETCHING',
+    group: 'Creative',
+    interest: 'Life drawing',
+    when: { day: 'Sun', time: '15:00' },
+    place: 'Gangaramaya Temple',
+    area: 'Colombo 03',
+    at: { lat: 6.9165, lng: 79.8565 },
+    capacity: 10,
+    going: 4,
+    host: 'Amaya',
+    community: 'sketch',
+    cover: '1460661419201-fd4cecdf8a8b',
+    description: 'Urban sketching around the temple and Seema Malaka. Any materials.',
+    messages: [['Amaya', 'Dress respectfully for the temple grounds.']],
+  },
+];
+
+/**
+ * Extra activities for exploring the app locally: one the demo user hosts,
+ * a longer chat they're in, a full one they can't join, every area and
+ * filter, and past activities for Profile → Recent.
+ */
+export const DEMO_ACTIVITIES: SeedActivity[] = [
+  // Hosted by the demo user, with guests chatting (Chats → Hosting).
+  {
+    title: 'Wingspan and coffee',
+    category: 'BOARD GAMES',
+    group: 'Social',
+    interest: 'Board games',
+    when: { day: 'Tomorrow', time: '19:00' },
+    place: 'Barefoot Café',
+    area: 'Colombo 03',
+    at: { lat: 6.8985, lng: 79.8555 },
+    capacity: 5,
+    going: 4,
+    host: 'Kavindu Perera',
+    community: 'gamers',
+    cover: '1543269865-cbf427effbad',
+    description:
+      'Teaching Wingspan from scratch. Takes about 90 minutes once everyone has the hang of it. Coffee is on whoever loses.',
+    messages: [
+      ['system', 'Kavindu created this activity'],
+      ['system', 'Dilan joined'],
+      ['Dilan', 'Count me in. I’ll bring the European expansion if we want it.'],
+      ['system', 'Sanduni joined'],
+      ['Sanduni', 'Is it okay if I’m 15 minutes late? Coming from Battaramulla.'],
+      ['Kavindu Perera', 'No worries, we’ll set up and do a practice round first.'],
+      ['system', 'Ishara joined'],
+      ['Ishara', 'Never played before, hope that’s fine!'],
+    ],
+  },
+  // Joined, with a longer conversation (Chats → Joined).
+  {
+    title: 'Crag day trip to Kandy',
+    category: 'CLIMBING',
+    group: 'Sports',
+    interest: 'Climbing',
+    when: { inDays: 9, time: '05:30' },
+    place: 'Climb Colombo car park',
+    area: 'Rajagiriya',
+    at: { lat: 6.91, lng: 79.896 },
+    capacity: 8,
+    going: 6,
+    host: 'Ravindu',
+    community: 'climb',
+    cover: '1522163182402-834f871fd851',
+    description:
+      'Two cars up to the crags near Kandy, back by evening. Splitting fuel. Ropes and draws sorted; bring shoes, a harness if you have one, and lunch.',
+    messages: [
+      ['Ravindu', 'Leaving at 05:30 sharp to beat the traffic.'],
+      ['Tharindu', 'I can drive the second car, room for three.'],
+      ['system', 'Kavindu joined'],
+      ['Kavindu Perera', 'I’ve only climbed indoors. Okay for a first time outside?'],
+      ['Ravindu', 'Totally. There are some easy routes and I’ll set a top rope.'],
+      ['Shehani', 'Fuel split is about Rs 1,800 each.'],
+      ['Tharindu', 'Kavindu, you can ride with me.'],
+    ],
+    demoJoined: true,
+  },
+  // Full, and the demo user isn't in it ("Activity full").
+  {
+    title: 'Sunrise yoga, Independence Square',
+    category: 'YOGA',
+    group: 'Sports',
+    interest: 'Yoga',
+    when: { day: 'Tomorrow', time: '06:00' },
+    place: 'Independence Memorial Hall',
+    area: 'Colombo 07',
+    at: { lat: 6.9036, lng: 79.8676 },
+    capacity: 6,
+    going: 6,
+    host: 'Sanduni',
+    description: 'Gentle flow on the grass before the walkers arrive. Bring a mat and water.',
+    messages: [['Sanduni', 'Full now, thanks all! See you on the lawn by the steps.']],
+  },
+  {
+    title: 'Live jazz at the Lavinia',
+    category: 'LIVE MUSIC',
+    group: 'Social',
+    interest: 'Live music',
+    when: { day: 'Tonight', time: '20:30' },
+    place: 'Mount Lavinia Hotel terrace',
+    area: 'Mount Lavinia',
+    at: { lat: 6.8317, lng: 79.8636 },
+    capacity: 6,
+    going: 3,
+    host: 'Kasun',
+    description: 'Local trio on the terrace. Grabbing a table near the front. No cover charge.',
+    messages: [['Kasun', 'I’ll be there from 8.']],
+  },
+  {
+    title: 'Nugegoda street food crawl',
+    category: 'FOOD MARKETS',
+    group: 'Food',
+    interest: 'Food markets',
+    when: { inDays: 2, time: '18:30' },
+    place: 'Nugegoda Junction',
+    area: 'Nugegoda',
+    capacity: 8,
+    going: 5,
+    host: 'Fathima',
+    community: 'food',
+    description:
+      'Kottu, isso vadai and faluda. We walk from the junction to the supermarket road and stop wherever smells best.',
+    messages: [['Fathima', 'Bring small notes, most stalls don’t take cards.']],
+  },
+  {
+    title: 'Diyawanna lake ride',
+    category: 'CYCLING',
+    group: 'Sports',
+    interest: 'Cycling',
+    when: { day: 'Sun', time: '06:30' },
+    place: 'Diyawanna Lake walking path',
+    area: 'Battaramulla',
+    capacity: 10,
+    going: 4,
+    host: 'Chamod',
+    community: 'cycle',
+    description: 'Two easy laps of the lake, about 20 km. Breakfast at the kade after.',
+    messages: [['Chamod', 'Meeting at the Parliament road entrance.']],
+  },
+  {
+    title: 'Photo walk at Dehiwala zoo',
+    category: 'PHOTOGRAPHY',
+    group: 'Creative',
+    interest: 'Photography',
+    when: { day: 'Sat', time: '08:30' },
+    place: 'Dehiwala Zoological Gardens',
+    area: 'Dehiwala',
+    capacity: 8,
+    going: 3,
+    host: 'Tharindu',
+    description: 'Morning light and feeding times. Any camera, phones welcome. Ticket is extra.',
+    messages: [['Tharindu', 'Meet at the ticket counter.']],
+  },
+  {
+    title: 'Cook-along: string hoppers',
+    category: 'COOKING',
+    group: 'Food',
+    interest: 'Cooking',
+    when: { inDays: 4, time: '18:00' },
+    place: 'Malsha’s kitchen, Nugegoda',
+    area: 'Nugegoda',
+    capacity: 6,
+    going: 2,
+    host: 'Malsha',
+    community: 'food',
+    description:
+      'Making string hoppers, pol sambol and a kiri hodi from scratch. Ingredients split, about Rs 800 each.',
+    messages: [['Malsha', 'I have two presses, bring yours if you have one.']],
+  },
+  {
+    title: 'Battaramulla 5K',
+    category: 'RUNNING',
+    group: 'Running',
+    interest: 'Running',
+    when: { inDays: 5, time: '06:00' },
+    place: 'Diyatha Uyana',
+    area: 'Battaramulla',
+    capacity: 15,
+    going: 7,
+    host: 'Pasindu',
+    community: 'runners',
+    description: 'Flat loop through the park. Coffee at the market stalls after.',
+    messages: [['Pasindu', 'Parking is free before 8.']],
+  },
+
+  // Past: shows in Profile → Recent and counts towards "hosted".
+  {
+    title: 'Catan night',
+    category: 'BOARD GAMES',
+    group: 'Social',
+    interest: 'Board games',
+    when: { daysAgo: 6, time: '19:30' },
+    place: 'Barefoot Café',
+    area: 'Colombo 03',
+    at: { lat: 6.8985, lng: 79.8555 },
+    capacity: 6,
+    going: 5,
+    host: 'Kavindu Perera',
+    community: 'gamers',
+    cover: '1529156069898-49953e39b3ac',
+    description: 'Base game, maybe Seafarers if people are keen.',
+    messages: [
+      ['Kavindu Perera', 'Grabbed the big table by the window.'],
+      ['Dilan', 'Good games, rematch next week?'],
+    ],
+  },
+  {
+    title: 'Sunset 5K at Galle Face',
+    category: 'RUNNING',
+    group: 'Running',
+    interest: 'Running',
+    when: { daysAgo: 3, time: '18:00' },
+    place: 'Galle Face Green',
+    area: 'Colombo 03',
+    at: { lat: 6.9271, lng: 79.845 },
+    capacity: 15,
+    going: 10,
+    host: 'Nethmi',
+    community: 'runners',
+    cover: '1552674605-db6ffd4facb5',
+    description: 'Easy conversational pace along the promenade, around 6 min/km.',
+    messages: [['Nethmi', 'Great run everyone!']],
+    demoJoined: true,
+  },
+  {
+    title: 'Intro to bouldering',
+    category: 'CLIMBING',
+    group: 'Sports',
+    interest: 'Climbing',
+    when: { daysAgo: 12, time: '17:00' },
+    place: 'Climb Colombo',
+    area: 'Rajagiriya',
+    at: { lat: 6.91, lng: 79.896 },
+    capacity: 8,
+    going: 6,
+    host: 'Ravindu',
+    community: 'climb',
+    cover: '1522163182402-834f871fd851',
+    description: 'First session for new climbers: falling safely, footwork and reading problems.',
+    messages: [['Ravindu', 'Nice work today, you all sent the yellow circuit.']],
+    demoJoined: true,
+  },
+];

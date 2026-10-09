@@ -10,7 +10,7 @@ The app needs the API running. Follow [`apps/api/README.md`](../api/README.md) f
 
 ```bash
 npm install                 # from the repo root (npm workspaces)
-npm run dev -w @buddy/api   # terminal 1: API on :3000
+npm run dev -w @buddy/api   # terminal 1: API on :3000 (or: docker compose up -d)
 npm run mobile              # terminal 2: press i / a, or scan the QR code
 ```
 

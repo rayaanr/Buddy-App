@@ -9,7 +9,7 @@ import { loadEnv } from '../src/env';
 import type { Mail, Mailer } from '../src/lib/mailer';
 import type { PushSender } from '../src/lib/push';
 import type { Storage } from '../src/lib/storage';
-import { seed } from '../scripts/seed';
+import { seed } from '../scripts/seed/index';
 import { TEST_DATABASE_URL } from './global-setup';
 
 /** Captures outgoing email so tests can read sign-in codes. */
@@ -53,7 +53,7 @@ export function useTestApp(
 
   beforeEach(async () => {
     mail.sent.length = 0;
-    await seed(deps.db, new Date());
+    await seed(deps.db);
   });
   afterAll(() => close());
 
