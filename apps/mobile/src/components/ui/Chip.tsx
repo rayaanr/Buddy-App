@@ -1,6 +1,7 @@
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
 
 import { cn } from '@/lib/cn';
+import { PressableScale } from './Motion';
 
 interface ChipProps {
   label: string;
@@ -21,12 +22,14 @@ const SHAPE = {
 /** Selectable chip: lime when selected, outlined otherwise. */
 export function Chip({ label, selected, onPress, shape = 'pill', mono, className }: ChipProps) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
+      haptic="selection"
+      scaleTo={0.94}
       className={cn(
-        'items-center justify-center border active:opacity-80',
+        'items-center justify-center border',
         SHAPE[shape],
         selected ? 'border-lime bg-lime' : 'border-chip-border bg-transparent',
         className,
@@ -40,7 +43,7 @@ export function Chip({ label, selected, onPress, shape = 'pill', mono, className
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 

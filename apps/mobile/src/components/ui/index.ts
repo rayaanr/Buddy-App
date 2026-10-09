@@ -14,3 +14,4 @@ export * from './Typography';
 export * from './QueryState';
 export * from './Keyboard';
 export * from './ActionSheet';
+export * from './Motion';

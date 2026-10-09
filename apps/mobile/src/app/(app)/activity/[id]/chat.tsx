@@ -7,12 +7,21 @@ import { useChat } from '@/api/chat';
 import { ApiRequestError } from '@/api/client';
 import { useActivity, useMe } from '@/api/queries';
 import { MessageBubble, toChatRows, type ChatRow } from '@/components/chat/MessageBubble';
-import { BackButton, KeyboardScreen, LoadError, Loading } from '@/components/ui';
+import { TypingIndicator } from '@/components/chat/TypingIndicator';
+import {
+  AnimatedView,
+  BackButton,
+  KeyboardScreen,
+  LoadError,
+  Loading,
+  PressableScale,
+} from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { whenLong } from '@/lib/activity';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
+import { enterMessage } from '@/theme/motion';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +33,12 @@ export default function ChatScreen() {
 
   const list = useRef<FlatList<ChatRow>>(null);
   const rows = useMemo(() => toChatRows(chat.items), [chat.items]);
+
+  // Messages already here when the chat opened appear as-is; new ones animate in.
+  const [openedWith, setOpenedWith] = useState<Set<string> | null>(null);
+  if (openedWith === null && !chat.isLoading && !chat.error) {
+    setOpenedWith(new Set(chat.items.map((i) => i.message.id)));
+  }
 
   const status = chat.error instanceof ApiRequestError ? chat.error.status : null;
   if (status === 403) return <NotFound message="Join this activity to see its chat." />;
@@ -77,7 +92,11 @@ export default function ChatScreen() {
           data={rows}
           keyExtractor={(r) => r.message.id}
           renderItem={({ item }) => (
-            <MessageBubble row={item} onRetry={chat.retry} onReport={reportMessage} />
+            <AnimatedView
+              entering={openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined}
+            >
+              <MessageBubble row={item} onRetry={chat.retry} onReport={reportMessage} />
+            </AnimatedView>
           )}
           contentContainerStyle={{
             paddingHorizontal: 18,
@@ -100,15 +119,7 @@ export default function ChatScreen() {
               </Pressable>
             ) : null
           }
-          ListFooterComponent={
-            chat.typingName ? (
-              <View className="mt-1.5 self-start rounded-2xl bg-surface px-3.5 py-2.5">
-                <Text className="font-sans text-[13.5px] text-muted">
-                  {chat.typingName} is typing…
-                </Text>
-              </View>
-            ) : null
-          }
+          ListFooterComponent={chat.typingName ? <TypingIndicator name={chat.typingName} /> : null}
         />
       )}
 
@@ -130,13 +141,15 @@ export default function ChatScreen() {
           selectionColor={colors.lime}
           className="h-[50px] min-w-0 flex-1 rounded-[25px] border border-field bg-surface px-5 font-sans text-[15.5px] text-ink"
         />
-        <Pressable
+        <PressableScale
           onPress={send}
           disabled={!canSend}
+          haptic="light"
+          scaleTo={0.92}
           accessibilityRole="button"
           accessibilityLabel="Send"
           className={cn(
-            'h-[50px] items-center justify-center rounded-[25px] px-5 active:opacity-80',
+            'h-[50px] items-center justify-center rounded-[25px] px-5',
             canSend ? 'bg-lime' : 'bg-disabled',
           )}
         >
@@ -145,7 +158,7 @@ export default function ChatScreen() {
           >
             Send
           </Text>
-        </Pressable>
+        </PressableScale>
       </View>
     </KeyboardScreen>
   );

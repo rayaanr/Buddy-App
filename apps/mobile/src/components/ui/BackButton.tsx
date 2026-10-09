@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Pressable } from 'react-native';
 
 import { cn } from '@/lib/cn';
 import { ArrowLeftIcon, MoreIcon } from './icons';
+import { PressableScale } from './Motion';
 
 interface IconButtonProps {
   icon: ReactNode;
@@ -18,19 +18,20 @@ interface IconButtonProps {
 /** Round 44px icon button used in screen headers. */
 export function IconButton({ icon, label, onPress, tone = 'solid', className }: IconButtonProps) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
       onPress={onPress}
+      scaleTo={0.9}
       className={cn(
-        'h-11 w-11 items-center justify-center rounded-full active:opacity-70',
+        'h-11 w-11 items-center justify-center rounded-full',
         tone === 'glass' ? 'bg-[rgba(11,12,11,0.6)]' : 'bg-surface',
         className,
       )}
     >
       {icon}
-    </Pressable>
+    </PressableScale>
   );
 }
 

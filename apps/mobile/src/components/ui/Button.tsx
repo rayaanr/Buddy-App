@@ -1,8 +1,8 @@
-import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
-import { Platform, Pressable, Text, type PressableProps } from 'react-native';
+import { Text, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { cn } from '@/lib/cn';
+import { PressableScale } from './Motion';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'danger' | 'danger-outline' | 'muted';
 type Size = 'lg' | 'md' | 'sm';
@@ -31,7 +31,8 @@ const SIZE: Record<Size, { box: string; text: string }> = {
   sm: { box: 'h-[42px] self-center rounded-[21px] px-[18px]', text: 'text-[14.5px]' },
 };
 
-interface ButtonProps extends Omit<PressableProps, 'children'> {
+interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
+  style?: StyleProp<ViewStyle>;
   label: string;
   variant?: Variant;
   size?: Size;
@@ -58,20 +59,17 @@ export function Button({
 }: ButtonProps) {
   const v: Variant = inactive ? 'muted' : variant;
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ disabled: !!(inactive || rest.disabled) }}
+      haptic={haptic && !inactive ? 'light' : undefined}
       className={cn(
-        'flex-row items-center justify-center gap-2 active:opacity-80',
+        'flex-row items-center justify-center gap-2',
         SIZE[size].box,
         CONTAINER[v],
         className,
       )}
-      onPress={(e) => {
-        if (haptic && !inactive && Platform.OS !== 'web')
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        onPress?.(e);
-      }}
+      onPress={onPress}
       {...rest}
     >
       {icon}
@@ -84,6 +82,6 @@ export function Button({
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

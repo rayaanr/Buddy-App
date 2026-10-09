@@ -77,7 +77,9 @@ src/
 - **No conflicting classes.** NativeWind doesn't merge classes, so components expose props (`variant`, `size`, `tone`, `weight`) instead of letting callers override the same property through `className`.
 - **Screens with text fields use `KeyboardScreen`** (and `KeyboardAwareScrollView` for scrolling forms) from `@/components/ui`. Android is edge-to-edge, so the system no longer moves content above the keyboard; a plain `KeyboardAvoidingView` that's iOS-only leaves Android inputs hidden.
 - **Icons are Lucide**, added to `src/components/ui/icons.tsx` with a deep import (`lucide-react-native/icons/<name>`) so only the icons in use are bundled. Screens use those wrappers, not text glyphs like → or ✓.
-- **Reanimated views carry motion only.** `className` isn't applied to `Animated.View`, so put styles on an inner `View`.
+- **Motion has one vocabulary.** Springs, durations and list/chat entrances live in `src/theme/motion.ts`; touchable surfaces use `PressableScale` (sinks under the finger, optional haptic); loading lists show `Skeleton` cards, not spinners. Everything follows the system's Reduce Motion setting.
+- **Animating with classes:** Reanimated's own `Animated.View` ignores `className`, so use `AnimatedView` from `@/components/ui`, which takes both. To animate a value changing in place (a count, a status), use `useEnterOnChange` rather than remounting with a new `key` and `entering`: on web that leaves the element absolutely positioned.
+- **Judge smoothness in a release build.** Development mode (and Expo Go) runs JavaScript far slower, so animations can stutter there that are fine in production.
 - **Wrappers forward everything.** Android and web clone a ScrollView's `refreshControl` and pass the scroll view in as `children`; a wrapper that drops props blanks the screen (see `Refresh`).
 - **Design → device spacing.** The prototype was drawn on a 390×844 frame. `useScreenInsets().top(designPx)` and `.bottom(designPx)` turn its paddings into safe-area-aware values.
 - **Navigation** uses Expo Router hrefs only (typed routes on). Auth is enforced by `Stack.Protected` guards in the root layout, never by manual redirects.

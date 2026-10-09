@@ -1,12 +1,21 @@
 import { ERROR_CODES, type ActivityDetail } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Text, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { ApiRequestError, errorMessage } from '@/api/client';
 import { useActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
 import {
   ActionSheet,
+  AnimatedView,
   ArrowRightIcon,
   Avatar,
   BackButton,
@@ -18,23 +27,23 @@ import {
   Loading,
   MoreButton,
   Photo,
+  PressableScale,
   Scrim,
+  successHaptic,
+  useEnterOnChange,
 } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { distanceLabel, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
+import { spring } from '@/theme/motion';
 
 const MAX_FACES = 5;
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const activity = useActivity(id);
-  const join = useJoinActivity();
-  const leave = useLeaveActivity();
-  const { top } = useScreenInsets();
-  const [menuOpen, setMenuOpen] = useState(false);
 
   if (activity.isLoading) return <Loading className="flex-1 bg-bg" />;
   if (activity.error instanceof ApiRequestError && activity.error.status === 404) {
@@ -47,10 +56,45 @@ export default function ActivityDetailScreen() {
       </View>
     );
   }
-  const a = activity.data;
+  return <ActivityView activity={activity.data} />;
+}
+
+/** Parallax cover photo; a compact title bar fades in once the title scrolls away. */
+const COVER_HEIGHT = 330;
+
+function ActivityView({ activity: a }: { activity: ActivityDetail }) {
+  const join = useJoinActivity();
+  const leave = useLeaveActivity();
+  const { top } = useScreenInsets();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+  // Scrolling up, the cover moves at half speed; pulling down (iOS), it stretches.
+  const coverStyle = useAnimatedStyle(() => {
+    const y = scrollY.get();
+    return {
+      transform: [
+        { translateY: y < 0 ? y / 2 : y * 0.45 },
+        { scale: y < 0 ? 1 + -y / COVER_HEIGHT : 1 },
+      ],
+    };
+  });
+  const barStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(
+      scrollY.get(),
+      [COVER_HEIGHT - 130, COVER_HEIGHT - 70],
+      [0, 1],
+      Extrapolation.CLAMP,
+    ),
+  }));
 
   const left = spotsLeft(a);
   const isIn = a.viewer.joined || a.viewer.hosting;
+  // The footer's buttons pop when you join or leave.
+  const footerStyle = useEnterOnChange(isIn, 'pop');
   const busy = join.isPending || leave.isPending;
   const hosted = a.host.hostedCount;
   const hostMeta = [
@@ -62,7 +106,10 @@ export default function ActivityDetailScreen() {
 
   const onJoin = () =>
     join.mutate(a.id, {
-      onSuccess: () => toast('You’re in. Say hi in the group chat.'),
+      onSuccess: () => {
+        successHaptic();
+        toast('You’re in. Say hi in the group chat.');
+      },
       onError: (err) =>
         toast(
           err instanceof ApiRequestError && err.code === ERROR_CODES.activityFull
@@ -78,32 +125,25 @@ export default function ActivityDetailScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScrollView className="flex-1">
-        <Photo uri={a.coverUrl ?? undefined} hue={hueFor(a)} style={{ height: 330 }}>
-          <Scrim from={0.5} opacity={1} />
-          <View
-            className="absolute inset-x-[18px] flex-row justify-between"
-            style={{ top: top(56) }}
-          >
-            <BackButton tone="glass" />
-            {a.viewer.hosting ? null : (
-              <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />
-            )}
-          </View>
-          <Eyebrow className="absolute bottom-1 left-[22px]">{a.category}</Eyebrow>
-        </Photo>
+      <Animated.ScrollView className="flex-1" onScroll={onScroll} scrollEventThrottle={16}>
+        <AnimatedView style={coverStyle}>
+          <Photo uri={a.coverUrl ?? undefined} hue={hueFor(a)} style={{ height: COVER_HEIGHT }}>
+            <Scrim from={0.5} opacity={1} />
+            <Eyebrow className="absolute bottom-1 left-[22px]">{a.category}</Eyebrow>
+          </Photo>
+        </AnimatedView>
 
-        <View className="px-[22px] pb-6 pt-3">
+        <View className="bg-bg px-[22px] pb-6 pt-3">
           <Heading size="page">{a.title}</Heading>
           {a.community ? (
-            <Pressable
+            <PressableScale
               onPress={() => router.push(`/community/${a.community!.id}`)}
-              className="mt-3 h-8 flex-row items-center gap-1.5 self-start rounded-2xl border border-outline px-[13px] active:opacity-80"
+              className="mt-3 h-8 flex-row items-center gap-1.5 self-start rounded-2xl border border-outline px-[13px]"
             >
               <Text className="font-sans-medium text-[13.5px] text-muted">Part of</Text>
               <Text className="font-sans-medium text-[13.5px] text-ink">{a.community.name}</Text>
               <ArrowRightIcon size={14} />
-            </Pressable>
+            </PressableScale>
           ) : null}
 
           <View className="mt-5 flex-row gap-[9px]">
@@ -113,11 +153,12 @@ export default function ActivityDetailScreen() {
 
           <Attendance activity={a} />
 
-          <Pressable
+          <PressableScale
             disabled={a.viewer.hosting}
             onPress={() => router.push(`/user/${a.host.id}`)}
-            className="mt-[18px] flex-row items-center gap-3.5 active:opacity-80"
+            className="mt-[18px] flex-row items-center gap-3.5"
             accessibilityRole={a.viewer.hosting ? undefined : 'button'}
+            scaleTo={0.98}
           >
             <Avatar uri={a.host.avatarUrl ?? undefined} size={46} />
             <View>
@@ -126,7 +167,7 @@ export default function ActivityDetailScreen() {
               </Text>
               <Text className="mt-[3px] font-sans text-[13.5px] text-muted">{hostMeta}</Text>
             </View>
-          </Pressable>
+          </PressableScale>
 
           {a.description ? (
             <Text className="mt-5 font-sans text-[15px] leading-[22.5px] text-ink-dim">
@@ -134,38 +175,62 @@ export default function ActivityDetailScreen() {
             </Text>
           ) : null}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Fixed header: a bar with the title fades in over the buttons as you scroll. */}
+      <View className="absolute inset-x-0 top-0" pointerEvents="box-none">
+        <AnimatedView
+          pointerEvents="none"
+          className="absolute inset-0 border-b border-line bg-bg"
+          style={barStyle}
+        />
+        <View
+          className="flex-row items-center gap-3 px-[18px] pb-2.5"
+          style={{ paddingTop: top(56) }}
+          pointerEvents="box-none"
+        >
+          <BackButton tone="glass" />
+          <AnimatedView className="flex-1" style={barStyle} pointerEvents="none">
+            <Text className="font-sans-semibold text-[16px] text-ink" numberOfLines={1}>
+              {a.title}
+            </Text>
+          </AnimatedView>
+          {a.viewer.hosting ? null : <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />}
+        </View>
+      </View>
 
       <Footer className="flex-row gap-2.5">
-        {!isIn && left > 0 ? (
-          <Button
-            label={join.isPending ? 'Joining…' : 'Join activity'}
-            inactive={busy}
-            onPress={onJoin}
-            className="flex-1"
-          />
-        ) : null}
-        {!isIn && left <= 0 ? (
-          <Button label="Activity full" inactive disabled className="flex-1" />
-        ) : null}
-        {isIn ? (
-          <>
+        <AnimatedView className="flex-1 flex-row gap-2.5" style={footerStyle}>
+          {!isIn && left > 0 ? (
             <Button
-              label="Open group chat"
-              onPress={() => router.push(`/activity/${a.id}/chat`)}
+              label={join.isPending ? 'Joining…' : 'Join activity'}
+              inactive={busy}
+              onPress={onJoin}
               className="flex-1"
             />
-            {a.viewer.joined ? (
+          ) : null}
+          {!isIn && left <= 0 ? (
+            <Button label="Activity full" inactive disabled className="flex-1" />
+          ) : null}
+          {isIn ? (
+            <>
               <Button
-                label={leave.isPending ? 'Leaving…' : 'Leave'}
-                variant="outline"
-                disabled={busy}
-                onPress={onLeave}
-                className="px-5"
+                label="Open group chat"
+                onPress={() => router.push(`/activity/${a.id}/chat`)}
+                className="flex-1"
               />
-            ) : null}
-          </>
-        ) : null}
+              {a.viewer.joined ? (
+                <Button
+                  label={leave.isPending ? 'Leaving…' : 'Leave'}
+                  variant="outline"
+                  disabled={busy}
+                  onPress={onLeave}
+                  className="px-5"
+                />
+              ) : null}
+            </>
+          ) : null}
+        </AnimatedView>
       </Footer>
 
       <ActionSheet
@@ -201,16 +266,26 @@ function Attendance({ activity: a }: { activity: ActivityDetail }) {
   const pct = Math.min(100, (a.goingCount / a.capacity) * 100);
   const extra = a.goingCount - a.attendees.length;
 
+  // The bar fills in on arrival and slides when someone joins or leaves.
+  const fill = useSharedValue(0);
+  useEffect(() => {
+    fill.set(withSpring(pct, spring.gentle));
+  }, [pct, fill]);
+  const fillStyle = useAnimatedStyle(() => ({ width: `${fill.get()}%` }));
+  const countStyle = useEnterOnChange(a.goingCount);
+
   return (
     <View className="mt-2.5 rounded-[18px] bg-surface p-4">
       <View className="flex-row justify-between">
-        <Text className="font-sans-semibold text-[15.5px] text-ink">
-          {a.goingCount} of {a.capacity} going
-        </Text>
+        <AnimatedView style={countStyle}>
+          <Text className="font-sans-semibold text-[15.5px] text-ink">
+            {a.goingCount} of {a.capacity} going
+          </Text>
+        </AnimatedView>
         <Text className="font-sans text-[14px] text-muted">{spotsLabel(a)}</Text>
       </View>
       <View className="mt-3.5 h-1.5 overflow-hidden rounded-[3px] bg-track">
-        <View className="h-full rounded-[3px] bg-lime" style={{ width: `${pct}%` }} />
+        <AnimatedView className="h-full rounded-[3px] bg-lime" style={fillStyle} />
       </View>
       <View className="mt-3.5 flex-row items-center">
         {a.attendees.slice(0, MAX_FACES).map((p) => (

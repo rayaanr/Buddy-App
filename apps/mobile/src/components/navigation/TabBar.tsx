@@ -1,11 +1,28 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { router } from 'expo-router';
-import type { ComponentType } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import type { ComponentType, ReactNode } from 'react';
+import { useEffect } from 'react';
+import { Text, View } from 'react-native';
+import {
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CalendarIcon, CompassIcon, PeopleIcon, PersonIcon, PlusIcon } from '@/components/ui';
+import {
+  AnimatedView,
+  CalendarIcon,
+  CompassIcon,
+  PeopleIcon,
+  PersonIcon,
+  PlusIcon,
+  PressableScale,
+  selectionHaptic,
+} from '@/components/ui';
 import { colors, TAB_BAR_HEIGHT } from '@/theme';
+import { spring } from '@/theme/motion';
 
 const TABS: Record<string, { label: string; Icon: ComponentType<{ color?: string }> }> = {
   index: { label: 'Discover', Icon: CompassIcon },
@@ -29,22 +46,28 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         target: route.key,
         canPreventDefault: true,
       });
-      if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+      if (!focused && !event.defaultPrevented) {
+        selectionHaptic();
+        navigation.navigate(route.name, route.params);
+      }
     };
     return (
-      <Pressable
+      <PressableScale
         key={route.key}
         onPress={onPress}
         accessibilityRole="tab"
         accessibilityState={{ selected: focused }}
         accessibilityLabel={tab.label}
+        scaleTo={0.92}
         className="flex-1 items-center gap-[5px]"
       >
-        <tab.Icon color={color} />
+        <TabIcon focused={focused}>
+          <tab.Icon color={color} />
+        </TabIcon>
         <Text className="font-sans-medium text-[12px]" style={{ color }}>
           {tab.label}
         </Text>
-      </Pressable>
+      </PressableScale>
     );
   });
 
@@ -55,11 +78,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
     >
       {items.slice(0, 2)}
       <View className="flex-1 items-center">
-        <Pressable
+        <PressableScale
           onPress={() => router.push('/create')}
           accessibilityRole="button"
           accessibilityLabel="New activity"
-          className="-mt-1.5 h-[58px] w-[58px] items-center justify-center rounded-[19px] bg-lime active:scale-95"
+          haptic="light"
+          scaleTo={0.9}
+          className="-mt-1.5 h-[58px] w-[58px] items-center justify-center rounded-[19px] bg-lime"
           style={{
             shadowColor: colors.lime,
             shadowOpacity: 0.35,
@@ -69,9 +94,20 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           }}
         >
           <PlusIcon />
-        </Pressable>
+        </PressableScale>
       </View>
       {items.slice(2)}
     </View>
   );
+}
+
+/** Gives the icon a small hop when its tab becomes the selected one. */
+function TabIcon({ focused, children }: { focused: boolean; children: ReactNode }) {
+  const lift = useSharedValue(0);
+  useEffect(() => {
+    if (focused)
+      lift.set(withSequence(withSpring(-4, spring.snappy), withSpring(0, spring.bouncy)));
+  }, [focused, lift]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: lift.get() }] }));
+  return <AnimatedView style={style}>{children}</AnimatedView>;
 }

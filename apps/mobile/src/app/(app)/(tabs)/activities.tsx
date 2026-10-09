@@ -2,19 +2,20 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useFromCommunities, useMyActivities } from '@/api/queries';
-import { MyActivityCard } from '@/components/activity/ActivityCards';
+import { MyActivityCard, MyActivitySkeleton } from '@/components/activity/ActivityCards';
 import {
+  AnimatedView,
   ArrowRightIcon,
   EmptyState,
   Heading,
   LoadError,
-  Loading,
   Refresh,
   SegmentedControl,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { whenLabel } from '@/lib/activity';
 import { cn } from '@/lib/cn';
+import { enterItem, layoutItem } from '@/theme/motion';
 
 type Segment = 'joined' | 'hosting';
 
@@ -92,12 +93,19 @@ export default function ActivitiesScreen() {
       ) : null}
 
       <View className="mt-4 gap-3">
-        {current.isLoading ? <Loading /> : null}
+        {current.isLoading ? (
+          <>
+            <MyActivitySkeleton />
+            <MyActivitySkeleton />
+          </>
+        ) : null}
         {current.error ? (
           <LoadError error={current.error} onRetry={() => void current.refetch()} />
         ) : null}
-        {list.map((a) => (
-          <MyActivityCard key={a.id} activity={a} />
+        {list.map((a, i) => (
+          <AnimatedView key={a.id} entering={enterItem(i)} layout={layoutItem}>
+            <MyActivityCard activity={a} />
+          </AnimatedView>
         ))}
         {current.data && list.length === 0 ? (
           isJoined ? (

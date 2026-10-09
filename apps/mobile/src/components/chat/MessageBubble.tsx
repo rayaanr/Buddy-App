@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 
 import type { ChatItem } from '@/api/chat';
-import { Avatar, DoubleTickIcon, TickIcon } from '@/components/ui';
+import { AnimatedView, Avatar, DoubleTickIcon, TickIcon, useEnterOnChange } from '@/components/ui';
 import { colors } from '@/theme';
 
 export interface ChatRow extends ChatItem {
@@ -44,6 +44,8 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
   const { message: m, mine, status, startsRun, gap, showMeta } = row;
+  // "Sending… → Sent → Seen" eases in as the status changes.
+  const metaStyle = useEnterOnChange(status);
 
   if (m.kind === 'system') {
     return <Text className="my-1.5 self-center font-sans text-[12.5px] text-subtle">{m.body}</Text>;
@@ -111,7 +113,7 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
         </View>
       </Pressable>
       {showMeta ? (
-        <View className="mr-1 mt-[5px] flex-row items-center gap-[5px]">
+        <AnimatedView className="mr-1 mt-[5px] flex-row items-center gap-[5px]" style={metaStyle}>
           <Text
             className="font-sans text-[12px]"
             style={{ color: status === 'failed' ? colors.danger : colors.subtle }}
@@ -120,7 +122,7 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
           </Text>
           {status === 'sent' ? <TickIcon color={colors.muted} /> : null}
           {status === 'seen' ? <DoubleTickIcon /> : null}
-        </View>
+        </AnimatedView>
       ) : null}
     </View>
   );

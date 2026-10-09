@@ -1,6 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { cn } from '@/lib/cn';
+import { spring } from '@/theme/motion';
+import { AnimatedView, selectionHaptic } from './Motion';
 
 interface Segment<T extends string> {
   value: T;
@@ -14,17 +18,49 @@ interface SegmentedControlProps<T extends string> {
   className?: string;
 }
 
+const PAD = 4;
+const GAP = 4;
+
+/** Two or more options with a highlight that slides to the selected one. */
 export function SegmentedControl<T extends string>({
   segments,
   value,
   onChange,
   className,
 }: SegmentedControlProps<T>) {
+  const [width, setWidth] = useState(0);
+  const index = Math.max(
+    0,
+    segments.findIndex((s) => s.value === value),
+  );
+  const segmentWidth = width
+    ? (width - PAD * 2 - GAP * (segments.length - 1)) / segments.length
+    : 0;
+
+  const x = useSharedValue(0);
+  const placed = useRef(false);
+  useEffect(() => {
+    if (!segmentWidth) return;
+    const target = index * (segmentWidth + GAP);
+    // Start in place; only later changes slide.
+    x.set(placed.current ? withSpring(target, spring.gentle) : target);
+    placed.current = true;
+  }, [index, segmentWidth, x]);
+  const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
+
   return (
     <View
       accessibilityRole="tablist"
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       className={cn('flex-row gap-1 rounded-2xl bg-surface p-1', className)}
     >
+      {segmentWidth ? (
+        <AnimatedView
+          pointerEvents="none"
+          className="absolute h-[42px] rounded-xl bg-disabled"
+          style={[{ left: PAD, top: PAD, width: segmentWidth }, indicator]}
+        />
+      ) : null}
       {segments.map((s) => {
         const active = s.value === value;
         return (
@@ -32,11 +68,12 @@ export function SegmentedControl<T extends string>({
             key={s.value}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
-            onPress={() => onChange(s.value)}
-            className={cn(
-              'h-[42px] flex-1 items-center justify-center rounded-xl',
-              active ? 'bg-disabled' : 'bg-transparent',
-            )}
+            onPress={() => {
+              if (active) return;
+              selectionHaptic();
+              onChange(s.value);
+            }}
+            className="h-[42px] flex-1 items-center justify-center rounded-xl"
           >
             <Text
               className={cn('font-sans-semibold text-[14.5px]', active ? 'text-ink' : 'text-muted')}

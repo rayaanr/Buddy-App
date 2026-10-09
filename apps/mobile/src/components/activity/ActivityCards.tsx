@@ -1,8 +1,8 @@
 import type { ActivitySummary, MyActivity } from '@buddy/shared';
 import { router } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
-import { ArrowRightIcon, Eyebrow, Photo, Scrim } from '@/components/ui';
+import { ArrowRightIcon, Eyebrow, Photo, PressableScale, Scrim, Skeleton } from '@/components/ui';
 import {
   availabilityColor,
   distanceLabel,
@@ -20,11 +20,11 @@ const openActivity = (id: string) => router.push(`/activity/${id}`);
 /** Large photo card at the top of Discover. */
 export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
-      className="active:opacity-90"
+      scaleTo={0.985}
     >
       <Photo
         uri={a.coverUrl ?? undefined}
@@ -53,7 +53,7 @@ export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
           </View>
         </View>
       </Photo>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -68,14 +68,14 @@ interface ActivityRowProps {
 export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: ActivityRowProps) {
   const big = thumb === 96;
   return (
-    <Pressable
+    <PressableScale
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
       className={
         big
-          ? 'flex-row gap-3.5 rounded-[20px] bg-surface p-2.5 active:opacity-80'
-          : 'flex-row gap-3.5 rounded-[18px] bg-surface p-2.5 active:opacity-80'
+          ? 'flex-row gap-3.5 rounded-[20px] bg-surface p-2.5'
+          : 'flex-row gap-3.5 rounded-[18px] bg-surface p-2.5'
       }
     >
       <Photo
@@ -122,18 +122,17 @@ export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: 
           </View>
         )}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 /** Horizontal card in the "From your communities" row. */
 export function CommunityPickCard({ activity: a }: { activity: Activity }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
-      className="active:opacity-90"
     >
       <Photo
         uri={a.coverUrl ?? undefined}
@@ -151,7 +150,7 @@ export function CommunityPickCard({ activity: a }: { activity: Activity }) {
           </Text>
         </View>
       </Photo>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -159,11 +158,11 @@ export function CommunityPickCard({ activity: a }: { activity: Activity }) {
 export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
   return (
     <View className="overflow-hidden rounded-[20px] bg-surface">
-      <Pressable
+      <PressableScale
         onPress={() => openActivity(a.id)}
         accessibilityRole="button"
         accessibilityLabel={a.title}
-        className="flex-row gap-3.5 p-3 active:opacity-80"
+        className="flex-row gap-3.5 p-3"
       >
         <Photo
           uri={a.coverUrl ?? undefined}
@@ -179,12 +178,12 @@ export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
             {a.place} · {a.goingCount} of {a.capacity} going
           </Text>
         </View>
-      </Pressable>
-      <Pressable
+      </PressableScale>
+      <PressableScale
         onPress={() => router.push(`/activity/${a.id}/chat`)}
         accessibilityRole="button"
         accessibilityLabel={`Open chat for ${a.title}`}
-        className="flex-row items-center gap-3 border-t border-divider-strong px-4 py-[13px] active:opacity-80"
+        className="flex-row items-center gap-3 border-t border-divider-strong px-4 py-[13px]"
       >
         <Text className="min-w-0 flex-1 font-sans text-[14.5px] text-ink-soft" numberOfLines={1}>
           {lastMessagePreview(a)}
@@ -193,7 +192,44 @@ export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
           <Text className="font-sans-medium text-[14.5px] text-lime">Chat</Text>
           <ArrowRightIcon />
         </View>
-      </Pressable>
+      </PressableScale>
+    </View>
+  );
+}
+
+// ── Loading placeholders, shaped like the cards above ────────────────────
+
+export function ActivityHeroSkeleton() {
+  return <Skeleton className="h-[410px] rounded-[26px]" />;
+}
+
+export function ActivityRowSkeleton() {
+  return (
+    <View className="flex-row gap-3.5 rounded-[20px] bg-surface p-2.5">
+      <Skeleton className="h-24 w-24 rounded-[14px]" />
+      <View className="flex-1 gap-2 py-1.5">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="mt-auto h-3 w-1/2" />
+      </View>
+    </View>
+  );
+}
+
+export function MyActivitySkeleton() {
+  return (
+    <View className="overflow-hidden rounded-[20px] bg-surface">
+      <View className="flex-row gap-3.5 p-3">
+        <Skeleton className="h-[74px] w-[74px] rounded-[14px]" />
+        <View className="flex-1 gap-2 py-1">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-3 w-3/5" />
+        </View>
+      </View>
+      <View className="border-t border-divider-strong px-4 py-[15px]">
+        <Skeleton className="h-3 w-2/3" />
+      </View>
     </View>
   );
 }

@@ -1,9 +1,10 @@
 import { ScrollView, Text, View } from 'react-native';
 
 import { useCommunities } from '@/api/queries';
-import { CommunityCard } from '@/components/community/CommunityCard';
-import { Heading, LoadError, Loading, Refresh } from '@/components/ui';
+import { CommunityCard, CommunityCardSkeleton } from '@/components/community/CommunityCard';
+import { AnimatedView, Heading, LoadError, Refresh } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { enterItem, layoutItem } from '@/theme/motion';
 
 export default function CommunitiesScreen() {
   const { top } = useScreenInsets();
@@ -25,12 +26,19 @@ export default function CommunitiesScreen() {
         Groups in Colombo that meet regularly.
       </Text>
       <View className="mt-4 gap-3.5">
-        {communities.isLoading ? <Loading /> : null}
+        {communities.isLoading ? (
+          <>
+            <CommunityCardSkeleton />
+            <CommunityCardSkeleton />
+          </>
+        ) : null}
         {communities.error ? (
           <LoadError error={communities.error} onRetry={() => void communities.refetch()} />
         ) : null}
-        {communities.data?.map((c) => (
-          <CommunityCard key={c.id} community={c} />
+        {communities.data?.map((c, i) => (
+          <AnimatedView key={c.id} entering={enterItem(i)} layout={layoutItem}>
+            <CommunityCard community={c} />
+          </AnimatedView>
         ))}
       </View>
     </ScrollView>
