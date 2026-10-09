@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useState, type ReactNode } from 'react';
-import { Dimensions, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import {
   Easing,
@@ -46,6 +46,10 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
   const height = useSharedValue(offscreen);
   const y = useSharedValue(offscreen); // 0 = fully open
   const dragStart = useSharedValue(0);
+  // Content scrolls when the drawer is taller than the room it has (e.g. with
+  // the keyboard up); dragging only moves the drawer once that's at the top.
+  const scrollY = useSharedValue(0);
+  const scrollGesture = Gesture.Native();
 
   const closed = useEffectEvent(() => {
     setMounted(false);
@@ -69,10 +73,17 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
   const pan = Gesture.Pan()
     .activeOffsetY(8)
     .failOffsetX([-12, 12])
+    .simultaneousWithExternalGesture(scrollGesture)
     .onStart(() => {
       dragStart.set(y.get());
     })
     .onUpdate((e) => {
+      if (scrollY.get() > 0) {
+        // Still scrolling the content: keep the drawer put, and pick up from
+        // here once the content reaches its top.
+        dragStart.set(y.get() - e.translationY);
+        return;
+      }
       y.set(Math.max(0, dragStart.get() + e.translationY));
     })
     .onEnd((e) => {
@@ -99,7 +110,7 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
     >
       {/* Gestures inside a Modal need their own root on Android. */}
       <GestureHandlerRootView style={styles.fill}>
-        <KeyboardScreen style={styles.end}>
+        <KeyboardScreen style={[styles.end, { paddingTop: insets.top + 12 }]}>
           <AnimatedView style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
             <Pressable
               style={styles.fill}
@@ -110,16 +121,26 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
           </AnimatedView>
           <GestureDetector gesture={pan}>
             <AnimatedView
-              style={sheetStyle}
+              style={[styles.shrink, sheetStyle]}
               onLayout={(e) => height.set(e.nativeEvent.layout.height)}
               accessibilityViewIsModal
             >
-              <View
-                className="rounded-t-[28px] bg-surface-sunken pt-2.5"
-                style={{ paddingBottom: insets.bottom + 16 }}
-              >
+              <View className="shrink rounded-t-[28px] bg-surface-sunken pt-2.5">
                 <View className="mx-auto mb-[18px] h-[5px] w-10 rounded-[3px] bg-outline" />
-                {children}
+                <GestureDetector gesture={scrollGesture}>
+                  <ScrollView
+                    style={styles.scroll}
+                    contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+                    onScroll={(e) => scrollY.set(e.nativeEvent.contentOffset.y)}
+                    scrollEventThrottle={16}
+                    keyboardShouldPersistTaps="handled"
+                    bounces={false}
+                    overScrollMode="never"
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {children}
+                  </ScrollView>
+                </GestureDetector>
               </View>
             </AnimatedView>
           </GestureDetector>
@@ -133,5 +154,8 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   end: { flex: 1, justifyContent: 'flex-end' },
+  // Never taller than the space above the keyboard (or below the status bar).
+  shrink: { flexShrink: 1 },
+  scroll: { flexGrow: 0 },
   backdrop: { backgroundColor: 'rgba(0,0,0,0.6)' },
 });

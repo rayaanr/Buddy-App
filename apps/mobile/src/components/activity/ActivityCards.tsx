@@ -21,10 +21,10 @@ const openActivity = (id: string) => router.push(`/activity/${id}`);
 export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
   return (
     <PressableScale
+      scale="dim"
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
-      scale="subtle"
     >
       <Photo
         uri={a.coverUrl ?? undefined}
@@ -69,6 +69,7 @@ export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: 
   const big = thumb === 96;
   return (
     <PressableScale
+      scale="dim"
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
@@ -130,6 +131,7 @@ export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: 
 export function CommunityPickCard({ activity: a }: { activity: Activity }) {
   return (
     <PressableScale
+      scale="dim"
       onPress={() => openActivity(a.id)}
       accessibilityRole="button"
       accessibilityLabel={a.title}
@@ -159,6 +161,7 @@ export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
   return (
     <View className="overflow-hidden rounded-[20px] bg-surface">
       <PressableScale
+        scale="dim"
         onPress={() => openActivity(a.id)}
         accessibilityRole="button"
         accessibilityLabel={a.title}
@@ -180,6 +183,7 @@ export function MyActivityCard({ activity: a }: { activity: MyActivity }) {
         </View>
       </PressableScale>
       <PressableScale
+        scale="dim"
         onPress={() => router.push(`/activity/${a.id}/chat`)}
         accessibilityRole="button"
         accessibilityLabel={`Open chat for ${a.title}`}

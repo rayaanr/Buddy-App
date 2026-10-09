@@ -29,6 +29,8 @@ type Haptic = 'light' | 'selection';
 /** How far a surface sinks while held. Literal classes, so Tailwind generates them. */
 const PRESS = {
   none: '',
+  /** Cards and rows: dim slightly, never move. */
+  dim: 'active:opacity-90',
   subtle: 'active:scale-[0.985]',
   normal: 'active:scale-[0.97]',
   strong: 'active:scale-[0.92]',
@@ -37,7 +39,7 @@ const PRESS = {
 interface PressableScaleProps extends Omit<PressableProps, 'style'> {
   className?: string;
   style?: StyleProp<ViewStyle>;
-  /** subtle for big cards, normal for buttons and rows, strong for small round buttons. */
+  /** dim for cards and rows (no movement), normal for buttons, strong for small round buttons. */
   scale?: keyof typeof PRESS;
   haptic?: Haptic;
 }

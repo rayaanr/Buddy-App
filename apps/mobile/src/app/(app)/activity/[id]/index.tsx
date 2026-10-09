@@ -158,7 +158,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             onPress={() => router.push(`/user/${a.host.id}`)}
             className="mt-[18px] flex-row items-center gap-3.5"
             accessibilityRole={a.viewer.hosting ? undefined : 'button'}
-            scale="subtle"
+            scale="dim"
           >
             <Avatar uri={a.host.avatarUrl ?? undefined} size={46} />
             <View>

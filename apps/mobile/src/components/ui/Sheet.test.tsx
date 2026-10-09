@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { Text } from 'react-native';
+import { ScrollView, Text } from 'react-native';
 
 import { act, fireEvent, render, screen } from '@/test/native';
 import { Sheet } from './Sheet';
@@ -38,5 +38,16 @@ describe('Sheet (drawer)', () => {
       warn.mockRestore();
       jest.useRealTimers();
     }
+  });
+
+  it('scrolls its content and stays below the status bar, so tall drawers fit above the keyboard', async () => {
+    await render(
+      <Sheet open onClose={() => {}}>
+        <Text>Tall content</Text>
+      </Sheet>,
+    );
+    const scroll = screen.UNSAFE_getByType(ScrollView);
+    expect(scroll.props.style).toMatchObject({ flexGrow: 0 });
+    expect(screen.getByText('Tall content', { includeHiddenElements: true })).toBeTruthy();
   });
 });

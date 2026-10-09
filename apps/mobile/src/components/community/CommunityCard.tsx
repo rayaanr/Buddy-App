@@ -21,11 +21,11 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
   return (
     <View>
       <PressableScale
+        scale="dim"
         onPress={() => router.push(`/community/${c.id}`)}
         accessibilityRole="button"
         accessibilityLabel={`${c.name}, ${communityMeta(c)}`}
         className="overflow-hidden rounded-[22px] bg-surface"
-        scale="subtle"
       >
         <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }} />
         <View className="py-4 pl-[18px] pr-[120px]">

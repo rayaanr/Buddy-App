@@ -59,12 +59,21 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         accessibilityState={{ selected: focused }}
         accessibilityLabel={tab.label}
         scale="strong"
-        className="flex-1 items-center gap-[5px]"
+        className="min-w-0 flex-1 items-center gap-[5px]"
       >
         <TabIcon focused={focused}>
           <tab.Icon color={color} />
         </TabIcon>
-        <Text className="font-sans-medium text-[12px]" style={{ color }}>
+        {/* One line always: shrinks a little rather than wrap ("Communitie/s"),
+            e.g. with a larger system text size. */}
+        <Text
+          className="font-sans-medium text-[12px]"
+          style={{ color }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.75}
+          maxFontSizeMultiplier={1.3}
+        >
           {tab.label}
         </Text>
       </PressableScale>
@@ -77,7 +86,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       style={{ height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom }}
     >
       {items.slice(0, 2)}
-      <View className="flex-1 items-center">
+      {/* Fixed width, so the four tabs share the rest and "Communities" fits. */}
+      <View className="w-[68px] items-center">
         <PressableScale
           onPress={() => router.push('/create')}
           accessibilityRole="button"
