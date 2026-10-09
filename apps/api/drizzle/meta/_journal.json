@@ -43,6 +43,13 @@
       "when": 1791583879284,
       "tag": "0005_activity_waitlist",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791585397646,
+      "tag": "0006_notification_settings",
+      "breakpoints": true
     }
   ]
 }

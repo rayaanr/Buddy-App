@@ -33,6 +33,8 @@ export const activitySummary = z.object({
     hosting: z.boolean(),
     /** 1 if you're next in line; null if you're not on the waitlist. */
     waitlistPosition: z.number().int().nullable(),
+    /** You muted this activity's group chat (no chat notifications). */
+    chatMuted: z.boolean(),
   }),
   /** Called off by the host. Only people who were going still see it. */
   cancelled: z.boolean(),
@@ -97,6 +99,8 @@ export const updateActivityInput = z
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to change');
 export type UpdateActivityInput = z.infer<typeof updateActivityInput>;
+
+export const muteInput = z.object({ muted: z.boolean() });
 
 /** An activity on "Your activities", with the latest chat line for the preview strip. */
 export const myActivity = activitySummary.extend({

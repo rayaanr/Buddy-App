@@ -237,4 +237,76 @@ describe('Expo push sender', () => {
       .sort();
     expect(remaining).toEqual(['ExponentPushToken[kavindu]', 'ExponentPushToken[shehani]']);
   });
+
+  it('respects notification switches and muted chats', async () => {
+    const { db } = t.deps;
+    const kavindu = await t.signIn();
+    const nethmi = await t.signIn('nethmi@buddy.test');
+    const shehani = await t.signIn('shehani@buddy.test');
+    await db.insert(pushTokens).values([
+      { token: 'ExponentPushToken[kavindu]', userId: kavindu.userId },
+      { token: 'ExponentPushToken[nethmi]', userId: nethmi.userId },
+      { token: 'ExponentPushToken[shehani]', userId: shehani.userId },
+    ]);
+    const padel = await padelFor(kavindu.headers);
+
+    // Nethmi turns chat notifications off; Kavindu mutes this one chat.
+    await t.call('/v1/me', {
+      method: 'PATCH',
+      headers: nethmi.headers,
+      body: { notifications: { chat: false } },
+    });
+    const muted = await t.call<{ viewer: { chatMuted: boolean } }>(
+      `/v1/activities/${padel.id}/mute`,
+      { method: 'POST', headers: kavindu.headers, body: { muted: true } },
+    );
+    expect(muted.body.viewer.chatMuted).toBe(true);
+    const me = await t.call<{ notifications: { chat: boolean; reminders: boolean } }>('/v1/me', {
+      headers: nethmi.headers,
+    });
+    expect(me.body.notifications).toEqual({ chat: false, reminders: true });
+
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const batch = JSON.parse(String(init.body)) as unknown[];
+      return new Response(JSON.stringify({ data: batch.map(() => ({ status: 'ok' })) }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const sentTo = () =>
+      fetchMock.mock.calls
+        .flatMap((c) => (JSON.parse(String(c[1].body)) as { to: string }[]).map((m) => m.to))
+        .sort();
+    try {
+      const sender = createPushSender(db, t.deps.logger);
+      await sender.notifyActivity(
+        padel.id,
+        { title: 'Padel', body: 'Hi', data: {}, channelId: 'chat' },
+        [],
+      );
+      expect(sentTo()).toEqual(['ExponentPushToken[shehani]']);
+
+      fetchMock.mockClear();
+      await sender.notifyActivity(
+        padel.id,
+        { title: 'Coming up', body: '06:30', data: {}, channelId: 'reminders' },
+        [],
+      );
+      // Muting a chat doesn't silence reminders and changes.
+      expect(sentTo()).toEqual([
+        'ExponentPushToken[kavindu]',
+        'ExponentPushToken[nethmi]',
+        'ExponentPushToken[shehani]',
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    // Only people going can mute a chat.
+    const outsider = await t.signIn('new@buddy.test', 'Nimal');
+    const denied = await t.call(`/v1/activities/${padel.id}/mute`, {
+      method: 'POST',
+      headers: outsider.headers,
+      body: { muted: true },
+    });
+    expect(denied.status).toBe(404);
+  });
 });

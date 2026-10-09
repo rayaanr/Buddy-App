@@ -1,7 +1,7 @@
 import { and, eq, inArray, notInArray } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
-import { activityMembers, pushTokens } from '../db/schema';
+import { activityMembers, profiles, pushTokens } from '../db/schema';
 import type { Logger } from '../logger';
 
 export interface PushMessage {
@@ -55,6 +55,14 @@ export function createPushSender(db: Db, logger: Logger, accessToken?: string): 
     }
   }
 
+  /** People who switched this kind of notification off (Settings → Notifications). */
+  const wanted = (message: PushMessage) =>
+    message.channelId === 'chat'
+      ? eq(profiles.notifyChat, true)
+      : message.channelId === 'reminders'
+        ? eq(profiles.notifyReminders, true)
+        : undefined;
+
   return {
     async notifyActivity(activityId, message, exceptUserIds) {
       try {
@@ -63,10 +71,14 @@ export function createPushSender(db: Db, logger: Logger, accessToken?: string): 
           .select({ token: pushTokens.token })
           .from(pushTokens)
           .innerJoin(activityMembers, eq(activityMembers.userId, pushTokens.userId))
+          .innerJoin(profiles, eq(profiles.userId, pushTokens.userId))
           .where(
             and(
               eq(activityMembers.activityId, activityId),
               except.length ? notInArray(pushTokens.userId, except) : undefined,
+              wanted(message),
+              // A muted group chat stays quiet; reminders and changes still come.
+              message.channelId === 'chat' ? eq(activityMembers.chatMuted, false) : undefined,
             ),
           );
         await send(
@@ -84,7 +96,8 @@ export function createPushSender(db: Db, logger: Logger, accessToken?: string): 
         const rows = await db
           .select({ token: pushTokens.token })
           .from(pushTokens)
-          .where(inArray(pushTokens.userId, userIds));
+          .innerJoin(profiles, eq(profiles.userId, pushTokens.userId))
+          .where(and(inArray(pushTokens.userId, userIds), wanted(message)));
         await send(
           rows.map((r) => r.token),
           message,

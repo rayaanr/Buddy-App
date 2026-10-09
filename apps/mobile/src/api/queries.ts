@@ -154,6 +154,15 @@ export function useLeaveActivity() {
   });
 }
 
+export function useMuteChat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, muted }: { id: string; muted: boolean }) =>
+      unwrap(api.activities[':id'].mute.$post({ param: { id }, json: { muted } })),
+    onSuccess: (detail) => qc.setQueryData(keys.activity(detail.id), detail),
+  });
+}
+
 export function useWaitlist() {
   const qc = useQueryClient();
   return useMutation({

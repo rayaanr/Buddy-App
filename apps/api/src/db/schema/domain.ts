@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   check,
   index,
   integer,
@@ -36,6 +37,9 @@ export const profiles = pgTable('profiles', {
   avatarKey: text(),
   /** External avatar URL (seed data); an uploaded avatarKey takes priority. */
   avatarUrl: text(),
+  /** Push notification switches (Settings → Notifications). */
+  notifyChat: boolean().notNull().default(true),
+  notifyReminders: boolean().notNull().default(true),
   ...timestamps,
 });
 
@@ -119,6 +123,8 @@ export const activityMembers = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     role: text().notNull().default('guest'),
     joinedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+    /** No chat notifications from this activity. */
+    chatMuted: boolean().notNull().default(false),
   },
   (t) => [
     primaryKey({ columns: [t.activityId, t.userId] }),

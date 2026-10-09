@@ -86,6 +86,9 @@ export async function findActivitySummaries(
       communityName: communities.name,
       goingCount: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
       waitingCount: sql<number>`(select count(*)::int from activity_waitlist w where w.activity_id = ${activities.id})`,
+      chatMuted: viewerId
+        ? sql<boolean>`coalesce((select m.chat_muted from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId}), false)`
+        : sql<boolean>`false`,
       waitlistPosition: viewerId
         ? sql<
             number | null
@@ -145,6 +148,7 @@ export async function findActivitySummaries(
       joined: r.viewerRole === 'guest',
       hosting: r.viewerRole === 'host',
       waitlistPosition: r.waitlistPosition,
+      chatMuted: r.chatMuted,
     },
     cancelled: r.cancelledAt !== null,
   }));

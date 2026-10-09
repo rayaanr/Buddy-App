@@ -19,6 +19,8 @@ export const me = z.object({
   avatarUrl: z.url().nullable(),
   /** False until interests are picked; the app routes to onboarding until then. */
   onboarded: z.boolean(),
+  /** Push notification switches. */
+  notifications: z.object({ chat: z.boolean(), reminders: z.boolean() }),
   stats: z.object({
     joined: z.number().int(),
     hosted: z.number().int(),
@@ -40,6 +42,7 @@ export const updateMeInput = z
     availability: uniqueList(availability),
     /** Key returned by the upload endpoint; null removes the photo. */
     avatarKey: z.string().nullable(),
+    notifications: z.object({ chat: z.boolean(), reminders: z.boolean() }).partial(),
   })
   .partial();
 export type UpdateMeInput = z.infer<typeof updateMeInput>;

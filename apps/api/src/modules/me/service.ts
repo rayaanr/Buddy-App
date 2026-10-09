@@ -47,6 +47,7 @@ export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
     availability: profile.availability as Availability[],
     avatarUrl: urls.avatar(profile.avatarKey, profile.avatarUrl),
     onboarded: profile.interests.length >= MIN_INTERESTS,
+    notifications: { chat: profile.notifyChat, reminders: profile.notifyReminders },
     stats: { joined: joined?.n ?? 0, hosted: hosted?.n ?? 0, communities: comms?.n ?? 0 },
     createdAt: row.user.createdAt.toISOString(),
   };
@@ -69,6 +70,10 @@ export async function updateMe(db: Db, userId: string, input: UpdateMeInput) {
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),
       ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey }),
+      ...(input.notifications?.chat !== undefined && { notifyChat: input.notifications.chat }),
+      ...(input.notifications?.reminders !== undefined && {
+        notifyReminders: input.notifications.reminders,
+      }),
     };
     if (Object.keys(profilePatch).length) {
       await tx.update(profiles).set(profilePatch).where(eq(profiles.userId, userId));

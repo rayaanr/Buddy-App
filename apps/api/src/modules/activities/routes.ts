@@ -1,10 +1,11 @@
 import {
   createActivityInput,
   feedQuery,
+  muteInput,
   myActivitiesQuery,
   updateActivityInput,
 } from '@buddy/shared';
-import { desc, eq, inArray, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import { currentUser, requireUser } from '../../auth/middleware';
@@ -209,6 +210,19 @@ export function activityRoutes(deps: Deps) {
         const result = await leaveActivity(db, me, id);
         if (result.left) hub.disconnect(id, me.id);
         await announce(id, me.id, result);
+        return c.json(await getActivityDetail(db, urls, id, me.id));
+      })
+
+      // Mute or unmute this activity's group chat notifications (members only).
+      .post('/:id/mute', idParam(), validate('json', muteInput), async (c) => {
+        const me = currentUser(c);
+        const id = c.req.param('id');
+        const [row] = await db
+          .update(activityMembers)
+          .set({ chatMuted: c.req.valid('json').muted })
+          .where(and(eq(activityMembers.activityId, id), eq(activityMembers.userId, me.id)))
+          .returning({ id: activityMembers.activityId });
+        if (!row) throw notFound('Activity');
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 

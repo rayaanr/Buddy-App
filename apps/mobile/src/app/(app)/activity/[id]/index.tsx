@@ -17,10 +17,12 @@ import {
   useCancelActivity,
   useJoinActivity,
   useLeaveActivity,
+  useMuteChat,
   useWaitlist,
 } from '@/api/queries';
 import {
   ActionSheet,
+  type SheetAction,
   AnimatedView,
   ArrowRightIcon,
   Avatar,
@@ -85,6 +87,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const join = useJoinActivity();
   const leave = useLeaveActivity();
   const waitlist = useWaitlist();
+  const mute = useMuteChat();
   const cancel = useCancelActivity();
   const { top } = useScreenInsets();
   const now = useNow();
@@ -146,6 +149,46 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             : errorMessage(err),
         ),
     });
+  const onMute = () =>
+    mute.mutate(
+      { id: a.id, muted: !a.viewer.chatMuted },
+      {
+        onSuccess: (detail) =>
+          toast(
+            detail.viewer.chatMuted
+              ? 'Group chat muted. You’ll still get reminders and changes.'
+              : 'Group chat unmuted.',
+          ),
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
+
+  // ⋯ menu: what you can do depends on whether you host, are going, or are browsing.
+  const menu: SheetAction[] = [
+    ...(isIn
+      ? [{ label: a.viewer.chatMuted ? 'Unmute group chat' : 'Mute group chat', onPress: onMute }]
+      : []),
+    ...(canManage
+      ? [
+          { label: 'Edit activity', onPress: () => router.push(`/activity/${a.id}/edit`) },
+          { label: 'Cancel activity', destructive: true, onPress: () => setConfirmCancel(true) },
+        ]
+      : []),
+    ...(a.viewer.hosting
+      ? []
+      : [
+          {
+            label: 'Report activity',
+            destructive: true,
+            onPress: () =>
+              router.push({
+                pathname: '/report',
+                params: { type: 'activity', id: a.id, userId: a.host.id, name: a.host.name },
+              }),
+          },
+        ]),
+  ];
+
   const onCancel = () =>
     cancel.mutate(a.id, {
       onSuccess: () => toast('Cancelled. Everyone going has been told.'),
@@ -258,9 +301,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               onPress={() => void shareActivity(a)}
             />
           )}
-          {!a.viewer.hosting || canManage ? (
-            <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />
-          ) : null}
+          {menu.length ? <MoreButton tone="glass" onPress={() => setMenuOpen(true)} /> : null}
         </View>
       </View>
 
@@ -326,32 +367,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
         </AnimatedView>
       </Footer>
 
-      <ActionSheet
-        visible={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        actions={
-          a.viewer.hosting
-            ? [
-                { label: 'Edit activity', onPress: () => router.push(`/activity/${a.id}/edit`) },
-                {
-                  label: 'Cancel activity',
-                  destructive: true,
-                  onPress: () => setConfirmCancel(true),
-                },
-              ]
-            : [
-                {
-                  label: 'Report activity',
-                  destructive: true,
-                  onPress: () =>
-                    router.push({
-                      pathname: '/report',
-                      params: { type: 'activity', id: a.id, userId: a.host.id, name: a.host.name },
-                    }),
-                },
-              ]
-        }
-      />
+      <ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} actions={menu} />
       <ActionSheet
         visible={confirmCancel}
         onClose={() => setConfirmCancel(false)}
