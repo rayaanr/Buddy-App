@@ -7,16 +7,16 @@ import { signOut, useHistory, useMe } from '@/api/queries';
 import {
   Avatar,
   Button,
-  ChevronRightIcon,
   Heading,
+  IconButton,
   Loading,
   Refresh,
   SectionLabel,
+  SettingsIcon,
   Tag,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { dayMonth, locationLabel, monthYear } from '@/lib/activity';
-import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
 export default function ProfileScreen() {
@@ -51,12 +51,15 @@ export default function ProfileScreen() {
         />
       }
     >
-      <Avatar
-        uri={avatarUrl ?? undefined}
-        size={86}
-        fallback={colors.me}
-        style={{ alignSelf: 'center' }}
-      />
+      <View className="items-center">
+        <Avatar uri={avatarUrl ?? undefined} size={86} fallback={colors.me} />
+        <IconButton
+          icon={<SettingsIcon />}
+          label="Settings"
+          onPress={() => router.push('/settings')}
+          className="absolute right-0 top-0"
+        />
+      </View>
       <Heading size="page" className="mt-4 text-center">
         {name}
       </Heading>
@@ -99,10 +102,6 @@ export default function ProfileScreen() {
         </Pressable>
       ))}
 
-      <SectionLabel className="mb-1 mt-6">Account</SectionLabel>
-      <SettingsRow label="Blocked people" onPress={() => router.push('/blocked')} />
-      <SettingsRow label="Delete account" danger onPress={() => router.push('/delete-account')} />
-
       <Button
         label="Edit profile"
         variant="outline"
@@ -120,28 +119,5 @@ export default function ProfileScreen() {
         weight="medium"
       />
     </ScrollView>
-  );
-}
-
-function SettingsRow({
-  label,
-  danger,
-  onPress,
-}: {
-  label: string;
-  danger?: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      className="flex-row items-center justify-between border-b border-divider py-3.5 active:opacity-80"
-    >
-      <Text className={cn('font-sans text-[15.5px]', danger ? 'text-danger' : 'text-ink')}>
-        {label}
-      </Text>
-      <ChevronRightIcon />
-    </Pressable>
   );
 }

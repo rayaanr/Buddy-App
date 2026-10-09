@@ -7,7 +7,9 @@ import Check from 'lucide-react-native/icons/check';
 import CheckCheck from 'lucide-react-native/icons/check-check';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Compass from 'lucide-react-native/icons/compass';
+import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Plus from 'lucide-react-native/icons/plus';
+import Settings from 'lucide-react-native/icons/settings';
 import User from 'lucide-react-native/icons/user';
 import Users from 'lucide-react-native/icons/users';
 import X from 'lucide-react-native/icons/x';
@@ -55,6 +57,13 @@ export const ChevronRightIcon = icon(
   ChevronRight,
   { size: 18, color: colors.subtle, strokeWidth: 1.8 },
   'ChevronRightIcon',
+);
+
+export const MoreIcon = icon(Ellipsis, { size: 20, color: colors.ink, strokeWidth: 2 }, 'MoreIcon');
+export const SettingsIcon = icon(
+  Settings,
+  { size: 20, color: colors.ink, strokeWidth: 1.8 },
+  'SettingsIcon',
 );
 
 // Chat receipts: sent ✓ and seen ✓✓

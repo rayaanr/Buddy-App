@@ -41,8 +41,8 @@ npm run format        # prettier + tailwind class sorting
 | Communities    | Join a community and its activities surface first: Discover row, Activities panel, swipe deck                                                     |
 | Host           | Centre **+** → title, type, time, place → **Publish** lands on Activities → Hosting                                                               |
 | Start over     | Log out → "Not you? Start over" forgets the account on this device                                                                                |
-| Report, block  | Long-press someone's message, or **Report**/**Block** on their profile, or **Report activity**. Unblock in Profile → Blocked people               |
-| Delete account | Profile → Delete account → **Delete my account**: lands on Sign up with nothing remembered                                                        |
+| Report, block  | **⋯** on someone's profile or an activity, or long-press a message. Unblock from their profile or Profile → ⚙ Settings → Blocked people           |
+| Delete account | Profile → ⚙ Settings → Delete account → **Delete my account**: lands on Sign up with nothing remembered                                           |
 
 ## Project structure
 

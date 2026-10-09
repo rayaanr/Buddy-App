@@ -1,10 +1,12 @@
 import { ERROR_CODES, type ActivityDetail } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { ApiRequestError, errorMessage } from '@/api/client';
 import { useActivity, useJoinActivity, useLeaveActivity } from '@/api/queries';
 import {
+  ActionSheet,
   ArrowRightIcon,
   Avatar,
   BackButton,
@@ -14,6 +16,7 @@ import {
   Heading,
   LoadError,
   Loading,
+  MoreButton,
   Photo,
   Scrim,
 } from '@/components/ui';
@@ -31,6 +34,7 @@ export default function ActivityDetailScreen() {
   const join = useJoinActivity();
   const leave = useLeaveActivity();
   const { top } = useScreenInsets();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (activity.isLoading) return <Loading className="flex-1 bg-bg" />;
   if (activity.error instanceof ApiRequestError && activity.error.status === 404) {
@@ -77,8 +81,14 @@ export default function ActivityDetailScreen() {
       <ScrollView className="flex-1">
         <Photo uri={a.coverUrl ?? undefined} hue={hueFor(a)} style={{ height: 330 }}>
           <Scrim from={0.5} opacity={1} />
-          <View className="absolute left-[18px]" style={{ top: top(56) }}>
+          <View
+            className="absolute inset-x-[18px] flex-row justify-between"
+            style={{ top: top(56) }}
+          >
             <BackButton tone="glass" />
+            {a.viewer.hosting ? null : (
+              <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />
+            )}
           </View>
           <Eyebrow className="absolute bottom-1 left-[22px]">{a.category}</Eyebrow>
         </Photo>
@@ -123,27 +133,6 @@ export default function ActivityDetailScreen() {
               {a.description}
             </Text>
           ) : null}
-
-          {a.viewer.hosting ? null : (
-            <Button
-              label="Report activity"
-              variant="ghost"
-              size="sm"
-              weight="medium"
-              className="mt-6"
-              onPress={() =>
-                router.push({
-                  pathname: '/report',
-                  params: {
-                    type: 'activity',
-                    id: a.id,
-                    userId: a.host.id,
-                    name: a.host.name,
-                  },
-                })
-              }
-            />
-          )}
         </View>
       </ScrollView>
 
@@ -178,6 +167,22 @@ export default function ActivityDetailScreen() {
           </>
         ) : null}
       </Footer>
+
+      <ActionSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        actions={[
+          {
+            label: 'Report activity',
+            destructive: true,
+            onPress: () =>
+              router.push({
+                pathname: '/report',
+                params: { type: 'activity', id: a.id, userId: a.host.id, name: a.host.name },
+              }),
+          },
+        ]}
+      />
     </View>
   );
 }

@@ -7,12 +7,14 @@ import { ApiRequestError, errorMessage } from '@/api/client';
 import { useMe, useSetBlocked, useUser } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import {
+  ActionSheet,
   Avatar,
   BackButton,
   Button,
   Heading,
   LoadError,
   Loading,
+  MoreButton,
   SectionLabel,
   Tag,
 } from '@/components/ui';
@@ -27,6 +29,7 @@ export default function UserProfileScreen() {
   const user = useUser(id);
   const me = useMe();
   const { top } = useScreenInsets();
+  const [sheet, setSheet] = useState<'menu' | 'confirm-block' | null>(null);
 
   if (user.isLoading) return <Loading className="flex-1 bg-bg" />;
   if (user.error instanceof ApiRequestError && user.error.status === 404) {
@@ -41,11 +44,13 @@ export default function UserProfileScreen() {
   }
   const u = user.data;
   const common = new Set(u.commonInterests);
+  const isMe = me.data?.id === u.id;
 
   return (
     <View className="flex-1 bg-bg">
-      <View className="px-[18px]" style={{ paddingTop: top(56) }}>
+      <View className="flex-row justify-between px-[18px]" style={{ paddingTop: top(56) }}>
         <BackButton />
+        {me.data && !isMe ? <MoreButton onPress={() => setSheet('menu')} /> : null}
       </View>
       <ScrollView
         className="flex-1"
@@ -96,8 +101,10 @@ export default function UserProfileScreen() {
           </>
         ) : null}
 
-        {me.data && me.data.id !== u.id ? <SafetyActions person={u} /> : null}
+        {u.blockedByYou ? <BlockedNotice person={u} /> : null}
       </ScrollView>
+
+      <SafetySheet person={u} mode={sheet} onChange={setSheet} />
     </View>
   );
 }
@@ -111,89 +118,82 @@ function Stat({ value, label }: { value: number; label: string }) {
   );
 }
 
-/** Report and block, or unblock if you already blocked them. */
-function SafetyActions({ person }: { person: PublicProfile }) {
+function useBlockToggle(person: PublicProfile) {
   const setBlocked = useSetBlocked();
-  const [confirming, setConfirming] = useState(false);
   const name = firstName(person.name);
-
   const update = (blocked: boolean) =>
     setBlocked.mutate(
       { userId: person.id, blocked },
       {
-        onSuccess: () => {
-          setConfirming(false);
-          toast(blocked ? `Blocked ${name}.` : `Unblocked ${name}.`);
-        },
+        onSuccess: () => toast(blocked ? `Blocked ${name}.` : `Unblocked ${name}.`),
         onError: (err) => toast(errorMessage(err)),
       },
     );
+  return { update, pending: setBlocked.isPending, name };
+}
 
-  if (person.blockedByYou || confirming) {
+/** "⋯" menu: report or block, then a confirmation before blocking. */
+function SafetySheet({
+  person,
+  mode,
+  onChange,
+}: {
+  person: PublicProfile;
+  mode: 'menu' | 'confirm-block' | null;
+  onChange: (mode: 'menu' | 'confirm-block' | null) => void;
+}) {
+  const { update, name } = useBlockToggle(person);
+  const close = () => onChange(null);
+
+  if (mode === 'confirm-block') {
     return (
-      <View className="mt-8 rounded-[18px] bg-surface px-[18px] py-4">
-        <Text className="font-sans-semibold text-[16px] text-ink">
-          {person.blockedByYou ? `You blocked ${name}` : `Block ${name}?`}
-        </Text>
-        <Text className="mt-1.5 font-sans text-[14.5px] leading-[21px] text-muted">
-          {person.blockedByYou
-            ? 'You won’t see each other’s activities or messages.'
-            : 'You won’t see each other’s activities or messages, and they can’t view your profile. They won’t be told.'}
-        </Text>
-        <View className="mt-4 flex-row gap-2.5">
-          {person.blockedByYou ? (
-            <Button
-              label="Unblock"
-              variant="outline"
-              size="md"
-              disabled={setBlocked.isPending}
-              onPress={() => update(false)}
-              className="flex-1"
-            />
-          ) : (
-            <>
-              <Button
-                label="Cancel"
-                variant="outline"
-                size="md"
-                onPress={() => setConfirming(false)}
-                className="flex-1"
-              />
-              <Button
-                label={setBlocked.isPending ? 'Blocking…' : 'Block'}
-                variant="danger-outline"
-                size="md"
-                disabled={setBlocked.isPending}
-                onPress={() => update(true)}
-                className="flex-1"
-              />
-            </>
-          )}
-        </View>
-      </View>
+      <ActionSheet
+        visible
+        onClose={close}
+        title={`Block ${name}?`}
+        message="You won’t see each other’s activities or messages, and they can’t view your profile. They won’t be told."
+        actions={[{ label: 'Block', destructive: true, onPress: () => update(true) }]}
+      />
     );
   }
 
   return (
-    <View className="mt-8 flex-row justify-center gap-2">
+    <ActionSheet
+      visible={mode === 'menu'}
+      onClose={close}
+      actions={[
+        {
+          label: `Report ${name}`,
+          onPress: () =>
+            router.push({
+              pathname: '/report',
+              params: { type: 'user', id: person.id, userId: person.id, name: person.name },
+            }),
+        },
+        person.blockedByYou
+          ? { label: `Unblock ${name}`, onPress: () => update(false) }
+          : { label: `Block ${name}`, destructive: true, onPress: () => onChange('confirm-block') },
+      ]}
+    />
+  );
+}
+
+/** Shown on the profile of someone you blocked, with a quick way back. */
+function BlockedNotice({ person }: { person: PublicProfile }) {
+  const { update, pending, name } = useBlockToggle(person);
+  return (
+    <View className="mt-8 rounded-[18px] bg-surface px-[18px] py-4">
+      <Text className="font-sans-semibold text-[16px] text-ink">You blocked {name}</Text>
+      <Text className="mt-1.5 font-sans text-[14.5px] leading-[21px] text-muted">
+        You won’t see each other’s activities or messages.
+      </Text>
       <Button
-        label={`Report ${name}`}
-        variant="ghost"
-        size="sm"
-        weight="medium"
-        onPress={() =>
-          router.push({
-            pathname: '/report',
-            params: { type: 'user', id: person.id, userId: person.id, name: person.name },
-          })
-        }
-      />
-      <Button
-        label={`Block ${name}`}
-        variant="danger"
-        size="sm"
-        weight="medium"
-        onPress={() => setConfirming(true)}
+        label="Unblock"
+        variant="outline"
+        size="md"
+        disabled={pending}
+        onPress={() => update(false)}
+        className="mt-4"
       />
     </View>
   );
