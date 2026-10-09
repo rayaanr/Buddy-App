@@ -20,7 +20,12 @@ export default function CreateActivityScreen() {
       onSubmit={(v) => {
         if (!me.data) return;
         create.mutate(
-          { ...v, startsAt: v.startsAt.toISOString(), area: me.data.area },
+          {
+            ...v,
+            coverKey: v.coverKey ?? undefined,
+            startsAt: v.startsAt.toISOString(),
+            area: me.data.area,
+          },
           {
             onSuccess: () => {
               router.dismissTo({ pathname: '/activities', params: { segment: 'hosting' } });

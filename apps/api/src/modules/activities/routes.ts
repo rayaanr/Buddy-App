@@ -179,7 +179,7 @@ export function activityRoutes(deps: Deps) {
       .patch('/:id', idParam(), validate('json', updateActivityInput), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
-        await announce(id, me.id, await updateActivity(db, me, id, c.req.valid('json')));
+        await announce(id, me.id, await updateActivity(db, urls, me, id, c.req.valid('json')));
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 

@@ -99,6 +99,23 @@ describe('editing an activity', () => {
   });
 });
 
+describe('cover photos', () => {
+  it('takes a cover the host uploaded, refuses anyone else’s, and null goes back to stock', async () => {
+    const host = await t.signIn('shehani@buddy.test');
+    const { id } = await padel(host.headers);
+    const patch = (coverKey: string | null) =>
+      t.call<ActivityDetail>(`/v1/activities/${id}`, {
+        method: 'PATCH',
+        headers: host.headers,
+        body: { coverKey },
+      });
+
+    expect((await patch(`covers/${host.userId}/a.jpg`)).status).toBe(200);
+    expect((await patch('covers/someone-else/a.jpg')).status).toBe(403);
+    expect((await patch(null)).body.coverUrl).toContain('unsplash');
+  });
+});
+
 describe('cancelling an activity', () => {
   it('tells the people going, keeps it for them, and hides it from everyone else', async () => {
     pushes.length = 0;

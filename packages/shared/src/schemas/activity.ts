@@ -91,6 +91,8 @@ export const updateActivityInput = z
     place: z.string().trim().min(2).max(LIMITS.placeMax),
     capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
     description: z.string().trim().max(LIMITS.descriptionMax),
+    /** A new uploaded cover; null goes back to the stock photo for the type. */
+    coverKey: z.string().nullable(),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, 'Nothing to change');

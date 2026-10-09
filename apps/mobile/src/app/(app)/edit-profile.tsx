@@ -8,14 +8,12 @@ import {
   type Availability,
   type Interest,
 } from '@buddy/shared';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
-import { uploadImage } from '@/api/upload';
 import { InterestTile, toggle } from '@/components/onboarding/InterestPicker';
 import {
   ActionSheet,
@@ -33,6 +31,7 @@ import {
   SectionLabel,
   TextField,
 } from '@/components/ui';
+import { usePickedImage } from '@/hooks/usePickedImage';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -58,40 +57,13 @@ function EditProfileForm({ me }: { me: Saved }) {
   const update = useUpdateMe();
   const [name, setName] = useState(me.name);
   const [bio, setBio] = useState(me.bio);
-  // `key` is what Save sends: undefined leaves the photo as is, null removes it.
-  const [photo, setPhoto] = useState<{ uri: string | null; key?: string | null }>({
-    uri: me.avatarUrl,
-  });
-  const [uploading, setUploading] = useState(false);
+  const photo = usePickedImage('avatar', me.avatarUrl);
+  const uploading = photo.uploading;
   const [photoMenu, setPhotoMenu] = useState(false);
   const [area, setArea] = useState<Area>(me.area);
   const [interests, setInterests] = useState(me.interests);
   const [availability, setAvailability] = useState(me.availability);
   const need = MIN_INTERESTS - interests.length;
-
-  // Uploads as soon as it's picked, so Save is quick; the photo only changes on Save.
-  const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      shape: 'oval',
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const before = photo;
-    setPhoto({ uri: asset.uri });
-    setUploading(true);
-    try {
-      setPhoto({ uri: asset.uri, key: await uploadImage('avatar', asset) });
-    } catch (err) {
-      setPhoto(before);
-      toast(errorMessage(err));
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const save = () => {
     if (need > 0 || update.isPending || uploading) return;
@@ -128,7 +100,7 @@ function EditProfileForm({ me }: { me: Saved }) {
         <Heading size="page">Edit profile</Heading>
 
         <PressableScale
-          onPress={() => (photo.uri ? setPhotoMenu(true) : void pickPhoto())}
+          onPress={() => (photo.uri ? setPhotoMenu(true) : void photo.pick())}
           disabled={uploading}
           accessibilityRole="button"
           accessibilityLabel={photo.uri ? 'Change photo' : 'Add a photo'}
@@ -221,11 +193,11 @@ function EditProfileForm({ me }: { me: Saved }) {
         visible={photoMenu}
         onClose={() => setPhotoMenu(false)}
         actions={[
-          { label: 'Choose a new photo', onPress: () => void pickPhoto() },
+          { label: 'Choose a new photo', onPress: () => void photo.pick() },
           {
             label: 'Remove photo',
             destructive: true,
-            onPress: () => setPhoto({ uri: null, key: null }),
+            onPress: photo.remove,
           },
         ]}
       />

@@ -1,7 +1,7 @@
 import { atLocalDay, clockLabel, LIMITS, localDay, type ActivityGroup } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { DatePickerSheet } from '@/components/create/DatePickerSheet';
 import { TimePickerSheet } from '@/components/create/TimePickerSheet';
@@ -11,13 +11,23 @@ import {
   Chip,
   ClockIcon,
   Footer,
+  ImagePlusIcon,
   KeyboardAwareScrollView,
   KeyboardScreen,
+  Photo,
+  PressableScale,
   SectionLabel,
   TextField,
 } from '@/components/ui';
-import { ACTIVITY_TYPES, CREATE_DAYS, CREATE_TIMES, type CreateDay } from '@/data/constants';
+import {
+  ACTIVITY_TYPES,
+  CREATE_DAYS,
+  CREATE_TIMES,
+  GROUP_HUES,
+  type CreateDay,
+} from '@/data/constants';
 import { useNow } from '@/hooks/useNow';
+import { usePickedImage } from '@/hooks/usePickedImage';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { presetDay, shortDay } from '@/lib/activity';
 import { colors } from '@/theme';
@@ -73,6 +83,8 @@ export function draftFrom(
 }
 
 export interface ActivityValues {
+  /** undefined: unchanged; null: back to the stock photo; string: a new upload. */
+  coverKey?: string | null;
   title: string;
   group: ActivityGroup;
   startsAt: Date;
@@ -89,6 +101,8 @@ interface ActivityFormProps {
   pending: boolean;
   /** Spots can't go below this (people already going). */
   minSpots?: number;
+  /** The current cover, when editing. */
+  initialCover?: string | null;
   autoFocus?: boolean;
   onSubmit: (values: ActivityValues) => void;
 }
@@ -101,12 +115,15 @@ export function ActivityForm({
   pendingLabel,
   pending,
   minSpots = LIMITS.capacityMin,
+  initialCover = null,
   autoFocus,
   onSubmit,
 }: ActivityFormProps) {
   const { top } = useScreenInsets();
   const [draft, setDraft] = useState(initial);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  const cover = usePickedImage('cover', initialCover);
+  const group = ACTIVITY_TYPES.find((t) => t.label === draft.type)?.group ?? 'Social';
   const now = useNow();
   const day =
     draft.day === 'custom' && draft.customDay
@@ -122,13 +139,15 @@ export function ActivityForm({
   const openPicker = (kind: 'date' | 'time') => setPicker((p) => ({ kind, key: p.key + 1 }));
   const closePicker = () => setPicker((p) => ({ ...p, kind: null }));
   const inPast = startsAt <= now;
-  const ready = !!draft.title.trim() && !!draft.where.trim() && !inPast && !pending;
+  const ready =
+    !!draft.title.trim() && !!draft.where.trim() && !inPast && !pending && !cover.uploading;
 
   const submit = () => {
     if (!ready) return;
     onSubmit({
+      coverKey: cover.key,
       title: draft.title.trim(),
-      group: ACTIVITY_TYPES.find((t) => t.label === draft.type)?.group ?? 'Social',
+      group,
       startsAt,
       place: draft.where.trim(),
       capacity: draft.spots,
@@ -263,6 +282,45 @@ export function ActivityForm({
           size="md"
           className="mt-3 h-24 py-3.5 leading-[22px]"
         />
+
+        <SectionLabel className="mb-2.5 mt-[22px]">Cover photo</SectionLabel>
+        {cover.uri ? (
+          <View>
+            <Photo
+              uri={cover.uri}
+              hue={GROUP_HUES[group]}
+              style={{ aspectRatio: 16 / 10, borderRadius: 16 }}
+            >
+              {cover.uploading ? (
+                <View className="flex-1 items-center justify-center bg-black/50">
+                  <ActivityIndicator color={colors.ink} />
+                </View>
+              ) : null}
+            </Photo>
+            <View className="mt-2.5 flex-row gap-2">
+              <Chip label="Change photo" selected={false} onPress={() => void cover.pick()} />
+              <Chip
+                label={initialCover ? 'Use the default' : 'Remove'}
+                selected={false}
+                onPress={cover.remove}
+              />
+            </View>
+          </View>
+        ) : (
+          <PressableScale
+            scale="dim"
+            onPress={() => void cover.pick()}
+            accessibilityRole="button"
+            accessibilityLabel="Add a cover photo"
+            className="h-[118px] items-center justify-center gap-1.5 rounded-2xl border border-dashed border-outline px-6"
+          >
+            <ImagePlusIcon />
+            <Text className="font-sans-medium text-[15px] text-ink">Add a cover photo</Text>
+            <Text className="text-center font-sans text-[13px] text-muted">
+              Optional. Otherwise it gets a photo for its type.
+            </Text>
+          </PressableScale>
+        )}
       </KeyboardAwareScrollView>
 
       <DatePickerSheet

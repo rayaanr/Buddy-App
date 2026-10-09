@@ -9,6 +9,7 @@ import CheckCheck from 'lucide-react-native/icons/check-check';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Clock from 'lucide-react-native/icons/clock';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
 import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Plus from 'lucide-react-native/icons/plus';
@@ -72,6 +73,11 @@ export const CameraIcon = icon(
   Camera,
   { size: 16, color: colors.bg, strokeWidth: 2 },
   'CameraIcon',
+);
+export const ImagePlusIcon = icon(
+  ImagePlus,
+  { size: 22, color: colors.muted, strokeWidth: 1.8 },
+  'ImagePlusIcon',
 );
 export const ClockIcon = icon(
   Clock,

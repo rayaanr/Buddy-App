@@ -290,11 +290,15 @@ async function lockForHost(tx: Tx, hostId: string, activityId: string) {
  */
 export async function updateActivity(
   db: Db,
+  urls: Urls,
   host: { id: string; name: string },
   activityId: string,
   input: UpdateActivityInput,
 ) {
   if (input.startsAt !== undefined) checkStartsAt(input.startsAt);
+  if (input.coverKey && !input.coverKey.startsWith(coverKeyPrefix(host.id))) {
+    throw forbidden('That image was not uploaded by you');
+  }
   return db.transaction(async (tx) => {
     const row = await lockForHost(tx, host.id, activityId);
 
@@ -340,6 +344,9 @@ export async function updateActivity(
                   : row.coverUrl,
             }
           : {}),
+        ...(input.coverKey !== undefined && {
+          coverUrl: (input.coverKey && urls.fromKey(input.coverKey)) || stockCover(group),
+        }),
       })
       .where(eq(activities.id, activityId));
 

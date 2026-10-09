@@ -22,10 +22,12 @@ export default function EditActivityScreen() {
       submitLabel="Save changes"
       pendingLabel="Saving…"
       pending={update.isPending}
+      initialCover={a.coverUrl}
       minSpots={Math.max(LIMITS.capacityMin, a.goingCount)}
       onSubmit={(v) => {
         const startsAt = v.startsAt.toISOString();
         const patch: UpdateActivityInput = {
+          ...(v.coverKey !== undefined && { coverKey: v.coverKey }),
           ...(v.title !== a.title && { title: v.title }),
           ...(v.group !== a.group && { group: v.group }),
           ...(startsAt !== a.startsAt && { startsAt }),
