@@ -5,7 +5,7 @@ import path from 'node:path';
 import { Text } from 'react-native';
 
 import { colors } from '@/theme';
-import { act, fireEvent, render, screen, styleOf } from '@/test/native';
+import { fireEvent, render, screen, styleOf } from '@/test/native';
 import { BackButton } from './BackButton';
 import { Button } from './Button';
 import { Chip } from './Chip';
@@ -28,21 +28,34 @@ describe('styles reach native', () => {
     });
   });
 
-  it('PressableScale sinks while pressed (animated by NativeWind)', async () => {
-    jest.useFakeTimers();
+  it('PressableScale sinks while pressed', async () => {
     await render(
       <PressableScale testID="press" className="bg-lime">
         <Text>Hi</Text>
       </PressableScale>,
     );
     fireEvent(screen.getByTestId('press'), 'pressIn');
-    act(() => jest.advanceTimersByTime(400));
-    const animated = screen.getByTestId('press', { hidden: true }).props.jestAnimatedStyle?.value;
-    expect(animated).toMatchObject({
+    expect(styleOf('press')).toMatchObject({
       backgroundColor: colors.lime,
       transform: expect.arrayContaining([{ scaleX: expect.closeTo(0.97, 3) }]),
     });
-    jest.useRealTimers();
+  });
+
+  it('pressing never makes Reanimated warn (e.g. shared values written during render)', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await render(
+        <PressableScale testID="press" className="bg-lime">
+          <Text>Hi</Text>
+        </PressableScale>,
+      );
+      fireEvent(screen.getByTestId('press'), 'pressIn');
+      fireEvent(screen.getByTestId('press'), 'pressOut');
+      const reanimated = warn.mock.calls.filter((args) => String(args[0]).includes('Reanimated'));
+      expect(reanimated).toEqual([]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('Button keeps its size and colour', async () => {

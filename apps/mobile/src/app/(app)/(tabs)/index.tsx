@@ -23,7 +23,7 @@ import {
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { locationLabel } from '@/lib/activity';
 import { colors } from '@/theme';
-import { enterItem, layoutItem } from '@/theme/motion';
+import { fadeIn } from '@/theme/motion';
 
 export default function DiscoverScreen() {
   const { top } = useScreenInsets();
@@ -90,10 +90,8 @@ export default function DiscoverScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 10, paddingHorizontal: 22, paddingBottom: 20 }}
           >
-            {communityItems.map((activity, i) => (
-              <AnimatedView key={activity.id} entering={enterItem(i)} layout={layoutItem}>
-                <CommunityPickCard activity={activity} />
-              </AnimatedView>
+            {communityItems.map((activity) => (
+              <CommunityPickCard key={activity.id} activity={activity} />
             ))}
           </ScrollView>
         </>
@@ -108,18 +106,10 @@ export default function DiscoverScreen() {
           </>
         ) : null}
         {feed.error ? <LoadError error={feed.error} onRetry={() => void feed.refetch()} /> : null}
-        {hero ? (
-          <AnimatedView key={hero.id} entering={enterItem(0)} layout={layoutItem}>
-            <ActivityHeroCard activity={hero} />
-          </AnimatedView>
-        ) : null}
-        {rows.map((a, i) => (
-          <AnimatedView
-            key={a.id}
-            entering={enterItem(i + 1)}
-
-            layout={layoutItem}
-          >
+        {hero ? <ActivityHeroCard activity={hero} /> : null}
+        {/* Home stays calm: rows just fade in when they first appear. */}
+        {rows.map((a) => (
+          <AnimatedView key={a.id} entering={fadeIn}>
             <ActivityRow activity={a} />
           </AnimatedView>
         ))}

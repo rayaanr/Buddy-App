@@ -49,10 +49,12 @@ const playHaptic = (kind: Haptic) => {
 };
 
 /**
- * Pressable that sinks slightly under your finger and eases back: the app's
- * standard touch feedback. It's a plain Pressable using NativeWind's
- * `active:` and `transition` classes (NativeWind runs the transition with
- * Reanimated on native), so `className` styles it like any other view.
+ * Pressable that sinks slightly under your finger: the app's standard touch
+ * feedback. It's a plain Pressable with NativeWind's `active:` classes, so
+ * `className` styles it like any other view.
+ *
+ * No `transition-*` classes: NativeWind animates those by writing Reanimated
+ * shared values during render, which Reanimated 4 warns about on every press.
  */
 export function PressableScale({
   scale = 'normal',
@@ -63,11 +65,7 @@ export function PressableScale({
 }: PressableScaleProps) {
   return (
     <Pressable
-      className={cn(
-        scale !== 'none' && 'transition-transform duration-150',
-        PRESS[scale],
-        className,
-      )}
+      className={cn(PRESS[scale], className)}
       onPress={(e) => {
         if (haptic) playHaptic(haptic);
         onPress?.(e);
