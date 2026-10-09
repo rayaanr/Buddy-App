@@ -51,10 +51,10 @@
     "@buddy/api": "*"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "start": "expo start --port 7481",
+    "android": "expo start --port 7481 --android",
+    "ios": "expo start --port 7481 --ios",
+    "web": "expo start --port 7481 --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{ts,tsx}\""

@@ -39,7 +39,7 @@ export function useTestApp(
   const env = loadEnv({
     NODE_ENV: 'test',
     DATABASE_URL: TEST_DATABASE_URL,
-    BETTER_AUTH_URL: 'http://localhost:3000',
+    BETTER_AUTH_URL: 'http://localhost:7400',
     BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-123',
     ...options.env,
   });
@@ -57,7 +57,7 @@ export function useTestApp(
   });
   afterAll(() => close());
 
-  const origin = { origin: 'http://localhost:3000' };
+  const origin = { origin: 'http://localhost:7400' };
 
   async function requestCode(email: string) {
     return app.request('/api/auth/email-otp/send-verification-otp', {

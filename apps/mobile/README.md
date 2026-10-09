@@ -10,17 +10,17 @@ The app needs the API running. Follow [`apps/api/README.md`](../api/README.md) f
 
 ```bash
 npm install                 # from the repo root (npm workspaces)
-npm run dev -w @buddy/api   # terminal 1: API on :3000 (or: docker compose up -d)
+npm run dev -w @buddy/api   # terminal 1: API on :7400 (or: docker compose up -d)
 npm run mobile              # terminal 2: press i / a, or scan the QR code
 ```
 
-**Where the app looks for the API:** `EXPO_PUBLIC_API_URL` if set; otherwise the machine running the Expo dev server, port 3000. A phone on the same Wi-Fi works without configuration.
+**Where the app looks for the API:** `EXPO_PUBLIC_API_URL` if set; otherwise the machine running the Expo dev server, port 7400. A phone on the same Wi-Fi works without configuration.
 
 **Signing in during development:** sign-in codes are printed in the API's log (no email is sent without `RESEND_API_KEY`). The seed's demo user is `kavindu@buddy.test`.
 
 **Expo Go vs a development build:** everything except push notifications works in Expo Go. Push needs a development build (`npx expo run:ios|android` or `eas build --profile development`) and an EAS project ID; until then the app skips push registration quietly.
 
-**Web (for quick checks):** set `WEB_ORIGINS=http://localhost:8081` in `apps/api/.env` so the browser may call the API, then `npm run web -w @buddy/mobile`.
+**Web (for quick checks):** set `WEB_ORIGINS=http://localhost:7481` in `apps/api/.env` so the browser may call the API, then `npm run web -w @buddy/mobile`.
 
 Checks (run from `apps/mobile`, or from the root for every package):
 

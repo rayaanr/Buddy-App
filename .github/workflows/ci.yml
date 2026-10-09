@@ -20,13 +20,13 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: buddy_test
         ports:
-          - 5432:5432
+          - 7432:5432
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-retries 10
     env:
-      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/buddy_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:7432/buddy_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

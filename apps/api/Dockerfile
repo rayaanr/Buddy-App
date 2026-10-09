@@ -26,8 +26,8 @@ COPY --from=build /repo/apps/api/dist ./dist
 COPY --from=build /repo/apps/api/drizzle ./drizzle
 
 USER node
-EXPOSE 3000
+EXPOSE 7400
 HEALTHCHECK --interval=10s --timeout=3s --start-period=15s \
-  CMD wget -qO- http://127.0.0.1:${PORT:-3000}/health || exit 1
+  CMD wget -qO- http://127.0.0.1:${PORT:-7400}/health || exit 1
 # Apply pending migrations, then serve.
 CMD ["sh", "-c", "node --enable-source-maps dist/migrate.js && exec node --enable-source-maps dist/server.js"]

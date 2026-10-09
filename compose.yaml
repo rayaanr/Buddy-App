@@ -1,13 +1,13 @@
 # Local backend: Postgres + PostGIS and the API, both on Alpine images.
 #
-#   docker compose up -d --build           # API on :3000, Postgres on :5432
+#   docker compose up -d --build           # API on :7400, Postgres on :7432
 #   docker compose exec api node dist/seed.js
 #   docker compose logs -f api             # sign-in codes are printed here
 #
 # Only the database (to run the API from source with `npm run dev`):
 #   docker compose up -d db
 #
-# Overrides go in a .env file next to this one, e.g. API_URL=http://192.168.1.20:3000
+# Overrides go in a .env file next to this one, e.g. API_URL=http://192.168.1.20:7400
 # so a phone on your Wi-Fi can reach the API, or R2_* keys to try uploads.
 name: buddy
 
@@ -18,7 +18,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: buddy
-    ports: ['5432:5432']
+    # Not 5432, so it doesn't clash with other local Postgres instances.
+    ports: ['7432:5432']
     volumes:
       - pgdata:/var/lib/postgresql/data
       # Runs on first start only: creates buddy_test for the integration tests.
@@ -36,14 +37,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports: ['3000:3000']
+    ports: ['7400:7400']
     environment:
       # Development mode: codes go to the log, no auth rate limits, seeding allowed.
       NODE_ENV: development
+      PORT: 7400
       DATABASE_URL: postgres://postgres:postgres@db:5432/buddy
-      BETTER_AUTH_URL: ${API_URL:-http://localhost:3000}
+      BETTER_AUTH_URL: ${API_URL:-http://localhost:7400}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-development-secret-do-not-use-in-production}
-      WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:8081}
+      WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:7481}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Optional; empty means off.
       RESEND_API_KEY: ${RESEND_API_KEY:-}

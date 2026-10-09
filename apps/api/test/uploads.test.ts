@@ -9,7 +9,7 @@ describe('R2 presigned uploads', () => {
   const env = loadEnv({
     NODE_ENV: 'test',
     DATABASE_URL: 'postgres://localhost/unused',
-    BETTER_AUTH_URL: 'http://localhost:3000',
+    BETTER_AUTH_URL: 'http://localhost:7400',
     BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-123',
     R2_ACCOUNT_ID: 'acct123',
     R2_ACCESS_KEY_ID: 'AKIDEXAMPLE',

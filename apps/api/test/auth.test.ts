@@ -36,7 +36,7 @@ describe('email code sign-in', () => {
     const wrong = real === '000000' ? '111111' : '000000';
     const res = await t.app.request('/api/auth/sign-in/email-otp', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:7400' },
       body: JSON.stringify({ email: 'kavindu@buddy.test', otp: wrong }),
     });
     expect(res.status).not.toBe(200);

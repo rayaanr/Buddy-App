@@ -30,10 +30,18 @@ npm run format       # format with Prettier
 Needs Docker. From the repo root:
 
 ```bash
-docker compose up -d --build                # Postgres + PostGIS on :5432, API on :3000
+docker compose up -d --build                # Postgres + PostGIS on :7432, API on :7400
 docker compose exec api node dist/seed.js   # sample data (wipes the database)
 docker compose logs -f api                  # sign-in codes are printed here
 ```
+
+Buddy stays off the usual defaults so it can run next to other projects:
+
+| Service         | Port |
+| --------------- | ---- |
+| API             | 7400 |
+| Postgres        | 7432 |
+| Expo dev server | 7481 |
 
 Sign in as `kavindu@buddy.test`, or any seeded person as `<first name>@buddy.test` (`nethmi@`, `dilan@`, `shehani@`…). No email is sent in development: the 6-digit code shows up in the API log.
 

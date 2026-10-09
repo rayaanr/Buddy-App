@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-const API_PORT = 3000;
+const API_PORT = 7400;
 
 /**
  * Where the API lives.
@@ -17,7 +17,7 @@ function resolveApiUrl() {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
   }
-  // e.g. "192.168.1.20:8081" → the dev machine's address on the local network.
+  // e.g. "192.168.1.20:7481" → the dev machine's address on the local network.
   const devHost = Constants.expoConfig?.hostUri?.split(':')[0];
   return `http://${devHost ?? 'localhost'}:${API_PORT}`;
 }

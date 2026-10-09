@@ -8,7 +8,7 @@ Request and response shapes live in [`packages/shared`](../../packages/shared).
 Everything in Docker (from the repo root; see [`compose.yaml`](../../compose.yaml)):
 
 ```bash
-docker compose up -d --build                # Postgres + PostGIS, and the API on :3000
+docker compose up -d --build                # Postgres + PostGIS on :7432, the API on :7400
 docker compose exec api node dist/seed.js   # sample data; wipes existing data
 docker compose logs -f api                  # sign-in codes appear here
 ```
@@ -28,7 +28,7 @@ npm run db:migrate -w @buddy/api
 npm run db:seed -w @buddy/api        # wipes existing data
 
 # 4. Run
-npm run dev -w @buddy/api            # http://localhost:3000/health
+npm run dev -w @buddy/api            # http://localhost:7400/health
 ```
 
 Both images are Alpine: `postgis/postgis:16-3.4-alpine` and `node:22-alpine`. The API image ([`Dockerfile`](Dockerfile)) contains only the bundled `dist/` and the migrations, with no `node_modules`; it applies migrations on start. Compose runs it with `NODE_ENV=development`; override settings (R2 keys, `RESEND_API_KEY`) in a `.env` next to `compose.yaml`.

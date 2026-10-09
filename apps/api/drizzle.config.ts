@@ -8,6 +8,6 @@ export default defineConfig({
   // PostGIS owns tables like spatial_ref_sys; keep them out of migrations.
   extensionsFilters: ['postgis'],
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/buddy',
+    url: process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:7432/buddy',
   },
 });
