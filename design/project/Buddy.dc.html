@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;700;800&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e4e2dd;font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#c9f53f;text-decoration:none}a:hover{color:#e2ff8a}
+*{box-sizing:border-box}
+*::-webkit-scrollbar{display:none}
+input,textarea,button{font-family:inherit}
+input::placeholder,textarea::placeholder{color:#6f726c}
+@keyframes bdSlide{from{transform:translateX(100%)}to{transform:none}}
+@keyframes bdUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes bdFade{from{opacity:0}to{opacity:1}}
+@keyframes bdToast{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:56px;padding:32px 16px">
+<nav data-screen-label="Feature index" style="width:240px;flex:none;color:#12140f">
+<div style="font:700 42px/1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.035em">Buddy</div>
+<p style="margin:12px 0 0;font:400 15px/1.5 'Geist',sans-serif;color:#5d605a;text-wrap:pretty">MVP prototype. Open Buddy, see something you can do, join it in 2–3 taps.</p>
+<div style="display:flex;flex-direction:column;gap:2px;margin-top:22px">
+<sc-for list="{{ guide }}" as="g" hint-placeholder-count="10">
+<button onClick="{{ g.go }}" style="display:flex;align-items:center;gap:14px;height:44px;padding:0 14px;border:none;border-radius:12px;background:{{ g.bg }};color:#12140f;cursor:pointer;text-align:left;transition:background .15s" style-hover="background:#dcdbd6">
+<span style="width:20px;font:500 13px 'Geist Mono',monospace;color:#8a8c86">{{ g.n }}</span>
+<span style="font:500 15.5px 'Geist',sans-serif">{{ g.label }}</span>
+</button>
+</sc-for>
+</div>
+<div style="margin-top:22px;display:flex;flex-direction:column;gap:8px;font:400 12.5px/1.5 'Geist Mono',monospace;color:#7a7c76">
+<span>Core flow: Discover → Details → Join → Chat</span>
+<span>Returning: Sign in → Swipe → Details</span>
+</div>
+</nav>
+<div data-screen-label="Buddy phone" style="width:390px;height:844px;flex:none;border-radius:58px;background:#0a0b0a;padding:10px;box-shadow:0 0 0 1.5px #2b2c2a,0 30px 80px rgba(0,0,0,.35)">
+<div style="position:relative;width:100%;height:100%;border-radius:48px;overflow:hidden;background:#0b0c0b;color:#f1f2ee">
+
+<div style="position:absolute;top:0;left:0;right:0;height:52px;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 34px;pointer-events:none">
+<span style="font:600 16px 'Geist',sans-serif;color:#f1f2ee">9:41</span>
+<div style="position:absolute;left:50%;top:10px;transform:translateX(-50%);width:118px;height:34px;border-radius:20px;background:#000"></div>
+<div style="display:flex;gap:6px;align-items:center"><div style="width:18px;height:11px;border-radius:3px;background:#e9e9e6"></div><div style="width:25px;height:12px;border-radius:4px;border:1.5px solid #e9e9e6;padding:1.5px"><div style="width:100%;height:100%;border-radius:2px;background:#e9e9e6"></div></div></div>
+</div>
+
+<sc-if value="{{ isOnboarding }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Onboarding" style="position:absolute;inset:0;display:flex;flex-direction:column">
+<div style="flex:1;overflow-y:auto;padding:64px 22px 20px">
+<div style="display:flex;align-items:center;gap:9px;font:700 18px 'Schibsted Grotesk',sans-serif"><div style="width:10px;height:10px;border-radius:50%;background:#c9f53f"></div>buddy</div>
+<h1 style="margin:10px 0 0;font:700 40px/1.05 'Schibsted Grotesk',sans-serif;letter-spacing:-0.035em">What are you into?</h1>
+<p style="margin:12px 0 0;font:400 16px/1.45 'Geist',sans-serif;color:#8b8e88;text-wrap:pretty">Pick at least three. We’ll show you things happening nearby.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:22px">
+<sc-for list="{{ interestsList }}" as="it" hint-placeholder-count="12">
+<button onClick="{{ it.toggle }}" style="height:54px;border-radius:14px;padding:0 14px 0 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;background:{{ it.bg }};border:1px solid {{ it.border }};color:#f1f2ee;font:500 15.5px 'Geist',sans-serif;text-align:left;transition:background .15s">
+<span>{{ it.label }}</span>
+<span style="width:20px;height:20px;border-radius:50%;flex:none;background:{{ it.dot }};border:1.5px solid {{ it.dotBorder }}"></span>
+</button>
+</sc-for>
+</div>
+<div style="margin:26px 0 12px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">USUALLY FREE</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ freeList }}" as="f" hint-placeholder-count="4">
+<button onClick="{{ f.toggle }}" style="height:42px;padding:0 17px;border-radius:21px;cursor:pointer;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }};font:500 15px 'Geist',sans-serif">{{ f.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="padding:12px 22px 30px;border-top:1px solid #1e201e;background:#0b0c0b">
+<button onClick="{{ onContinue }}" style="width:100%;height:58px;border-radius:18px;border:none;cursor:pointer;background:{{ cont.bg }};color:{{ cont.color }};font:600 17px 'Geist',sans-serif">{{ cont.label }}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Sign up" style="position:absolute;inset:0;display:flex;flex-direction:column">
+<div style="flex:1;overflow-y:auto;padding:64px 22px 20px">
+<div style="display:flex;align-items:center;gap:9px;font:700 18px 'Schibsted Grotesk',sans-serif"><div style="width:10px;height:10px;border-radius:50%;background:#c9f53f"></div>buddy</div>
+<h1 style="margin:28px 0 0;font:700 40px/1.05 'Schibsted Grotesk',sans-serif;letter-spacing:-0.035em;text-wrap:pretty">Find people to do things with</h1>
+<p style="margin:12px 0 0;font:400 16px/1.45 'Geist',sans-serif;color:#8b8e88;text-wrap:pretty">Runs, games, markets and more happening near you this week.</p>
+<div style="margin:28px 0 8px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">YOUR NAME</div>
+<input value="{{ su.name }}" onChange="{{ suOnName }}" placeholder="First and last name" style="width:100%;height:54px;border-radius:16px;border:1px solid #2b2d2a;background:#141614;color:#f1f2ee;padding:0 16px;font:400 16px 'Geist',sans-serif;outline:none">
+<div style="margin:18px 0 8px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">MOBILE NUMBER</div>
+<div style="display:flex;gap:8px">
+<div style="flex:none;height:54px;padding:0 16px;border-radius:16px;border:1px solid #2b2d2a;background:#141614;display:flex;align-items:center;font:500 16px 'Geist Mono',monospace;color:#d9dbd5">+94</div>
+<input value="{{ su.phone }}" onChange="{{ suOnPhone }}" inputmode="numeric" placeholder="77 123 4567" style="flex:1;min-width:0;height:54px;border-radius:16px;border:1px solid #2b2d2a;background:#141614;color:#f1f2ee;padding:0 16px;font:400 16px 'Geist Mono',monospace;outline:none">
+</div>
+<sc-if value="{{ su.phoneErr }}" hint-placeholder-val="{{ false }}"><div style="margin-top:8px;font:400 13.5px 'Geist',sans-serif;color:#ff6b5a">Enter a 9-digit mobile number.</div></sc-if>
+<div style="margin:18px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">YOUR AREA</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ su.areas }}" as="ar" hint-placeholder-count="6">
+<button onClick="{{ ar.pick }}" style="height:42px;padding:0 16px;border-radius:21px;cursor:pointer;background:{{ ar.bg }};color:{{ ar.color }};border:1px solid {{ ar.border }};font:500 15px 'Geist',sans-serif">{{ ar.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="padding:12px 22px 30px;border-top:1px solid #1e201e;background:#0b0c0b">
+<button onClick="{{ suSubmit }}" style="width:100%;height:58px;border-radius:18px;border:none;cursor:pointer;background:{{ su.btnBg }};color:{{ su.btnColor }};font:600 17px 'Geist',sans-serif">Create account</button>
+<div style="margin-top:14px;display:flex;justify-content:center;gap:6px;font:400 14.5px 'Geist',sans-serif;color:#8b8e88"><span>Already on Buddy?</span><button onClick="{{ suToLogin }}" style="background:none;border:none;padding:0;color:#c9f53f;font:500 14.5px 'Geist',sans-serif;cursor:pointer">Sign in</button></div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Sign in" style="position:absolute;inset:0;display:flex;flex-direction:column;padding:64px 22px 34px">
+<div style="display:flex;align-items:center;gap:9px;font:700 18px 'Schibsted Grotesk',sans-serif"><div style="width:10px;height:10px;border-radius:50%;background:#c9f53f"></div>buddy</div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:10px">
+<div style="position:relative;width:300px;height:250px">
+<div style="position:absolute;left:12px;top:26px;width:150px;height:200px;border-radius:22px;background:{{ lp.c.stripe }};border:1px solid #2a2c29;transform:rotate(-11deg);box-shadow:0 14px 30px rgba(0,0,0,.45)"></div>
+<div style="position:absolute;right:12px;top:26px;width:150px;height:200px;border-radius:22px;background:{{ lp.b.stripe }};border:1px solid #2a2c29;transform:rotate(11deg);box-shadow:0 14px 30px rgba(0,0,0,.45)"></div>
+<div style="position:absolute;left:65px;top:0;width:170px;height:226px;border-radius:24px;overflow:hidden;background:{{ lp.a.stripe }};border:1px solid #2a2c29;box-shadow:0 18px 40px rgba(0,0,0,.55)">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,12,11,0) 40%,rgba(11,12,11,.9) 100%)"></div>
+<div style="position:absolute;left:12px;right:12px;bottom:12px"><div style="font:500 10.5px 'Geist Mono',monospace;letter-spacing:.1em;color:#c9f53f">{{ lp.a.whenLabel }}</div><div style="margin-top:5px;font:600 14px/1.25 'Geist',sans-serif">{{ lp.a.title }}</div></div>
+</div>
+<div style="position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);height:32px;padding:0 14px;border-radius:16px;background:#c9f53f;color:#0b0c0b;font:600 13.5px 'Geist',sans-serif;display:flex;align-items:center;white-space:nowrap"><span>{{ lp.count }} new picks near {{ locShort }}</span></div>
+</div>
+</div>
+<div>
+
+<h1 style="margin: 0px 0 0; font: 700 40px/1.05 'Schibsted Grotesk',sans-serif; letter-spacing: -0.035em; text-align: center">Good to see you, {{ firstName }}</h1>
+<p style="margin: 12px 0 0; font: 400 16px/1.45 'Geist',sans-serif; color: #8b8e88; text-align: center">Signed out on this device.</p>
+</div>
+<button onClick="{{ signIn }}" style="margin-top:28px;width:100%;height:58px;border-radius:18px;border:none;background:#c9f53f;color:#0b0c0b;font:600 17px 'Geist',sans-serif;cursor:pointer">Continue as {{ firstName }}</button>
+<button onClick="{{ startOver }}" style="margin-top:10px;width:100%;height:50px;border-radius:16px;border:none;background:none;color:#8b8e88;font:500 15px 'Geist',sans-serif;cursor:pointer">Not you? Start over</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0">
+
+<sc-if value="{{ tab.discover }}" hint-placeholder-val="{{ true }}">
+<div data-screen-label="Discover" style="position:absolute;top:0;left:0;right:0;bottom:84px;overflow-y:auto;padding:58px 0 24px">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:0 22px">
+<span style="font:400 14px 'Geist',sans-serif;color:#8b8e88">{{ loc }}</span>
+<button onClick="{{ goProfile }}" style="width:42px;height:42px;border-radius:50%;border:none;background:{{ meBg }};color:#f1f2ee;font:600 14px 'Geist',sans-serif;cursor:pointer">{{ meText }}</button>
+</div>
+<h1 style="margin:2px 0 0;padding:0 22px;font:700 36px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.035em">What’s happening</h1>
+<div style="display:flex;gap:8px;overflow-x:auto;padding:16px 22px 18px">
+<sc-for list="{{ filters }}" as="fl" hint-placeholder-count="5">
+<button onClick="{{ fl.pick }}" style="flex:none;height:38px;padding:0 17px;border-radius:19px;cursor:pointer;background:{{ fl.bg }};color:{{ fl.color }};border:1px solid {{ fl.border }};font:500 15px 'Geist',sans-serif">{{ fl.label }}</button>
+</sc-for>
+</div>
+<sc-if value="{{ fromComms.show }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 22px 10px"><span style="font:600 17px 'Geist',sans-serif">From your communities</span><button onClick="{{ goCommunities }}" style="background:none;border:none;padding:0;color:#c9f53f;font:500 14px 'Geist',sans-serif;cursor:pointer">See all</button></div>
+<div style="display:flex;gap:10px;overflow-x:auto;padding:0 22px 20px">
+<sc-for list="{{ fromComms.items }}" as="fc" hint-placeholder-count="2">
+<div onClick="{{ fc.open }}" style="position:relative;flex:none;width:230px;height:150px;border-radius:20px;overflow:hidden;cursor:pointer;background:{{ fc.stripe }};border:1px solid #1e201e">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,12,11,.1) 20%,rgba(11,12,11,.9) 100%)"></div>
+<div style="position:absolute;top:10px;left:10px;height:24px;padding:0 10px;border-radius:12px;background:rgba(11,12,11,.7);color:#f1f2ee;font:500 12px 'Geist',sans-serif;display:flex;align-items:center">{{ fc.commName }}</div>
+<div style="position:absolute;left:12px;right:12px;bottom:12px"><div style="font:500 12.5px 'Geist',sans-serif;color:#c9f53f">{{ fc.whenLabel }}</div><div style="margin-top:4px;font:600 15px/1.25 'Geist',sans-serif">{{ fc.title }}</div></div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:12px;padding:0 22px">
+<sc-if value="{{ hasHero }}" hint-placeholder-val="{{ true }}">
+<div onClick="{{ hero.open }}" style="position:relative;height:410px;border-radius:26px;overflow:hidden;cursor:pointer;background:{{ hero.stripe }};border:1px solid #1e201e">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,12,11,0) 45%,rgba(11,12,11,.8) 100%)"></div>
+
+<div style="position:absolute;top:14px;right:14px;height:28px;padding:0 11px;border-radius:14px;background:#c9f53f;color:#0b0c0b;font:600 13px 'Geist',sans-serif;display:flex;align-items:center">{{ hero.whenLabel }}</div>
+<div style="position:absolute;left:18px;right:18px;bottom:18px">
+<div style="font:500 12.5px 'Geist Mono',monospace;letter-spacing:.1em;color:#c9f53f">{{ hero.cat }}</div>
+<div style="margin-top:10px;font:700 27px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.025em;text-wrap:pretty">{{ hero.title }}</div>
+<div style="margin-top:10px;display:flex;justify-content:space-between;gap:10px;font:400 14.5px 'Geist',sans-serif"><span style="color:#b9bcb5">{{ hero.place }} · {{ hero.dist }}</span><span style="font-weight:500;color:{{ hero.leftColor }};flex:none">{{ hero.spotsLabel }}</span></div>
+</div>
+</div>
+</sc-if>
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+<div onClick="{{ r.open }}" style="display:flex;gap:14px;padding:10px;border-radius:20px;background:#161816;cursor:pointer">
+<div style="width:96px;height:96px;flex:none;border-radius:14px;background:{{ r.stripe }};padding:8px;display:flex;align-items:flex-end;font:400 9.5px/1.35 'Geist Mono',monospace;color:rgba(241,242,238,.55)"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:2px 4px 2px 0">
+<span style="font:500 13.5px 'Geist',sans-serif;color:#c9f53f">{{ r.whenLabel }}</span>
+<span style="margin-top:5px;font:600 16.5px/1.25 'Geist',sans-serif">{{ r.title }}</span>
+<div style="margin-top:auto;display:flex;justify-content:space-between;font:400 14px 'Geist',sans-serif"><span style="color:#8b8e88">{{ r.area }}</span><span style="color:{{ r.leftColor }}">{{ r.leftLabel }}</span></div>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ feedEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:48px 20px;text-align:center;border-radius:20px;background:#161816">
+<div style="font:600 17px 'Geist',sans-serif">Nothing here yet</div>
+<div style="margin-top:6px;font:400 14px/1.4 'Geist',sans-serif;color:#8b8e88">Be the first to host something.</div>
+<button onClick="{{ openCreate }}" style="margin-top:16px;height:42px;padding:0 18px;border-radius:21px;border:none;background:#c9f53f;color:#0b0c0b;font:600 14.5px 'Geist',sans-serif;cursor:pointer">Host an activity</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tab.activities }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Your activities" style="position:absolute;top:0;left:0;right:0;bottom:84px;overflow-y:auto;padding:62px 22px 24px">
+<h1 style="margin:0;font:700 36px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.035em">Your activities</h1>
+<div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:16px;background:#161816">
+<button onClick="{{ segJoined }}" style="height:42px;border-radius:12px;border:none;cursor:pointer;background:{{ seg.jBg }};color:{{ seg.jColor }};font:600 14.5px 'Geist',sans-serif">Joined · {{ seg.jCount }}</button>
+<button onClick="{{ segHosting }}" style="height:42px;border-radius:12px;border:none;cursor:pointer;background:{{ seg.hBg }};color:{{ seg.hColor }};font:600 14.5px 'Geist',sans-serif">Hosting · {{ seg.hCount }}</button>
+</div>
+<sc-if value="{{ commNews.show }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:16px;border-radius:20px;background:#1a2010;border:1px solid #3d4a1c;padding:14px 16px 6px">
+<div style="display:flex;align-items:center;gap:8px;font:600 15px 'Geist',sans-serif"><span style="width:8px;height:8px;border-radius:50%;background:#c9f53f"></span><span>{{ commNews.label }}</span></div>
+<sc-for list="{{ commNews.items }}" as="cn" hint-placeholder-count="2">
+<div onClick="{{ cn.open }}" style="display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #2c3518;cursor:pointer;margin-top:{{ cn.mt }}">
+<div style="min-width:0"><div style="font:500 15px 'Geist',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ cn.title }}</div><div style="margin-top:3px;font:400 13px 'Geist',sans-serif;color:#9da48f">{{ cn.commName }} · {{ cn.whenLabel }}</div></div>
+<span style="flex:none;align-self:center;color:#c9f53f;font:500 14px 'Geist',sans-serif">View →</span>
+</div>
+</sc-for>
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+<sc-for list="{{ mine }}" as="m" hint-placeholder-count="1">
+<div style="border-radius:20px;background:#161816;overflow:hidden">
+<div onClick="{{ m.open }}" style="display:flex;gap:14px;padding:12px;cursor:pointer">
+<div style="width:74px;height:74px;flex:none;border-radius:14px;background:{{ m.stripe }}"></div>
+<div style="min-width:0;display:flex;flex-direction:column;gap:3px">
+<span style="font:500 13px 'Geist',sans-serif;color:#c9f53f">{{ m.whenLabel }}</span>
+<span style="font:600 16.5px/1.25 'Geist',sans-serif">{{ m.title }}</span>
+<span style="font:400 13.5px 'Geist',sans-serif;color:#8b8e88">{{ m.place }} · {{ m.going }} of {{ m.cap }} going</span>
+</div>
+</div>
+<div onClick="{{ m.chat }}" style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid #232523;cursor:pointer">
+<span style="flex:1;min-width:0;font:400 14.5px 'Geist',sans-serif;color:#d9dbd5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.lastMsg }}</span>
+<span style="flex:none;font:500 14.5px 'Geist',sans-serif;color:#c9f53f">Chat →</span>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{ mineEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="padding:44px 20px;text-align:center">
+<div style="font:600 17px 'Geist',sans-serif">{{ emptyTitle }}</div>
+<div style="margin-top:6px;font:400 14px/1.4 'Geist',sans-serif;color:#8b8e88">{{ emptySub }}</div>
+<button onClick="{{ emptyAction }}" style="margin-top:16px;height:42px;padding:0 18px;border-radius:21px;border:none;background:#c9f53f;color:#0b0c0b;font:600 14.5px 'Geist',sans-serif;cursor:pointer">{{ emptyCta }}</button>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tab.communities }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Communities" style="position:absolute;top:0;left:0;right:0;bottom:84px;overflow-y:auto;padding:62px 22px 24px">
+<h1 style="margin:0;font:700 36px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.035em">Communities</h1>
+<p style="margin:6px 0 0;font:400 14.5px 'Geist',sans-serif;color:#8b8e88">Groups in Colombo that meet regularly.</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-top:16px">
+<sc-for list="{{ comms }}" as="c" hint-placeholder-count="3">
+<div onClick="{{ c.open }}" style="border-radius:22px;overflow:hidden;background:#161816;cursor:pointer">
+<div style="height:124px;background:{{ c.stripe }};display:flex;align-items:flex-end;padding:12px 14px;font:400 11px 'Geist Mono',monospace;color:rgba(241,242,238,.55)"></div>
+<div style="display:flex;align-items:center;gap:12px;padding:16px 16px 16px 18px">
+<div style="flex:1;min-width:0">
+<div style="font:600 17.5px 'Geist',sans-serif">{{ c.name }}</div>
+<div style="margin-top:4px;font:400 14px/1.35 'Geist',sans-serif;color:#8b8e88">{{ c.meta }}</div>
+</div>
+<button onClick="{{ c.toggle }}" style="flex:none;height:44px;padding:0 20px;border-radius:22px;cursor:pointer;background:{{ c.bg }};color:{{ c.color }};border:1px solid {{ c.border }};font:600 15px 'Geist',sans-serif">{{ c.label }}</button>
+</div>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ tab.profile }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Profile" style="position: absolute; top: 0; left: 0; right: 0; bottom: 84px; overflow-y: auto; padding: 68px 22px 24px; display: block">
+
+<div style="width: 86px; height: 86px; margin: 0 auto; border-radius: 50%; background: {{ meBg }}; display: flex; align-items: center; justify-content: center; font: 700 26px 'Schibsted Grotesk',sans-serif">{{ meText }}</div><h1 style="margin: 16px 0 0; font: 700 32px/1.1 'Schibsted Grotesk',sans-serif; letter-spacing: -0.03em; text-align: center">{{ name }}</h1>
+<p style="margin: 6px 0 0; font: 400 14.5px 'Geist',sans-serif; color: #8b8e88; text-align: center">{{ loc }} · on Buddy since March</p>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px">
+<sc-for list="{{ stats }}" as="s" hint-placeholder-count="3">
+<div style="padding:14px 14px 16px;border-radius:16px;background:#161816"><div style="font:700 22px 'Schibsted Grotesk',sans-serif">{{ s.n }}</div><div style="margin-top:4px;font:400 13px 'Geist',sans-serif;color:#8b8e88">{{ s.l }}</div></div>
+</sc-for>
+</div>
+<div style="margin:24px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">INTO</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ interests }}" as="i" hint-placeholder-count="3">
+<span style="height:34px;padding:0 15px;border-radius:17px;background:#262e12;color:#c9f53f;font:500 14px 'Geist',sans-serif;display:flex;align-items:center">{{ i }}</span>
+</sc-for>
+</div>
+<div style="margin:24px 0 4px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">RECENT</div>
+<sc-for list="{{ recent }}" as="rc" hint-placeholder-count="3">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #222422;font:400 15.5px 'Geist',sans-serif"><span>{{ rc.t }}</span><span style="color:#8b8e88;font-size:14px">{{ rc.d }}</span></div>
+</sc-for>
+<button onClick="{{ openEdit }}" style="margin-top:22px;width:100%;height:52px;border-radius:16px;background:transparent;border:1px solid #343632;color:#f1f2ee;font:600 15.5px 'Geist',sans-serif;cursor:pointer" style-hover="background:#161816">Edit profile</button>
+<button onClick="{{ logOut }}" style="margin-top:10px;width:100%;height:50px;border-radius:16px;background:none;border:none;color:#ff6b5a;font:500 15px 'Geist',sans-serif;cursor:pointer">Log out</button>
+</div>
+</sc-if>
+
+<div style="position:absolute;left:0;right:0;bottom:0;height:84px;background:#0d0e0d;border-top:1px solid #1e201e;display:grid;grid-template-columns:repeat(5,1fr);align-items:start;padding:10px 4px 0;z-index:5">
+<button onClick="{{ goDiscover }}" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ nav.discover }};font:500 12px 'Geist',sans-serif">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>Discover</button>
+<button onClick="{{ goActivities }}" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ nav.activities }};font:500 12px 'Geist',sans-serif">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg>Activities</button>
+<div style="display:flex;justify-content:center"><button onClick="{{ openCreate }}" aria-label="New activity" style="width:58px;height:58px;margin-top:-6px;border-radius:19px;border:none;background:#c9f53f;cursor:pointer;box-shadow:0 0 22px rgba(201,245,63,.35);display:flex;align-items:center;justify-content:center" style-active="transform:scale(.94)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0b0c0b" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg></button></div>
+<button onClick="{{ goCommunities }}" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ nav.communities }};font:500 12px 'Geist',sans-serif">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.5"></circle><circle cx="16.5" cy="9.5" r="2.8"></circle><path d="M3 19c.6-3.2 3-5 6-5s5.4 1.8 6 5M15.5 14.2c2.8-.3 4.9 1.4 5.5 4.3"></path></svg>Communities</button>
+<button onClick="{{ goProfile }}" style="background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;color:{{ nav.profile }};font:500 12px 'Geist',sans-serif">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20c.8-3.8 3.7-6 7.5-6s6.7 2.2 7.5 6"></path></svg>Profile</button>
+</div>
+
+</div>
+</sc-if>
+
+<sc-if value="{{ showDetail }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Activity detail" style="position:absolute;inset:0;z-index:20;background:#0b0c0b;display:flex;flex-direction:column;animation:bdSlide .28s cubic-bezier(.2,.8,.2,1)">
+<div style="flex:1;overflow-y:auto">
+<div style="position:relative;height:330px;background:{{ d.stripe }}">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,12,11,0) 50%,#0b0c0b 100%)"></div>
+<button onClick="{{ back }}" aria-label="Back" style="position:absolute;top:56px;left:18px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(11,12,11,.6);color:#f1f2ee;font-size:20px;cursor:pointer">←</button>
+
+<div style="position:absolute;left:22px;bottom:4px;font:500 12.5px 'Geist Mono',monospace;letter-spacing:.1em;color:#c9f53f">{{ d.cat }}</div>
+</div>
+<div style="padding:12px 22px 24px">
+<h1 style="margin:0;font:700 32px/1.08 'Schibsted Grotesk',sans-serif;letter-spacing:-0.03em;text-wrap:pretty">{{ d.title }}</h1>
+<sc-if value="{{ d.hasComm }}" hint-placeholder-val="{{ false }}"><button onClick="{{ d.openComm }}" style="margin-top:12px;height:32px;padding:0 13px;border-radius:16px;border:1px solid #343632;background:none;color:#f1f2ee;font:500 13.5px 'Geist',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px"><span style="color:#8b8e88">Part of</span><span>{{ d.commName }}</span><span style="color:#c9f53f">→</span></button></sc-if>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:20px">
+<div style="padding:14px 15px;border-radius:16px;background:#161816"><div style="font:400 13px 'Geist',sans-serif;color:#8b8e88">When</div><div style="margin-top:5px;font:600 15.5px 'Geist',sans-serif">{{ d.whenLong }}</div></div>
+<div style="padding:14px 15px;border-radius:16px;background:#161816"><div style="font:400 13px 'Geist',sans-serif;color:#8b8e88">Where</div><div style="margin-top:5px;font:600 15.5px 'Geist',sans-serif">{{ d.place }}</div><div style="margin-top:3px;font:400 13px 'Geist',sans-serif;color:#8b8e88">{{ d.sub }}</div></div>
+</div>
+<div style="margin-top:10px;padding:16px;border-radius:18px;background:#161816">
+<div style="display:flex;justify-content:space-between;font:600 15.5px 'Geist',sans-serif"><span>{{ d.going }} of {{ d.cap }} going</span><span style="font-weight:400;font-size:14px;color:#8b8e88">{{ d.spotsLabel }}</span></div>
+<div style="margin-top:14px;height:6px;border-radius:3px;background:#262826;overflow:hidden"><div style="height:100%;width:{{ d.pct }};background:#c9f53f;border-radius:3px;transition:width .4s"></div></div>
+<div style="display:flex;align-items:center;margin-top:14px">
+<sc-for list="{{ d.avatars }}" as="av" hint-placeholder-count="5">
+<div style="width:32px;height:32px;margin-right:-6px;border-radius:50%;border:2px solid #161816;background:{{ av.bg }};display:flex;align-items:center;justify-content:center;font:600 12px 'Geist',sans-serif">{{ av.t }}</div>
+</sc-for>
+<span style="margin-left:18px;font:400 14px 'Geist',sans-serif;color:#8b8e88">{{ d.more }}</span>
+</div>
+</div>
+<div onClick="{{ d.openHost }}" style="display:flex;align-items:center;gap:14px;margin-top:18px;cursor:pointer">
+<div style="width:46px;height:46px;flex:none;border-radius:50%;background:{{ d.hostBg }};display:flex;align-items:center;justify-content:center;font:600 16px 'Geist',sans-serif">{{ d.hostText }}</div>
+<div><div style="font:600 16px 'Geist',sans-serif">Hosted by {{ d.host }}</div><div style="margin-top:3px;font:400 13.5px 'Geist',sans-serif;color:#8b8e88">{{ d.hostMeta }}</div></div>
+</div>
+<sc-if value="{{ d.hasDesc }}" hint-placeholder-val="{{ false }}">
+<div style="margin-top:20px;font:400 15px/1.5 'Geist',sans-serif;color:#c8cbc4;text-wrap:pretty">{{ d.desc }}</div>
+</sc-if>
+</div>
+</div>
+<div style="padding:12px 22px 30px;border-top:1px solid #1e201e;display:flex;gap:10px">
+<sc-if value="{{ d.canJoin }}" hint-placeholder-val="{{ true }}"><button onClick="{{ join }}" style="flex:1;height:58px;border-radius:18px;border:none;background:#c9f53f;color:#0b0c0b;font:600 17px 'Geist',sans-serif;cursor:pointer">Join activity</button></sc-if>
+<sc-if value="{{ d.isFull }}" hint-placeholder-val="{{ false }}"><button style="flex:1;height:58px;border-radius:18px;border:none;background:#232523;color:#8b8e88;font:600 17px 'Geist',sans-serif">Activity full</button></sc-if>
+<sc-if value="{{ d.isIn }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ openChatFromDetail }}" style="flex:1;height:58px;border-radius:18px;border:none;background:#c9f53f;color:#0b0c0b;font:600 17px 'Geist',sans-serif;cursor:pointer">Open group chat</button>
+<sc-if value="{{ d.canLeave }}" hint-placeholder-val="{{ false }}"><button onClick="{{ leave }}" style="flex:none;height:58px;padding:0 20px;border-radius:18px;border:1px solid #343632;background:transparent;color:#f1f2ee;font:600 16px 'Geist',sans-serif;cursor:pointer">Leave</button></sc-if>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showChat }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Group chat" style="position:absolute;inset:0;z-index:30;background:#0b0c0b;display:flex;flex-direction:column;animation:bdSlide .28s cubic-bezier(.2,.8,.2,1)">
+<div style="display:flex;align-items:center;gap:14px;padding:56px 18px 12px;border-bottom:1px solid #1e201e">
+<button onClick="{{ back }}" aria-label="Back" style="width:44px;height:44px;flex:none;border-radius:50%;border:none;background:#161816;color:#f1f2ee;font-size:20px;cursor:pointer">←</button>
+<div style="min-width:0"><div style="font:600 16.5px 'Geist',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.title }}</div><div style="margin-top:2px;font:400 13px 'Geist',sans-serif;color:#8b8e88">{{ c.going }} of {{ c.cap }} going</div></div>
+</div>
+<div ref="{{ chatRef }}" style="flex:1;overflow-y:auto;padding:14px 18px 18px;display:flex;flex-direction:column;gap:6px">
+<div onClick="{{ c.open }}" style="display:flex;justify-content:space-between;padding:14px 16px;border-radius:14px;background:#1a2010;border:1px solid #3d4a1c;font:500 14.5px 'Geist',sans-serif;cursor:pointer;margin-bottom:8px"><span style="color:#c9f53f">{{ c.whenLong }}</span><span style="color:#d9dbd5">{{ c.place }}</span></div>
+<sc-for list="{{ c.msgs }}" as="msg" hint-placeholder-count="1">
+<sc-if value="{{ msg.sys }}" hint-placeholder-val="{{ false }}"><div style="align-self:center;margin:6px 0;font:400 12.5px 'Geist',sans-serif;color:#6f726c">{{ msg.text }}</div></sc-if>
+<sc-if value="{{ msg.other }}" hint-placeholder-val="{{ true }}">
+<div style="align-self:flex-start;max-width:84%;display:flex;align-items:flex-end;gap:8px;margin-top:{{ msg.gap }}">
+<button onClick="{{ msg.openUser }}" aria-label="View profile" style="width:30px;height:30px;flex:none;padding:0;border-radius:50%;border:none;cursor:pointer;background:{{ msg.face }};opacity:{{ msg.faceOp }}"></button>
+<div style="min-width:0;display:flex;flex-direction:column;gap:5px">
+<sc-if value="{{ msg.showName }}" hint-placeholder-val="{{ true }}"><button onClick="{{ msg.openUser }}" style="align-self:flex-start;margin-left:6px;padding:0;background:none;border:none;cursor:pointer;font:500 13px 'Geist',sans-serif;color:#8b8e88" style-hover="color:#c9f53f">{{ msg.from }}</button></sc-if>
+<div style="padding:12px 16px;border-radius:18px 18px 18px 6px;background:#161816;font:400 15.5px/1.4 'Geist',sans-serif">{{ msg.text }}</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ msg.me }}" hint-placeholder-val="{{ false }}"><div style="align-self:flex-end;max-width:78%;display:flex;flex-direction:column;align-items:flex-end;margin-top:{{ msg.gap }}">
+<div style="padding:12px 16px;border-radius:18px 18px 6px 18px;background:#c9f53f;color:#0b0c0b;font:400 15.5px/1.4 'Geist',sans-serif;opacity:{{ msg.op }};transition:opacity .2s">{{ msg.text }}</div>
+<sc-if value="{{ msg.showMeta }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:5px;margin:5px 4px 0 0;font:400 12px 'Geist',sans-serif;color:#6f726c">
+<span>{{ msg.meta }}</span>
+<sc-if value="{{ msg.isSent }}" hint-placeholder-val="{{ false }}"><svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="#8b8e88" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 5.2l3 3L11 1.8"></path></svg></sc-if>
+<sc-if value="{{ msg.isSeen }}" hint-placeholder-val="{{ false }}"><svg width="18" height="10" viewBox="0 0 18 10" fill="none" stroke="#c9f53f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 5.2l3 3L11 1.8M8.5 7.6l.6.6L15.5 1.8"></path></svg></sc-if>
+</div></sc-if>
+</div></sc-if>
+</sc-for>
+<sc-if value="{{ c.typing }}" hint-placeholder-val="{{ false }}"><div style="align-self:flex-start;margin-top:6px;padding:10px 14px;border-radius:16px;background:#161816;font:400 13.5px 'Geist',sans-serif;color:#8b8e88">{{ c.typingName }} is typing…</div></sc-if>
+</div>
+<div style="display:flex;gap:10px;padding:12px 14px 28px;border-top:1px solid #1e201e">
+<input value="{{ chatText }}" onChange="{{ onChatText }}" onKeyDown="{{ onChatKey }}" placeholder="Message the group" style="flex:1;min-width:0;height:50px;border-radius:25px;border:1px solid #2b2d2a;background:#161816;color:#f1f2ee;padding:0 20px;font:400 15.5px 'Geist',sans-serif;outline:none">
+<button onClick="{{ send }}" style="flex:none;height:50px;padding:0 20px;border-radius:25px;border:none;cursor:pointer;background:{{ sendBtn.bg }};color:{{ sendBtn.color }};font:600 15px 'Geist',sans-serif">Send</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showComm }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Community page" style="position:absolute;inset:0;z-index:31;background:#0b0c0b;display:flex;flex-direction:column;animation:bdSlide .28s cubic-bezier(.2,.8,.2,1)">
+<div style="flex:1;overflow-y:auto">
+<div style="position:relative;height:250px;background:{{ cm.stripe }}">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,12,11,.2) 30%,#0b0c0b 100%)"></div>
+<button onClick="{{ back }}" aria-label="Back" style="position:absolute;top:56px;left:18px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(11,12,11,.6);color:#f1f2ee;font-size:20px;cursor:pointer">←</button>
+</div>
+<div style="padding:0 22px 30px;margin-top:-30px;position:relative">
+<h1 style="margin:0;font:700 32px/1.08 'Schibsted Grotesk',sans-serif;letter-spacing:-0.03em">{{ cm.name }}</h1>
+<p style="margin:8px 0 0;font:400 14.5px 'Geist',sans-serif;color:#8b8e88">{{ cm.meta }}</p>
+<sc-if value="{{ cm.notJoined }}" hint-placeholder-val="{{ true }}"><button onClick="{{ cm.toggle }}" style="margin-top:16px;width:100%;height:52px;border-radius:16px;cursor:pointer;background:#c9f53f;color:#0b0c0b;border:none;font:600 16px 'Geist',sans-serif">Join community</button></sc-if>
+<sc-if value="{{ cm.joined }}" hint-placeholder-val="{{ false }}"><div style="margin-top:14px;display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 13px;border-radius:16px;background:#262e12;color:#c9f53f;font:500 13.5px 'Geist',sans-serif"><svg width="13" height="10" viewBox="0 0 14 10" fill="none" stroke="#c9f53f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 5.2l3 3L11 1.8"></path></svg>You’re a member</div></sc-if>
+<div style="display:flex;align-items:center;margin-top:20px">
+<sc-for list="{{ cm.members }}" as="mb" hint-placeholder-count="6">
+<button onClick="{{ mb.open }}" aria-label="{{ mb.name }}" style="width:38px;height:38px;margin-right:-8px;padding:0;border-radius:50%;border:2px solid #0b0c0b;cursor:pointer;background:{{ mb.face }}"></button>
+</sc-for>
+<span style="margin-left:18px;font:400 14px 'Geist',sans-serif;color:#8b8e88">{{ cm.membersLabel }}</span>
+</div>
+<div style="margin:26px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">UPCOMING</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ cm.acts }}" as="ca" hint-placeholder-count="2">
+<div onClick="{{ ca.open }}" style="display:flex;gap:14px;padding:10px;border-radius:18px;background:#161816;cursor:pointer">
+<div style="width:72px;height:72px;flex:none;border-radius:12px;background:{{ ca.stripe }}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px"><span style="font:500 13px 'Geist',sans-serif;color:#c9f53f">{{ ca.whenLabel }}</span><span style="font:600 15.5px/1.25 'Geist',sans-serif">{{ ca.title }}</span><div style="display:flex;justify-content:space-between;font:400 13px 'Geist',sans-serif"><span style="color:#8b8e88">{{ ca.area }}</span><span style="color:{{ ca.leftColor }}">{{ ca.leftLabel }}</span></div></div>
+</div>
+</sc-for>
+<sc-if value="{{ cm.noActs }}" hint-placeholder-val="{{ false }}"><div style="padding:20px;border-radius:18px;background:#161816;font:400 14.5px 'Geist',sans-serif;color:#8b8e88;text-align:center">No upcoming activities this week.</div></sc-if>
+</div>
+<div style="margin:26px 0 8px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">ABOUT</div>
+<p style="margin:0;font:400 15px/1.5 'Geist',sans-serif;color:#c8cbc4;text-wrap:pretty">{{ cm.about }}</p>
+<div style="margin:24px 0 4px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">GROUP RULES</div>
+<sc-for list="{{ cm.rules }}" as="rl" hint-placeholder-count="3">
+<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #222422;font:400 15px/1.4 'Geist',sans-serif"><span style="flex:none;font:500 13px/1.6 'Geist Mono',monospace;color:#8b8e88">{{ rl.n }}</span><span>{{ rl.t }}</span></div>
+</sc-for>
+<sc-if value="{{ cm.joined }}" hint-placeholder-val="{{ false }}"><button onClick="{{ cm.toggle }}" style="margin-top:22px;width:100%;height:50px;border-radius:16px;background:none;border:1px solid #2b2d2a;color:#ff6b5a;font:500 15px 'Geist',sans-serif;cursor:pointer">Leave community</button></sc-if>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showUser }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="User profile" style="position:absolute;inset:0;z-index:32;background:#0b0c0b;display:flex;flex-direction:column;animation:bdSlide .28s cubic-bezier(.2,.8,.2,1)">
+<div style="padding:56px 18px 0"><button onClick="{{ back }}" aria-label="Back" style="width:44px;height:44px;border-radius:50%;border:none;background:#161816;color:#f1f2ee;font-size:20px;cursor:pointer">←</button></div>
+<div style="flex:1;overflow-y:auto;padding:8px 22px 30px">
+<div style="width:104px;height:104px;margin:0 auto;border-radius:50%;background:{{ u.face }};border:3px solid #1e201e"></div>
+<h1 style="margin:16px 0 0;text-align:center;font:700 30px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.03em">{{ u.name }}</h1>
+<p style="margin:6px 0 0;text-align:center;font:400 14.5px 'Geist',sans-serif;color:#8b8e88">{{ u.area }} · on Buddy since {{ u.since }}</p>
+<p style="margin:16px auto 0;max-width:300px;text-align:center;font:400 15px/1.5 'Geist',sans-serif;color:#c8cbc4;text-wrap:pretty">{{ u.bio }}</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px">
+<div style="padding:14px 14px 16px;border-radius:16px;background:#161816"><div style="font:700 22px 'Schibsted Grotesk',sans-serif">{{ u.hosted }}</div><div style="margin-top:4px;font:400 13px 'Geist',sans-serif;color:#8b8e88">Hosted</div></div>
+<div style="padding:14px 14px 16px;border-radius:16px;background:#161816"><div style="font:700 22px 'Schibsted Grotesk',sans-serif">{{ u.joined }}</div><div style="margin-top:4px;font:400 13px 'Geist',sans-serif;color:#8b8e88">Joined</div></div>
+</div>
+<div style="display:flex;justify-content:space-between;margin:24px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88"><span>INTO</span><span style="color:#c9f53f">{{ u.commonLabel }}</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ u.tags }}" as="tg" hint-placeholder-count="3">
+<span style="height:34px;padding:0 15px;border-radius:17px;background:{{ tg.bg }};color:{{ tg.color }};font:500 14px 'Geist',sans-serif;display:flex;align-items:center">{{ tg.label }}</span>
+</sc-for>
+</div>
+<sc-if value="{{ u.hasActs }}" hint-placeholder-val="{{ false }}">
+<div style="margin:24px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">HOSTING ON BUDDY</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ u.acts }}" as="ua" hint-placeholder-count="1">
+<div onClick="{{ ua.open }}" style="display:flex;gap:14px;padding:10px;border-radius:18px;background:#161816;cursor:pointer">
+<div style="width:64px;height:64px;flex:none;border-radius:12px;background:{{ ua.stripe }}"></div>
+<div style="min-width:0;display:flex;flex-direction:column;justify-content:center;gap:4px"><span style="font:500 13px 'Geist',sans-serif;color:#c9f53f">{{ ua.whenLabel }}</span><span style="font:600 15.5px/1.25 'Geist',sans-serif">{{ ua.title }}</span><span style="font:400 13px 'Geist',sans-serif;color:#8b8e88">{{ ua.place }}</span></div>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showCreate }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="New activity" style="position:absolute;inset:0;z-index:40;background:#0b0c0b;display:flex;flex-direction:column;animation:bdUp .32s cubic-bezier(.2,.8,.2,1)">
+<div style="flex:1;overflow-y:auto;padding:58px 22px 24px">
+<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+<button onClick="{{ back }}" style="justify-self:start;background:none;border:none;color:#8b8e88;font:400 16px 'Geist',sans-serif;cursor:pointer;padding:6px 0">Cancel</button>
+<span style="font:600 16px 'Geist',sans-serif">New activity</span><span></span>
+</div>
+<input value="{{ draft.title }}" onChange="{{ onTitle }}" placeholder="What are you doing?" style="margin-top:16px;width:100%;border:none;background:none;outline:none;color:#f1f2ee;padding:0;font:700 29px 'Schibsted Grotesk',sans-serif;letter-spacing:-0.03em">
+<div style="margin:22px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">TYPE</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px">
+<sc-for list="{{ typeChips }}" as="t" hint-placeholder-count="5">
+<button onClick="{{ t.pick }}" style="height:42px;padding:0 17px;border-radius:21px;cursor:pointer;background:{{ t.bg }};color:{{ t.color }};border:1px solid {{ t.border }};font:500 15px 'Geist',sans-serif">{{ t.label }}</button>
+</sc-for>
+</div>
+<div style="margin:22px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">WHEN</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+<sc-for list="{{ dayChips }}" as="dc" hint-placeholder-count="4">
+<button onClick="{{ dc.pick }}" style="height:44px;border-radius:14px;cursor:pointer;background:{{ dc.bg }};color:{{ dc.color }};border:1px solid {{ dc.border }};font:500 15px 'Geist',sans-serif">{{ dc.label }}</button>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;overflow-x:auto;margin:8px -22px 0;padding:0 22px">
+<sc-for list="{{ timeChips }}" as="tc" hint-placeholder-count="6">
+<button onClick="{{ tc.pick }}" style="flex:none;height:42px;padding:0 15px;border-radius:21px;cursor:pointer;background:{{ tc.bg }};color:{{ tc.color }};border:1px solid {{ tc.border }};font:500 14.5px 'Geist Mono',monospace">{{ tc.label }}</button>
+</sc-for>
+</div>
+<div style="margin:22px 0 10px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">WHERE</div>
+<input value="{{ draft.where }}" onChange="{{ onWhere }}" placeholder="Venue, park or address" style="width:100%;height:52px;border-radius:16px;border:1px solid #2b2d2a;background:#141614;color:#f1f2ee;padding:0 16px;font:400 15.5px 'Geist',sans-serif;outline:none">
+<div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;padding:12px 12px 12px 16px;border-radius:16px;background:#161816">
+<div><div style="font:600 15.5px 'Geist',sans-serif">Spots</div><div style="margin-top:2px;font:400 13px 'Geist',sans-serif;color:#8b8e88">Including you</div></div>
+<div style="display:flex;align-items:center;gap:14px">
+<button onClick="{{ spotsDown }}" aria-label="Fewer" style="width:44px;height:44px;border-radius:50%;border:1px solid #343632;background:none;color:#f1f2ee;font-size:18px;cursor:pointer">−</button>
+<span style="width:26px;text-align:center;font:600 19px 'Geist Mono',monospace">{{ draft.spots }}</span>
+<button onClick="{{ spotsUp }}" aria-label="More" style="width:44px;height:44px;border-radius:50%;border:1px solid #343632;background:none;color:#f1f2ee;font-size:18px;cursor:pointer">+</button>
+</div>
+</div>
+<textarea value="{{ draft.notes }}" onChange="{{ onNotes }}" placeholder="Anything people should know? Level, what to bring, where to meet." style="margin-top:12px;width:100%;height:96px;resize:none;border-radius:16px;border:1px solid #2b2d2a;background:#141614;color:#f1f2ee;padding:14px 16px;font:400 15.5px/1.45 'Geist',sans-serif;outline:none"></textarea>
+</div>
+<div style="padding:12px 22px 30px;border-top:1px solid #1e201e">
+<button onClick="{{ publish }}" style="width:100%;height:58px;border-radius:18px;border:none;cursor:pointer;background:{{ pub.bg }};color:{{ pub.color }};font:600 17px 'Geist',sans-serif">{{ pub.label }}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showSwipe }}" hint-placeholder-val="{{ false }}">
+<div data-screen-label="Picks for you" style="position:absolute;inset:0;z-index:35;background:#0b0c0b;display:flex;flex-direction:column;animation:bdUp .34s cubic-bezier(.2,.8,.2,1);opacity:{{ swOpacity }};pointer-events:{{ swPE }};transition:opacity .3s ease">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:60px 22px 0">
+<div>
+<div style="font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#c9f53f">PICKED FOR YOU · {{ sw.progress }}</div>
+<h1 style="margin:8px 0 0;font:700 30px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.03em">Welcome back, {{ firstName }}</h1>
+<p style="margin:6px 0 0;font:400 14.5px 'Geist',sans-serif;color:#8b8e88">Near {{ locShort }}, based on what you’re into.</p>
+</div>
+<button onClick="{{ closeSwipe }}" aria-label="Close" style="flex:none;width:44px;height:44px;border-radius:50%;border:none;background:#161816;color:#f1f2ee;font-size:17px;cursor:pointer">✕</button>
+</div>
+<div style="position:relative;flex:1;margin:20px 22px 0">
+<sc-if value="{{ sw.hasNext }}" hint-placeholder-val="{{ true }}">
+<div ref="{{ backRef }}" style="position:absolute;inset:0;border-radius:28px;overflow:hidden;background:{{ sw.next.stripe }};border:1px solid #1e201e;transform:scale(.93) translateY(18px);will-change:transform"><div style="position:absolute;inset:0;background:rgba(11,12,11,.45)"></div></div>
+</sc-if>
+<div ref="{{ cardRef }}" onPointerDown="{{ swDown }}" style="position:absolute;inset:0;border-radius:28px;overflow:hidden;background:{{ sw.top.stripe }};border:1px solid #2a2c29;touch-action:none;user-select:none;cursor:grab;will-change:transform;box-shadow:0 20px 50px rgba(0,0,0,.5)">
+<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,12,11,0) 35%,rgba(11,12,11,.92) 100%)"></div>
+
+<div style="position:absolute;top:14px;right:14px;height:28px;padding:0 11px;border-radius:14px;background:#c9f53f;color:#0b0c0b;font:600 13px 'Geist',sans-serif;display:flex;align-items:center">{{ sw.top.dist }}</div>
+<div ref="{{ likeRef }}" style="position:absolute;top:58px;left:20px;padding:6px 14px;border-radius:10px;border:3px solid #c9f53f;color:#c9f53f;font:800 26px 'Schibsted Grotesk',sans-serif;letter-spacing:.04em;transform:rotate(-12deg);opacity:0">GOING?</div>
+<div ref="{{ nopeRef }}" style="position:absolute;top:58px;right:20px;padding:6px 14px;border-radius:10px;border:3px solid #ff6b5a;color:#ff6b5a;font:800 26px 'Schibsted Grotesk',sans-serif;letter-spacing:.04em;transform:rotate(12deg);opacity:0">SKIP</div>
+<div style="position:absolute;left:20px;right:20px;bottom:20px">
+<div style="display:inline-flex;height:28px;padding:0 12px;border-radius:14px;background:rgba(201,245,63,.14);color:#c9f53f;font:500 13px 'Geist',sans-serif;align-items:center">{{ sw.reason }}</div>
+<div style="margin-top:12px;font:500 12.5px 'Geist Mono',monospace;letter-spacing:.1em;color:#c9f53f">{{ sw.top.cat }}</div>
+<div style="margin-top:8px;font:700 27px/1.1 'Schibsted Grotesk',sans-serif;letter-spacing:-0.025em;text-wrap:pretty">{{ sw.top.title }}</div>
+<div style="margin-top:12px;display:flex;flex-direction:column;gap:4px;font:400 14.5px 'Geist',sans-serif;color:#c8cbc4">
+<span>{{ sw.top.whenLong }} · {{ sw.top.place }}</span>
+<span style="color:{{ sw.top.leftColor }}">{{ sw.top.going }} going · {{ sw.top.spotsLabel }}</span>
+</div>
+</div>
+</div>
+</div>
+<div style="display:flex;justify-content:center;align-items:center;gap:22px;padding:22px 0 34px">
+<button onClick="{{ swNope }}" aria-label="Skip" style="width:66px;height:66px;border-radius:50%;border:1px solid #343632;background:#161816;color:#ff6b5a;font-size:24px;cursor:pointer" style-active="transform:scale(.92)">✕</button>
+<button onClick="{{ swLike }}" aria-label="Interested" style="width:78px;height:78px;border-radius:50%;border:none;background:#c9f53f;color:#0b0c0b;cursor:pointer;box-shadow:0 0 26px rgba(201,245,63,.35);display:flex;align-items:center;justify-content:center" style-active="transform:scale(.92)"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0b0c0b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showEdit }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;z-index:40;display:flex;flex-direction:column;justify-content:flex-end">
+<div onClick="{{ back }}" style="position:absolute;inset:0;background:rgba(0,0,0,.6);animation:bdFade .2s"></div>
+<div data-screen-label="Edit profile" style="position:relative;border-radius:28px 28px 0 0;background:#141614;padding:10px 22px 32px;animation:bdUp .3s cubic-bezier(.2,.8,.2,1)">
+<div style="width:40px;height:5px;border-radius:3px;background:#343632;margin:0 auto 18px"></div>
+<div style="font:700 24px 'Schibsted Grotesk',sans-serif;letter-spacing:-0.02em">Edit profile</div>
+<div style="margin:18px 0 8px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">NAME</div>
+<input value="{{ editName }}" onChange="{{ onEditName }}" style="width:100%;height:52px;border-radius:16px;border:1px solid #2b2d2a;background:#0b0c0b;color:#f1f2ee;padding:0 16px;font:400 15.5px 'Geist',sans-serif;outline:none">
+<div style="margin:16px 0 8px;font:500 12px 'Geist Mono',monospace;letter-spacing:.12em;color:#8b8e88">AREA</div>
+<input value="{{ editLoc }}" onChange="{{ onEditLoc }}" style="width:100%;height:52px;border-radius:16px;border:1px solid #2b2d2a;background:#0b0c0b;color:#f1f2ee;padding:0 16px;font:400 15.5px 'Geist',sans-serif;outline:none">
+<button onClick="{{ editInterests }}" style="margin-top:16px;width:100%;height:50px;border-radius:16px;border:1px solid #343632;background:none;color:#f1f2ee;font:500 15px 'Geist',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:0 16px"><span>Interests &amp; availability</span><span style="color:#c9f53f">Edit →</span></button>
+<button onClick="{{ saveEdit }}" style="margin-top:18px;width:100%;height:56px;border-radius:18px;border:none;background:#c9f53f;color:#0b0c0b;font:600 17px 'Geist',sans-serif;cursor:pointer">Save</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;left:50%;bottom:104px;transform:translateX(-50%);z-index:60;padding:12px 18px;border-radius:14px;background:#f1f2ee;color:#0b0c0b;font:500 14.5px 'Geist',sans-serif;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:bdToast .25s">{{ toast }}</div>
+</sc-if>
+
+<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:#f1f2ee;z-index:70;pointer-events:none"></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startScreen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;signup&quot;,&quot;onboarding&quot;,&quot;discover&quot;,&quot;returning&quot;],&quot;default&quot;:&quot;signup&quot;,&quot;tsType&quot;:&quot;'signup'|'onboarding'|'discover'|'returning'&quot;},&quot;autoReplies&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const LIME = '#c9f53f', MUTED = '#8b8e88', INK = '#f1f2ee', BG = '#0b0c0b', ORANGE = '#f2a65a';
+const INTERESTS = ['Running','Climbing','Padel','Cycling','Board games','Live music','Life drawing','Cooking','Yoga','Cricket','Photography','Food markets'];
+const FREE = ['Weekday evenings','Weekend mornings','Weekend afternoons','Lunch breaks'];
+const FILTERS = ['All','Tonight','Weekend','Sports','Social','Creative','Food'];
+const TYPES = [{l:'Social',g:'Social',c:'SOCIAL',h:'#5a2a2a',p:'friends getting together'},{l:'Sports',g:'Sports',c:'SPORTS',h:'#0f4550',p:'game in progress'},{l:'Running',g:'Running',c:'RUNNING',h:'#5a3420',p:'runners on the road'},{l:'Creative',g:'Creative',c:'CREATIVE',h:'#45345a',p:'people making things'},{l:'Food & markets',g:'Food',c:'FOOD & MARKETS',h:'#5a4818',p:'market stalls'}];
+const DAYS = ['Today','Tmrw','Sat','Sun'];
+const DAY_LABEL = {Today:'Today',Tmrw:'Tomorrow',Sat:'Sat',Sun:'Sun'};
+const TIMES = ['07:30','10:00','12:30','18:30','19:30','20:00'];
+const POOL = [['M','#7a3a3a'],['T','#7a3a5a'],['P','#1f5a3a'],['J','#1f4a6a'],['L','#5a3a6a'],['A','#6a5a2a'],['R','#3a5a6a'],['K','#6a3a2a'],['N','#3a3a6a'],['E','#2a5a4a'],['D','#5a2a4a'],['B','#4a5a2a'],['F','#6a4a3a'],['H','#2a4a5a'],['O','#5a5a3a']];
+const REPLIES = ['Nice, see you there!','Welcome 👋','Great, the more the merrier.','Perfect. I’ll be near the entrance.','Brilliant, see you soon.'];
+const stripe = h => `repeating-linear-gradient(135deg, ${h} 0 22px, color-mix(in oklab, ${h} 80%, black) 22px 44px)`;
+const ACTS = [
+  {id:'a1',title:'Sunset 5K at Galle Face',cat:'RUNNING',g:'Running',day:'Tonight',time:'18:00',place:'Galle Face Green',sub:'Colombo 03 · 1.2 km',dist:'1.2 km',area:'Galle Face',cap:15,going:9,host:'Nethmi',hostColor:'#7a3a3a',hostMeta:'Hosted 14 runs · Colombo Runners',hue:'#5a3420',photo:'evening run by the sea',desc:'Easy conversational pace along the promenade, around 6 min/km. We finish near the lighthouse and grab king coconut after.',msgs:[{from:'Nethmi',text:'Hi all, meeting by the flag post at the Kollupitiya end.'}]},
+  {id:'a2',title:'Board games night',cat:'SOCIAL',g:'Social',day:'Tonight',time:'19:30',place:'The Commons',sub:'Kollupitiya · 0.8 km',dist:'0.8 km',area:'Kollupitiya',cap:8,going:6,host:'Dilan',hostColor:'#7a3a5a',hostMeta:'Colombo Board Gamers',hue:'#5a2a2a',photo:'friends around a table',desc:'Bringing Catan and Codenames. Beginners very welcome.',msgs:[{from:'Dilan',text:'Table booked upstairs under Dilan. See you at 7.30.'}]},
+  {id:'a3',title:'Padel doubles, need one more',cat:'PADEL',g:'Sports',day:'Tomorrow',time:'06:30',place:'Padel Lanka',sub:'Havelock Town · 2.1 km',dist:'2.1 km',area:'Havelock Town',cap:4,going:4,joined:true,host:'Shehani',hostColor:'#1f5a3a',hostMeta:'Hosted 6 games',hue:'#0f4550',photo:'padel court',desc:'Intermediate level. Early slot before the heat. Court is split four ways, about Rs 2,500 each.',msgs:[{from:'Shehani',text:'Court 2 booked for 06:30.'},{sys:true,text:'Kavindu joined'},{from:'Shehani',text:'Perfect. Meet at reception at 06:20.'}]},
+  {id:'a4',title:'Life drawing, untutored session',cat:'LIFE DRAWING',g:'Creative',day:'Sat',time:'10:00',place:'Lionel Wendt Art Centre',sub:'Colombo 07 · 1.6 km',dist:'1.6 km',area:'Cinnamon Gardens',cap:12,going:5,host:'Amaya',hostColor:'#5a3a6a',hostMeta:'Hosted 9 sessions',hue:'#45345a',photo:'easels in a bright studio',desc:'Two hours with a model, short and long poses. Paper provided, bring your own pencils.',msgs:[{from:'Amaya',text:'Doors open 9.45. Studio is at the back of the gallery.'}]},
+  {id:'a5',title:'Bouldering social',cat:'CLIMBING',g:'Sports',day:'Sat',time:'16:00',place:'Climb Colombo',sub:'Rajagiriya · 4.2 km',dist:'4.2 km',area:'Rajagiriya',cap:10,going:3,host:'Ravindu',hostColor:'#1f4a6a',hostMeta:'Climb Lanka',hue:'#24452c',photo:'climbers at the bouldering wall',desc:'All grades. Shoe hire available at the desk.',msgs:[{from:'Ravindu',text:'I’ll be by the lockers in a blue t-shirt.'}]},
+  {id:'a6',title:'Pettah market food walk',cat:'FOOD MARKETS',g:'Food',day:'Sun',time:'08:30',place:'Pettah Floating Market',sub:'Pettah · 3.0 km',dist:'3.0 km',area:'Pettah',cap:8,going:4,host:'Fathima',hostColor:'#6a5a2a',hostMeta:'Hosted 3 walks',hue:'#5a4818',photo:'busy market stalls',desc:'Slow wander through the stalls. Kiribath and plain tea first, then short eats along the way.',msgs:[{from:'Fathima',text:'Meet at the main entrance near Bastian Mawatha.'}]},
+  {id:'a7',title:'Beach cricket, softball',cat:'CRICKET',g:'Sports',day:'Sun',time:'16:30',place:'Mount Lavinia Beach',sub:'Mount Lavinia · 9.5 km',dist:'9.5 km',area:'Mount Lavinia',cap:12,going:8,host:'Kasun',hostColor:'#6a3a2a',hostMeta:'Hosted 21 games',hue:'#1f4a2a',photo:'cricket on the beach',desc:'Friendly tape-ball game, mixed ability. Bring water and a hat.',msgs:[{from:'Kasun',text:'Bat and stumps sorted. Meet near the hotel steps.'}]}
+];
+const COMMS = [
+  {id:'c1',name:'Colombo Runners',members:'2.4k',weekly:4,hue:'#5a3420',photo:'group run at dawn',joined:false},
+  {id:'c2',name:'Colombo Board Gamers',members:'860',weekly:3,hue:'#5a2a2a',photo:'game night crowd',joined:true},
+  {id:'c3',name:'Climb Lanka',members:'1.1k',weekly:2,hue:'#24452c',photo:'climbers at the crag',joined:false},
+  {id:'c4',name:'Colombo Sketch Club',members:'540',weekly:2,hue:'#45345a',photo:'sketchbooks in the park',joined:false}
+];
+ACTS.push(
+  {id:'a8',title:'Saturday 10K, Viharamahadevi Park',cat:'RUNNING',g:'Running',day:'Sat',time:'06:00',place:'Viharamahadevi Park',sub:'Colombo 07 · 1.0 km',dist:'1.0 km',area:'Cinnamon Gardens',cap:20,going:11,host:'Nethmi',hostColor:'#7a3a3a',hostMeta:'Hosted 14 runs · Colombo Runners',hue:'#5a3420',photo:'',desc:'Two loops of the park before it gets hot. Two pace groups, 5:30 and 6:30 min/km.',msgs:[{from:'Nethmi',text:'Meeting at the Town Hall entrance.'}]},
+  {id:'a9',title:'Sketching at Gangaramaya',cat:'SKETCHING',g:'Creative',day:'Sun',time:'15:00',place:'Gangaramaya Temple',sub:'Hunupitiya · 2.3 km',dist:'2.3 km',area:'Beira Lake',cap:10,going:4,host:'Amaya',hostColor:'#5a3a6a',hostMeta:'Colombo Sketch Club',hue:'#45345a',photo:'',desc:'Urban sketching around the temple and Seema Malaka. Any materials.',msgs:[{from:'Amaya',text:'Dress respectfully for the temple grounds.'}]}
+);
+const COMM_OF = {a1:'c1',a8:'c1',a2:'c2',a5:'c3',a4:'c4',a9:'c4'};
+ACTS.forEach(a => a.comm = COMM_OF[a.id] || null);
+const CINFO = {
+  c1:{about:'Free group runs around Colombo, four times a week. Galle Face at sunset, Viharamahadevi Park on weekend mornings. Every pace is welcome and nobody gets left behind.',rules:['Wait at every turn for the back of the group.','Cancel in the app if you can’t make it.','No pressure to race. It’s a social run.'],people:['Nethmi','Ishara','Ashan','Shehani','Tharindu','Ravindu']},
+  c2:{about:'Weekly games nights in cafés around Colombo 03 and 07. Bring a game or learn a new one.',rules:['Teach the rules before you start.','Buy something from the café.','Look after shared games.'],people:['Dilan','Sanduni','Ishara','Ashan','Amaya','Kasun']},
+  c3:{about:'Bouldering sessions at Climb Colombo and weekend trips to the crags near Kandy.',rules:['Spot each other on high problems.','Brush holds when you finish.','Beginners pair with an experienced climber.'],people:['Ravindu','Tharindu','Shehani','Ashan','Nethmi','Kasun']},
+  c4:{about:'Urban sketching and life drawing around Colombo. Temples, markets, the Fort and the odd studio session.',rules:['Any skill level, any materials.','Ask before sketching people up close.','Share your page at the end if you like.'],people:['Amaya','Sanduni','Fathima','Tharindu','Ishara','Dilan']}
+};
+COMMS.forEach(c => Object.assign(c, CINFO[c.id]));
+const INT = {a1:'Running',a2:'Board games',a3:'Padel',a4:'Life drawing',a5:'Climbing',a6:'Food markets',a7:'Cricket',a8:'Running',a9:'Life drawing'};
+ACTS.forEach(a => a.interest = INT[a.id]);
+const U = id => 'https://images.unsplash.com/photo-' + id + '?w=800&q=70&auto=format&fit=crop';
+const F = p => 'https://randomuser.me/api/portraits/' + p + '.jpg';
+const ME = F('men/32');
+const IMG = {a1:'1552674605-db6ffd4facb5',a2:'1529156069898-49953e39b3ac',a3:'1554068865-24cecd4e34b8',a4:'1513364776144-60967b0f800f',a5:'1522163182402-834f871fd851',a6:'1488459716781-31db52582fe9',a7:'1531415074968-036ba1b575da',a8:'1476480862126-209bfaa8edc8',a9:'1460661419201-fd4cecdf8a8b'};
+ACTS.forEach(a => a.img = U(IMG[a.id]));
+const CIMG = {c1:'1476480862126-209bfaa8edc8',c2:'1543269865-cbf427effbad',c3:'1522163182402-834f871fd851',c4:'1460661419201-fd4cecdf8a8b'};
+COMMS.forEach(c => c.img = U(CIMG[c.id]));
+const TIMG = {Social:'1543269865-cbf427effbad',Sports:'1574629810360-7efbbe195018',Running:'1552674605-db6ffd4facb5',Creative:'1460661419201-fd4cecdf8a8b','Food & markets':'1488459716781-31db52582fe9'};
+TYPES.forEach(t => t.img = U(TIMG[t.l]));
+const HOSTFACE = {Nethmi:F('women/44'),Dilan:F('men/22'),Shehani:F('women/65'),Amaya:F('women/68'),Ravindu:F('men/45'),Fathima:F('women/12'),Kasun:F('men/75')};
+const USERS = {
+  Nethmi:{area:'Colombo 03',since:'Jan 2025',bio:'Sunset runs on the Green most evenings. Happy to pace beginners.',tags:['Running','Yoga','Food markets'],hosted:14,joined:22},
+  Dilan:{area:'Kollupitiya',since:'Mar 2025',bio:'Board game collector. If you haven’t played Wingspan yet, I’ll teach you.',tags:['Board games','Live music','Cooking'],hosted:11,joined:9},
+  Shehani:{area:'Havelock Town',since:'Jun 2025',bio:'Early padel, late brunch.',tags:['Padel','Running','Food markets'],hosted:6,joined:18},
+  Amaya:{area:'Colombo 07',since:'Nov 2024',bio:'Illustrator. Running untutored life drawing at the Lionel Wendt.',tags:['Life drawing','Photography','Live music'],hosted:9,joined:12},
+  Ravindu:{area:'Rajagiriya',since:'Feb 2025',bio:'Climbing V4s, mostly falling off V5s.',tags:['Climbing','Cycling','Running'],hosted:5,joined:15},
+  Fathima:{area:'Wellawatte',since:'Aug 2025',bio:'Food walks around Pettah and the Fort. Always hungry.',tags:['Food markets','Cooking','Photography'],hosted:3,joined:7},
+  Kasun:{area:'Mount Lavinia',since:'Sep 2024',bio:'Sunday beach cricket organiser. All abilities, all ages.',tags:['Cricket','Running','Live music'],hosted:21,joined:30},
+  Ishara:{area:'Dehiwala',since:'May 2025',bio:'New to Colombo, saying yes to everything.',tags:['Running','Board games','Cooking'],hosted:0,joined:6,face:'women/21'},
+  Tharindu:{area:'Nugegoda',since:'Apr 2025',bio:'Weekend cyclist and amateur photographer.',tags:['Cycling','Photography','Cricket'],hosted:2,joined:11,face:'men/36'},
+  Sanduni:{area:'Battaramulla',since:'Jul 2025',bio:'Yoga in the mornings, games at night.',tags:['Yoga','Board games','Life drawing'],hosted:1,joined:8,face:'women/33'},
+  Ashan:{area:'Colombo 05',since:'Dec 2024',bio:'Padel and plain tea.',tags:['Padel','Cricket','Food markets'],hosted:4,joined:13,face:'men/52'}
+};
+const PFACES = ['men/11','women/21','men/36','women/33','men/52','women/57','men/64','women/79','men/85','women/90','men/18','women/29','men/41','women/50','men/60'].map(F);
+Object.keys(USERS).forEach(n => { USERS[n].faceUrl = HOSTFACE[n] || F(USERS[n].face || 'men/11'); });
+const withImg = (url, fb) => url ? `url(${url}) center/cover no-repeat, ${fb}` : fb;
+const LS = 'buddy-app-v2';
+const loadLS = () => { try { return JSON.parse(localStorage.getItem(LS)) || {}; } catch (e) { return {}; } };
+const buildDeck = (acts, interests, comms = []) => {
+  const jc = comms.filter(c => c.joined).map(c => c.id);
+  const c = acts.filter(a => !a.joined && !a.hosting && a.going < a.cap);
+  const score = a => (jc.includes(a.comm) ? 2 : 0) + (interests.includes(a.interest) ? 1 : 0);
+  return c.map((a, k) => ({a, k, s:score(a)})).sort((x, y) => y.s - x.s || x.k - y.k).slice(0, 5).map(x => x.a.id);
+};
+const newSwipe = (acts, interests, comms) => ({ids:buildDeck(acts, interests, comms), i:0, dx:0, dy:0, dragging:false, fly:false, snap:false});
+const newDraft = () => ({title:'',type:'Social',day:'Today',time:'18:30',where:'',spots:6,notes:''});
+const chip = (on, solid) => solid
+  ? {bg: on ? LIME : 'transparent', color: on ? BG : INK, border: on ? LIME : '#2f312e'}
+  : {bg: on ? LIME : 'transparent', color: on ? BG : INK, border: on ? LIME : '#2f312e'};
+
+const SAVED = loadLS();
+class Component extends DCLogic {
+  state = {screen: SAVED.onboarded ? 'app' : null, onboarded: !!SAVED.onboarded, swipe: SAVED.onboarded ? newSwipe(ACTS, SAVED.interests || [], COMMS) : null, returning:false, tab:'discover', stack:[], interests: SAVED.interests || ['Running','Climbing','Board games'], free: SAVED.free || ['Weekday evenings'], filter:'All', acts:ACTS, comms:COMMS, segment:'joined', chatText:'', draft:newDraft(), name: SAVED.name || 'Kavindu Perera', loc: SAVED.loc || 'Colombo 07, Sri Lanka', editName:'', editLoc:'', toast:null, typing:null};
+  chatRef = React.createRef();
+
+  componentDidMount() {
+    if (!this.state.onboarded && this.props.startScreen === 'returning') this.setState({screen:'app', onboarded:true, swipe:newSwipe(this.state.acts, this.state.interests, this.state.comms)});
+  }
+  componentDidUpdate() {
+    const s = this.state;
+    const snap = JSON.stringify({onboarded:s.onboarded, interests:s.interests, free:s.free, name:s.name, loc:s.loc});
+    if (snap !== this._saved) { this._saved = snap; try { localStorage.setItem(LS, snap); } catch (e) {} }
+    const el = this.chatRef.current;
+    if (el) { const k = el.scrollHeight + ':' + (this.state.typing || ''); if (k !== this._k) { this._k = k; el.scrollTop = el.scrollHeight; } }
+  }
+  componentWillUnmount() { clearTimeout(this._tt); clearTimeout(this._rt); clearTimeout(this._ft); }
+  setSwipe = p => this.setState(s => s.swipe ? {swipe:{...s.swipe, ...p}} : null);
+  cardRef = React.createRef(); backRef = React.createRef(); likeRef = React.createRef(); nopeRef = React.createRef();
+  paint(dx, dy, anim) {
+    const c = this.cardRef.current, bk = this.backRef.current, l = this.likeRef.current, n = this.nopeRef.current;
+    const tr = anim ? 'transform .32s cubic-bezier(.2,.8,.2,1)' : 'none';
+    if (c) { c.style.transition = tr; c.style.transform = `translate3d(${dx}px, ${dy * 0.35}px, 0) rotate(${dx / 18}deg)`; }
+    const p = Math.min(1, Math.abs(dx) / 120);
+    if (bk) { bk.style.transition = anim ? 'transform .32s ease' : 'none'; bk.style.transform = `scale(${0.93 + 0.07 * p}) translateY(${18 * (1 - p)}px)`; }
+    if (l) l.style.opacity = Math.max(0, Math.min(1, dx / 100));
+    if (n) n.style.opacity = Math.max(0, Math.min(1, -dx / 100));
+  }
+  swDown = e => {
+    if (this._flying || !this.state.swipe) return;
+    e.preventDefault();
+    this._sx = e.clientX; this._sy = e.clientY; this._dx = 0; this._dy = 0;
+    const move = ev => { this._dx = ev.clientX - this._sx; this._dy = ev.clientY - this._sy; if (!this._raf) this._raf = requestAnimationFrame(() => { this._raf = 0; this.paint(this._dx, this._dy, false); }); };
+    const up = () => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      cancelAnimationFrame(this._raf); this._raf = 0;
+      if (this._dx > 100) this.decide(true); else if (this._dx < -100) this.decide(false); else this.paint(0, 0, true);
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  };
+  decide = like => {
+    const w = this.state.swipe; if (!w || this._flying) return;
+    this._flying = true;
+    const id = w.ids[w.i];
+    this.paint(like ? 600 : -600, this._dy || -30, true);
+    this._dx = this._dy = 0;
+    if (like) {
+      if (this.backRef.current) this.backRef.current.style.opacity = '0';
+      this.setState({leaving:true, tab:'discover', stack:[{type:'detail', id}]});
+      this._ft = setTimeout(() => { this._flying = false; this.setState({swipe:null, leaving:false}); }, 320);
+      return;
+    }
+    this._ft = setTimeout(() => {
+      const ni = w.i + 1;
+      if (ni >= w.ids.length) { this._flying = false; this.setState({swipe:null}); this.toast('You’re all caught up.'); return; }
+      this.setState(s => ({swipe:{...s.swipe, i:ni}}), () => { this.paint(0, 0, false); this._flying = false; });
+    }, 300);
+  };
+
+  push = o => this.setState(s => ({stack:[...s.stack, o]}));
+  back = () => this.setState(s => ({stack:s.stack.slice(0,-1), chatText:''}));
+  toast = t => { clearTimeout(this._tt); this.setState({toast:t}); this._tt = setTimeout(() => this.setState({toast:null}), 2200); };
+  upd = (id, fn) => this.setState(s => ({acts:s.acts.map(a => a.id === id ? fn(a) : a)}));
+  toggleComm = x => {
+    this.setState(st => ({comms:st.comms.map(y => y.id === x.id ? {...y, joined:!y.joined} : y)}));
+    this.toast(x.joined ? `Left ${x.name}` : `Joined. ${x.name} activities now show first.`);
+  };
+  setTab = tab => this.setState({tab, stack:[]});
+
+  dec(a) {
+    const left = a.cap - a.going, inA = a.joined || a.hosting;
+    const lm = [...a.msgs].reverse().find(m => !m.sys);
+    return {...a,
+      stripe: withImg(a.img, stripe(a.hue)),
+      whenLabel: `${a.day} · ${a.time}`,
+      whenLong: `${a.day}, ${a.time}`,
+      leftLabel: a.hosting ? 'Hosting' : a.joined ? 'Going' : left <= 0 ? 'Full' : `${left} left`,
+      spotsLabel: left <= 0 ? 'Full' : `${left} spot${left === 1 ? '' : 's'} left`,
+      leftColor: inA ? LIME : left <= 0 ? MUTED : left <= 3 ? ORANGE : INK,
+      lastMsg: lm ? `${lm.me ? 'You' : lm.from}: ${lm.text}` : 'No messages yet. Say hi.',
+      open: () => this.push({type:'detail', id:a.id}),
+      chat: () => this.push({type:'chat', id:a.id})
+    };
+  }
+
+  matches(a, f) {
+    if (f === 'All') return true;
+    if (f === 'Tonight') return a.day === 'Tonight' || a.day === 'Today';
+    if (f === 'Weekend') return a.day === 'Sat' || a.day === 'Sun';
+    if (f === 'Sports') return a.g === 'Sports' || a.g === 'Running';
+    return a.g === f;
+  }
+
+  join = () => {
+    const top = this.state.stack[this.state.stack.length - 1];
+    this.upd(top.id, a => ({...a, joined:true, going:a.going + 1, msgs:[...a.msgs, {sys:true, text:`${this.state.name.split(' ')[0]} joined`}]}));
+    this.toast('You’re in. Say hi in the group chat.');
+  };
+  leave = () => {
+    const top = this.state.stack[this.state.stack.length - 1];
+    this.upd(top.id, a => ({...a, joined:false, going:a.going - 1, msgs:[...a.msgs, {sys:true, text:`${this.state.name.split(' ')[0]} left`}]}));
+    this.toast('You left the activity.');
+  };
+
+  send = () => {
+    const text = this.state.chatText.trim(); if (!text) return;
+    const top = this.state.stack[this.state.stack.length - 1]; const id = top.id;
+    const mid = 'm' + Date.now(), d = new Date(), time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    const setSt = st => this.upd(id, a => ({...a, msgs:a.msgs.map(m => m.mid === mid ? {...m, status:st} : m)}));
+    const seenAll = () => this.upd(id, a => ({...a, msgs:a.msgs.map(m => m.me ? {...m, status:'seen'} : m)}));
+    this.upd(id, a => ({...a, msgs:[...a.msgs, {me:true, text, mid, time, status:'sending'}]}));
+    this.setState({chatText:''});
+    setTimeout(() => setSt('sent'), 450);
+    if (this.props.autoReplies === false) { setTimeout(seenAll, 1600); return; }
+    const a = this.state.acts.find(x => x.id === id);
+    const from = a.hosting ? ['Ishara','Tharindu','Sanduni','Ashan'][a.msgs.length % 4] : a.host;
+    clearTimeout(this._rt);
+    this._rt = setTimeout(() => {
+      seenAll();
+      this.setState({typing:{id, from}});
+      this._rt = setTimeout(() => {
+        this.setState({typing:null});
+        this.upd(id, x => ({...x, msgs:[...x.msgs, {from, text:REPLIES[x.msgs.length % REPLIES.length]}]}));
+      }, 1400);
+    }, 600);
+  };
+
+  publish = () => {
+    const d = this.state.draft;
+    if (!d.title.trim() || !d.where.trim()) return;
+    const t = TYPES.find(x => x.l === d.type);
+    const hr = parseInt(d.time, 10);
+    const day = d.day === 'Today' ? (hr >= 17 ? 'Tonight' : 'Today') : DAY_LABEL[d.day];
+    const id = 'n' + Date.now();
+    const act = {id, img:t.img, title:d.title.trim(), cat:t.c, g:t.g, day, time:d.time, place:d.where.trim(), sub:this.state.loc.split(',')[0] + ' · nearby', dist:'nearby', area:d.where.trim(), cap:d.spots, going:1, hosting:true, host:this.state.name.split(' ')[0] + ' (you)', hostColor:'#3a6b35', hostMeta:'First time hosting', hue:t.h, photo:t.p, desc:d.notes.trim(), msgs:[{sys:true, text:'You created this activity'}]};
+    this.setState(s => ({acts:[act, ...s.acts], stack:[], tab:'activities', segment:'hosting', draft:newDraft(), filter:'All'}));
+    this.toast('Published. It’s live on Discover.');
+  };
+
+  renderVals() {
+    const s = this.state;
+    const ps = this.props.startScreen;
+    const screen = s.screen ?? (ps === 'discover' ? 'app' : ps === 'onboarding' ? 'onboarding' : 'signup');
+    const top = s.stack[s.stack.length - 1] || null;
+    const acts = s.acts.map(a => this.dec(a));
+    const byId = id => acts.find(a => a.id === id);
+    const initials = s.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase() || '?';
+
+    const interestsList = INTERESTS.map(label => { const on = s.interests.includes(label); return {label, bg: on ? '#222a12' : '#161816', border: on ? LIME : '#161816', dot: on ? LIME : 'transparent', dotBorder: on ? LIME : '#4a4c48', toggle: () => this.setState(st => ({interests: on ? st.interests.filter(x => x !== label) : [...st.interests, label]}))}; });
+    const freeList = FREE.map(label => { const on = s.free.includes(label); return {label, ...chip(on), toggle: () => this.setState(st => ({free: on ? st.free.filter(x => x !== label) : [...st.free, label]}))}; });
+    const need = 3 - s.interests.length;
+    const cont = need > 0 ? {bg:'#232523', color:MUTED, label:`Pick ${need} more`} : {bg:LIME, color:BG, label: s.returning ? 'Save' : 'Continue'};
+    const onContinue = () => { if (need > 0) return; const r = s.returning; this.setState({screen:'app', onboarded:true, returning:false, tab: r ? 'profile' : 'discover', stack:[]}); if (r) this.toast('Interests updated.'); };
+
+    const filtered = acts.filter(a => this.matches(a, s.filter));
+    const filters = FILTERS.map(label => ({label, ...chip(label === s.filter), pick: () => this.setState({filter:label})}));
+
+    const joinedList = acts.filter(a => a.joined), hostList = acts.filter(a => a.hosting);
+    const isJ = s.segment === 'joined';
+    const mine = isJ ? joinedList : hostList;
+
+    let d = {avatars:[]};
+    if (top && top.type === 'detail') {
+      const a = byId(top.id); const left = a.cap - a.going;
+      const n = Math.min(a.going, 5);
+      const hf = HOSTFACE[a.host];
+      const pool = [{t:'', bg:withImg(hf, a.hostColor)}, ...PFACES.map((f, k) => ({t:'', bg:withImg(f, POOL[k][1])}))];
+      let av = pool.slice(0, n);
+      if (a.joined && n) av[n - 1] = {t:'', bg:withImg(ME, '#3a6b35')};
+      if (a.hosting) av = [{t:'', bg:withImg(ME, '#3a6b35')}];
+      d = {...a, avatars:av, more: a.going > 5 ? `+${a.going - 5} more` : '', pct:`${Math.min(100, a.going / a.cap * 100)}%`, hasComm: !!a.comm, commName: a.comm ? s.comms.find(x => x.id === a.comm).name : '', openComm: () => this.push({type:'comm', id:a.comm}),
+        openHost: () => { if (!a.hosting) this.push({type:'user', name:a.host}); }, hostBg: a.hosting ? withImg(ME, '#3a6b35') : withImg(hf, a.hostColor), hostText: '', hasDesc:!!a.desc,
+        canJoin: !a.joined && !a.hosting && left > 0, isFull: !a.joined && !a.hosting && left <= 0, isIn: a.joined || a.hosting, canLeave: a.joined};
+    }
+    let c = {msgs:[]};
+    if (top && top.type === 'chat') {
+      const a = byId(top.id);
+      let prev = null;
+      const msgs = a.msgs.map(m => { const key = m.sys ? '#sys' : m.me ? '#me' : m.from; const showName = !m.sys && !m.me && key !== prev; const gap = key !== prev && prev ? '8px' : '0px'; prev = key; const other = !m.sys && !m.me; const fu = other ? (USERS[m.from] ? USERS[m.from].faceUrl : HOSTFACE[m.from]) : null;
+        return {...m, sys:!!m.sys, me:!!m.me, other, showName, gap, face: withImg(fu, '#3a3d39'), faceOp: showName ? 1 : 0, openUser: () => this.push({type:'user', name:m.from})}; });
+      const lastMe = msgs.map(m => m.me).lastIndexOf(true);
+      msgs.forEach((m, k) => { if (!m.me) return; const st = m.status || 'seen';
+        m.op = st === 'sending' ? 0.6 : 1;
+        m.showMeta = k === lastMe || st === 'sending';
+        m.meta = st === 'sending' ? 'Sending…' : st === 'seen' ? ('Seen' + (m.time ? ' · ' + m.time : '')) : (m.time ? m.time : 'Sent');
+        m.isSent = st === 'sent'; m.isSeen = st === 'seen'; });
+      c = {...a, msgs, typing: !!(s.typing && s.typing.id === a.id), typingName: s.typing ? s.typing.from : '', open: () => this.push({type:'detail', id:a.id})};
+    }
+
+    const dr = s.draft; const ready = dr.title.trim() && dr.where.trim();
+    const setD = patch => this.setState(st => ({draft:{...st.draft, ...patch}}));
+    const nc = s.comms.filter(x => x.joined).length;
+
+    let sw = {top:{}, next:{}};
+    if (s.swipe && s.swipe.ids.length) {
+      const w = s.swipe, top = byId(w.ids[w.i]), next = w.ids[w.i + 1] ? byId(w.ids[w.i + 1]) : null;
+      const p = Math.min(1, Math.abs(w.dx) / 120);
+      sw = {top, next: next || {}, hasNext: !!next, progress: `${w.i + 1} OF ${w.ids.length}`,
+        reason: (top.comm && s.comms.find(x => x.id === top.comm && x.joined)) ? `From ${s.comms.find(x => x.id === top.comm).name}` : s.interests.includes(top.interest) ? `Because you’re into ${top.interest}` : 'Popular nearby',
+        transform: `translate(${w.dx}px, ${w.dy * 0.35}px) rotate(${w.dx / 18}deg)`,
+        trans: w.dragging || w.snap ? 'none' : 'transform .3s cubic-bezier(.2,.8,.2,1)',
+        backScale: (0.93 + 0.07 * p).toFixed(3), backY: `${Math.round(18 * (1 - p))}px`, backTrans: w.dragging ? 'none' : 'transform .3s',
+        likeOp: Math.max(0, Math.min(1, w.dx / 100)).toFixed(2), nopeOp: Math.max(0, Math.min(1, -w.dx / 100)).toFixed(2)};
+    }
+    const cur = screen === 'signup' ? 'signup' : screen === 'onboarding' ? 'onboarding' : screen === 'login' ? 'signin'
+      : top && top.type === 'detail' ? 'details' : top && top.type === 'chat' ? 'chat' : top && top.type === 'create' ? 'create'
+      : top && top.type === 'comm' ? 'commpage' : top && top.type === 'user' ? 'user' : s.swipe && s.swipe.ids.length ? 'swipe' : top && top.type === 'edit' ? 'profile'
+      : ({discover:'discover', activities:'my', communities:'community', profile:'profile'})[s.tab];
+    const app = (p) => this.setState(st => ({screen:'app', onboarded:true, returning:false, swipe:null, stack:[], ...(typeof p === 'function' ? p(st) : p)}));
+    const guide = [
+      ['signup', 'Sign up', () => this.setState({screen:'signup', stack:[], swipe:null})],
+      ['onboarding', 'Onboarding', () => this.setState({screen:'onboarding', returning:false, stack:[], swipe:null})],
+      ['discover', 'Discover', () => app({tab:'discover'})],
+      ['details', 'Activity details', () => app({tab:'discover', stack:[{type:'detail', id:'a1'}]})],
+      ['create', 'Create activity', () => app({stack:[{type:'create'}]})],
+      ['my', 'My activities', () => app({tab:'activities', segment:'joined'})],
+      ['chat', 'Activity chat', () => app({tab:'activities', stack:[{type:'chat', id:'a3'}]})],
+      ['community', 'Community', () => app({tab:'communities'})],
+      ['commpage', 'Community page', () => app({tab:'communities', stack:[{type:'comm', id:'c1'}]})],
+      ['user', 'User profile', () => app({tab:'activities', stack:[{type:'chat', id:'a3'}, {type:'user', name:'Shehani'}]})],
+      ['profile', 'Profile', () => app({tab:'profile'})],
+      ['signin', 'Sign in', () => this.setState({screen:'login', onboarded:true, stack:[], swipe:null})],
+      ['swipe', 'Picks for you', () => app(st => ({tab:'discover', swipe:newSwipe(st.acts, st.interests, st.comms)}))]
+    ].map(([k, label, go], i) => ({n:String(i + 1).padStart(2, '0'), label, go, bg: k === cur ? '#d9d8d3' : 'transparent'}));
+    const phoneDigits = (s.suPhone || '').replace(/\D/g, '').replace(/^0/, '');
+    const suOk = (s.suName || '').trim() && phoneDigits.length === 9;
+    const AREAS = ['Colombo 03','Colombo 05','Colombo 07','Dehiwala','Nugegoda','Rajagiriya','Mount Lavinia','Battaramulla'];
+    const su = {name:s.suName || '', phone:s.suPhone || '', phoneErr: !!s.suTried && phoneDigits.length !== 9,
+      areas: AREAS.map(label => ({label, ...chip((s.suArea || 'Colombo 07') === label), pick: () => this.setState({suArea:label})})),
+      btnBg: suOk ? LIME : '#2a2d29', btnColor: suOk ? BG : MUTED};
+    let u = {tags:[], acts:[]};
+    if (top && top.type === 'user') {
+      const p = USERS[top.name] || {area:'Colombo', since:'2025', bio:'', tags:[], hosted:0, joined:0, faceUrl:HOSTFACE[top.name]};
+      const common = p.tags.filter(t => s.interests.includes(t)).length;
+      const uacts = acts.filter(a => a.host === top.name);
+      u = {...p, name:top.name, face:withImg(p.faceUrl, '#3a3d39'),
+        commonLabel: common ? `${common} IN COMMON` : '',
+        tags: p.tags.map(t => { const on = s.interests.includes(t); return {label:t, bg: on ? '#262e12' : '#1c1e1c', color: on ? LIME : '#c8cbc4'}; }),
+        acts: uacts.map(a => ({...a, open: () => this.push({type:'detail', id:a.id})})), hasActs: uacts.length > 0};
+    }
+    const cById = id => s.comms.find(x => x.id === id);
+    const jIds = s.comms.filter(x => x.joined).map(x => x.id);
+    const commActs = acts.filter(a => a.comm && jIds.includes(a.comm) && !a.joined && !a.hosting).map(a => ({...a, commName:cById(a.comm).name}));
+    const fromComms = {show: s.filter === 'All' && commActs.length > 0, items: commActs};
+    const commNews = {show: commActs.length > 0, label: `${commActs.length} new from your communities`, items: commActs.slice(0, 3).map((a, k) => ({...a, mt: k ? '0px' : '8px'}))};
+    let cm = {members:[], acts:[], rules:[]};
+    if (top && top.type === 'comm') {
+      const x = cById(top.id);
+      const ca = acts.filter(a => a.comm === x.id);
+      cm = {...x, stripe: withImg(x.img, stripe(x.hue)), meta: `${x.members} members · ${x.weekly} activities this week`,
+        cta: x.joined ? 'Joined · Leave community' : 'Join community', bg: x.joined ? 'transparent' : LIME, color: x.joined ? INK : BG, border: x.joined ? '#343632' : LIME,
+        toggle: () => this.toggleComm(x), notJoined: !x.joined,
+        members: (CINFO[x.id].people || []).map(n => ({name:n, face:withImg(USERS[n] && USERS[n].faceUrl, '#3a3d39'), open: () => this.push({type:'user', name:n})})),
+        membersLabel: `+${x.members} members`, acts: ca, noActs: ca.length === 0,
+        rules: (CINFO[x.id].rules || []).map((t, k) => ({n:String(k + 1).padStart(2, '0'), t}))};
+    }
+    return {
+      showComm: !!top && top.type === 'comm', cm, fromComms, commNews,
+      showUser: !!top && top.type === 'user', u,
+      isSignup: screen === 'signup', su,
+      suOnName: e => this.setState({suName:e.target.value}),
+      suOnPhone: e => this.setState({suPhone:e.target.value.replace(/[^\d ]/g, '').slice(0, 12)}),
+      suSubmit: () => { if (!suOk) { this.setState({suTried:true}); return; } this.setState({name:s.suName.trim(), loc:(s.suArea || 'Colombo 07') + ', Sri Lanka', screen:'onboarding', returning:false, interests:[], free:[]}); },
+      suToLogin: () => this.setState({screen:'login', onboarded:true}),
+      cardRef: this.cardRef, backRef: this.backRef, likeRef: this.likeRef, nopeRef: this.nopeRef,
+      swOpacity: s.leaving ? 0 : 1, swPE: s.leaving ? 'none' : 'auto',
+      lp: (() => { const ids = buildDeck(s.acts, s.interests, s.comms); const g = k => byId(ids[k] || ids[0]) || {}; return {a:g(0), b:g(1), c:g(2), count:ids.length}; })(),
+      guide, meBg: withImg(ME, '#3a6b35'), meText: '',
+      isOnboarding: screen === 'onboarding', isApp: screen === 'app', isLogin: screen === 'login',
+      showSwipe: screen === 'app' && !!s.swipe && s.swipe.ids.length > 0, sw,
+      swDown: this.swDown, swMove: this.swMove, swUp: this.swUp, swLike: () => this.decide(true), swNope: () => this.decide(false),
+      closeSwipe: () => this.setState({swipe:null}),
+      firstName: s.name.split(' ')[0], locShort: s.loc.split(',')[0],
+      logOut: () => this.setState({screen:'login', stack:[], swipe:null}),
+      signIn: () => this.setState(st => ({screen:'app', tab:'discover', stack:[], swipe:newSwipe(st.acts, st.interests, st.comms)})),
+      startOver: () => this.setState({screen:'signup', suName:'', suPhone:'', suTried:false, onboarded:false, returning:false, swipe:null, interests:[], free:[]}),
+      interestsList, freeList, cont, onContinue,
+      tab: {discover:s.tab === 'discover', activities:s.tab === 'activities', communities:s.tab === 'communities', profile:s.tab === 'profile'},
+      nav: {discover:s.tab === 'discover' ? LIME : MUTED, activities:s.tab === 'activities' ? LIME : MUTED, communities:s.tab === 'communities' ? LIME : MUTED, profile:s.tab === 'profile' ? LIME : MUTED},
+      goDiscover: () => this.setTab('discover'), goActivities: () => this.setTab('activities'), goCommunities: () => this.setTab('communities'), goProfile: () => this.setTab('profile'),
+      openCreate: () => this.push({type:'create'}),
+      loc: s.loc, name: s.name, initials,
+      filters, hasHero: filtered.length > 0, hero: filtered[0] || {}, rows: filtered.slice(1), feedEmpty: filtered.length === 0,
+      seg: {jBg: isJ ? '#2a2d29' : 'transparent', jColor: isJ ? INK : MUTED, hBg: !isJ ? '#2a2d29' : 'transparent', hColor: !isJ ? INK : MUTED, jCount: joinedList.length, hCount: hostList.length},
+      segJoined: () => this.setState({segment:'joined'}), segHosting: () => this.setState({segment:'hosting'}),
+      mine, mineEmpty: mine.length === 0,
+      emptyTitle: isJ ? 'Nothing joined yet' : 'You’re not hosting anything',
+      emptySub: isJ ? 'Find something happening nearby.' : 'Start something and people nearby can join.',
+      emptyCta: isJ ? 'Browse Discover' : 'Host an activity',
+      emptyAction: isJ ? () => this.setTab('discover') : () => this.push({type:'create'}),
+      comms: s.comms.map(x => ({...x, stripe:withImg(x.img, stripe(x.hue)), meta:`${x.members} members · ${x.weekly} activities this week`, label: x.joined ? 'Joined' : 'Join', bg: x.joined ? 'transparent' : LIME, color: x.joined ? LIME : BG, border: x.joined ? '#55622a' : LIME,
+        open: () => this.push({type:'comm', id:x.id}),
+        toggle: e => { if (e && e.stopPropagation) e.stopPropagation(); this.toggleComm(x); }})),
+      stats: [{n: 7 + joinedList.length, l:'Joined'}, {n: 2 + hostList.length, l:'Hosted'}, {n: nc, l: nc === 1 ? 'Community' : 'Communities'}],
+      interests: s.interests,
+      recent: [{t:'Viharamahadevi Park 10K', d:'28 Sep'}, {t:'Catan at Barefoot Café', d:'21 Sep'}, {t:'Beach cricket, Mount Lavinia', d:'14 Sep'}],
+      openEdit: () => { this.setState({editName:s.name, editLoc:s.loc}); this.push({type:'edit'}); },
+      showEdit: !!top && top.type === 'edit', editName: s.editName, editLoc: s.editLoc,
+      onEditName: e => this.setState({editName:e.target.value}), onEditLoc: e => this.setState({editLoc:e.target.value}),
+      saveEdit: () => { this.setState(st => ({name: st.editName.trim() || st.name, loc: st.editLoc.trim() || st.loc, stack:[]})); this.toast('Profile saved.'); },
+      editInterests: () => this.setState({screen:'onboarding', returning:true, stack:[]}),
+      showDetail: !!top && top.type === 'detail', d, join: this.join, leave: this.leave, back: this.back,
+      openChatFromDetail: () => this.push({type:'chat', id:top.id}),
+      showChat: !!top && top.type === 'chat', c, chatRef: this.chatRef, chatText: s.chatText,
+      onChatText: e => this.setState({chatText:e.target.value}), onChatKey: e => { if (e.key === 'Enter') this.send(); }, send: this.send,
+      sendBtn: s.chatText.trim() ? {bg:LIME, color:BG} : {bg:'#2a2d29', color:MUTED},
+      showCreate: !!top && top.type === 'create', draft: dr,
+      onTitle: e => setD({title:e.target.value}), onWhere: e => setD({where:e.target.value}), onNotes: e => setD({notes:e.target.value}),
+      typeChips: TYPES.map(t => ({label:t.l, ...chip(dr.type === t.l), pick: () => setD({type:t.l})})),
+      dayChips: DAYS.map(x => ({label:x, ...chip(dr.day === x), pick: () => setD({day:x})})),
+      timeChips: TIMES.map(x => ({label:x, ...chip(dr.time === x), pick: () => setD({time:x})})),
+      spotsDown: () => setD({spots:Math.max(2, dr.spots - 1)}), spotsUp: () => setD({spots:Math.min(30, dr.spots + 1)}),
+      pub: ready ? {bg:LIME, color:BG, label:'Publish activity'} : {bg:'#2a2d29', color:MUTED, label:'Publish activity'},
+      publish: this.publish,
+      hasToast: !!s.toast, toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

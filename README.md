@@ -1,6 +1,6 @@
 # Buddy
 
-Expo app for **Buddy**: find people nearby to do things with. Built from a Claude Design prototype (`Buddy.dc.html`), with mock data set in Colombo.
+Expo app for **Buddy**: find people nearby to do things with. Built from a Claude Design prototype ([`design/project/Buddy.dc.html`](design/project/Buddy.dc.html)), with mock data set in Colombo. The full design handoff, including the design chat transcript, is in [`design/`](design/).
 
 **Stack:** Expo SDK 57 · Expo Router (typed routes) · NativeWind v4 (Tailwind 3) · Zustand + AsyncStorage · Reanimated 4 + Gesture Handler · expo-image · TypeScript (strict)
 
@@ -76,4 +76,4 @@ Nothing talks to a server yet. To hook one up:
 
 - Photos come from Unsplash and randomuser.me. Offline, cards show the striped hue placeholder from the design.
 - Bundle ID / package is the placeholder `com.buddyapp.mobile`. Change it in `app.json` before the first EAS build.
-- App icon and splash are still Expo defaults. Logo directions exist in the design handoff (`Buddy Logo.dc.html`), and none has been chosen yet.
+- App icon and splash are still Expo defaults. Logo directions are in [`design/project/Buddy Logo.dc.html`](design/project/Buddy%20Logo.dc.html), and none has been chosen yet.
