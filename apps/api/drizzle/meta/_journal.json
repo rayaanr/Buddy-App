@@ -29,6 +29,13 @@
       "when": 1791582449408,
       "tag": "0003_activity_cancel",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791583199267,
+      "tag": "0004_activity_reminders",
+      "breakpoints": true
     }
   ]
 }

@@ -93,6 +93,8 @@ src/
 - Edit profile is one page (photo, name, bio, area, interests, when you're free) saved together. Area is a chip choice, not free text: distances are measured from a known area.
 - Activities are placed at their area's centre until the Create screen gets a map picker.
 - Profile photos upload straight to Cloudflare R2 (`src/api/upload.ts`). Without the API's `R2_*` settings, uploads are off and picking a photo shows “Photo uploads are not available yet”. `expo-image-picker` is a native module, so a development build is needed after installing (Expo Go has it built in).
+- Tapping a notification opens the activity's chat (messages, reminders) or its page (time changes, cancellations). Android gets two channels: Group chats, and Reminders and changes.
+- Share (activity header) sends a link to the API's `/a/:id` preview page, which opens `buddy://activity/:id`. Set `EXPO_PUBLIC_SHARE_URL` to share from another domain. Universal/App Links (opening the app straight from an https link) need a real domain and are not set up yet. Opened while signed out, a link goes to sign-in and then Discover, not the activity.
 - Hosts can edit or cancel an activity from its ⋯ menu until it starts. A new time or place, or a cancellation, is posted in the group chat and pushed to everyone going; cancelled activities stay visible only to the people who were going.
 - Bundle ID / package is the placeholder `com.buddyapp.mobile`. Change it in `app.json` before the first EAS build.
 - App icon and splash are still Expo defaults. Logo directions are in [`design/project/Buddy Logo.dc.html`](../../design/project/Buddy%20Logo.dc.html); none has been chosen yet.

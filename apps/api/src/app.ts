@@ -12,6 +12,7 @@ import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { meRoutes } from './modules/me/routes';
 import { reportRoutes } from './modules/safety/routes';
+import { shareRoutes } from './modules/share/routes';
 import { uploadRoutes } from './modules/uploads/routes';
 import { userRoutes } from './modules/users/routes';
 
@@ -62,6 +63,9 @@ export function createApp(deps: Deps) {
     await db.execute(sql`select 1`);
     return c.json({ status: 'ok' });
   });
+
+  // Public pages behind shared links.
+  app.route('/', shareRoutes(deps));
 
   // Better Auth owns everything under /api/auth (send code, sign in, sign out, session).
   app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw));

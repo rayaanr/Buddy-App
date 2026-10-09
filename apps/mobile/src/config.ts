@@ -24,3 +24,9 @@ function resolveApiUrl() {
 
 export const API_URL = resolveApiUrl();
 export const APP_SCHEME = 'buddy';
+
+/**
+ * Base for shared links (the API serves the preview page at /a/:id). Set
+ * EXPO_PUBLIC_SHARE_URL if links should use a different domain, e.g. buddy.lk.
+ */
+export const SHARE_URL = (process.env.EXPO_PUBLIC_SHARE_URL ?? API_URL).replace(/\/$/, '');

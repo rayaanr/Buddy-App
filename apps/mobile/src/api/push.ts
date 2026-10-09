@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { api, unwrap } from './client';
@@ -33,6 +35,10 @@ export async function registerForPush() {
         name: 'Group chats',
         importance: Notifications.AndroidImportance.HIGH,
       });
+      await Notifications.setNotificationChannelAsync('reminders', {
+        name: 'Reminders and changes',
+        importance: Notifications.AndroidImportance.HIGH,
+      });
     }
     const current = await Notifications.getPermissionsAsync();
     const granted = current.granted || (await Notifications.requestPermissionsAsync()).granted;
@@ -52,4 +58,29 @@ export async function unregisterPush() {
   const token = registeredToken;
   registeredToken = null;
   await unwrap(api.me['push-tokens'].$delete({ json: { token } })).catch(() => {});
+}
+
+/**
+ * Tapping a notification opens what it's about: the group chat, or the
+ * activity page (time changes, cancellations). Covers taps that launched the
+ * app as well as ones while it was running.
+ */
+export function useOpenFromNotifications() {
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const open = (response: Notifications.NotificationResponse | null) => {
+      const data = response?.notification.request.content.data as
+        { activityId?: string; screen?: string } | undefined;
+      if (!data?.activityId) return;
+      Notifications.clearLastNotificationResponse();
+      router.push(
+        data.screen === 'chat'
+          ? `/activity/${data.activityId}/chat`
+          : `/activity/${data.activityId}`,
+      );
+    };
+    open(Notifications.getLastNotificationResponse());
+    const sub = Notifications.addNotificationResponseReceivedListener(open);
+    return () => sub.remove();
+  }, []);
 }

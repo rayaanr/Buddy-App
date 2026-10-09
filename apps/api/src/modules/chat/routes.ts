@@ -55,7 +55,12 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
               : message.body;
           void push.notifyActivity(
             activityId,
-            { title: c.get('activityTitle'), body: `${me.name}: ${preview}`, data: { activityId } },
+            {
+              title: c.get('activityTitle'),
+              body: `${me.name}: ${preview}`,
+              data: { activityId, screen: 'chat' },
+              channelId: 'chat',
+            },
             new Set([me.id, ...blocked, ...hub.connectedUsers(activityId)]),
           );
         }

@@ -1,7 +1,7 @@
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 
-import { registerForPush } from '@/api/push';
+import { registerForPush, useOpenFromNotifications } from '@/api/push';
 import { useMe, usePicks } from '@/api/queries';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
@@ -44,6 +44,7 @@ export default function AppLayout() {
   useEffect(() => {
     void registerForPush();
   }, []);
+  useOpenFromNotifications();
 
   return (
     <Stack

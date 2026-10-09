@@ -13,6 +13,7 @@ import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Plus from 'lucide-react-native/icons/plus';
 import Settings from 'lucide-react-native/icons/settings';
+import Share from 'lucide-react-native/icons/share';
 import User from 'lucide-react-native/icons/user';
 import Users from 'lucide-react-native/icons/users';
 import X from 'lucide-react-native/icons/x';
@@ -79,6 +80,11 @@ export const ClockIcon = icon(
 );
 
 export const MoreIcon = icon(Ellipsis, { size: 20, color: colors.ink, strokeWidth: 2 }, 'MoreIcon');
+export const ShareIcon = icon(
+  Share,
+  { size: 19, color: colors.ink, strokeWidth: 1.9 },
+  'ShareIcon',
+);
 export const SettingsIcon = icon(
   Settings,
   { size: 20, color: colors.ink, strokeWidth: 1.8 },

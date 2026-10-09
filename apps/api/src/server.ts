@@ -4,10 +4,12 @@ import { WebSocketServer } from 'ws';
 import { createApp } from './app';
 import { createDeps } from './deps';
 import { loadEnv } from './env';
+import { startReminders } from './jobs/reminders';
 
 const env = loadEnv();
 const { deps, close } = createDeps(env);
 const app = createApp(deps);
+const stopReminders = startReminders(deps);
 
 // Chat sockets share the HTTP port; Hono routes upgrade requests to this server.
 const wss = new WebSocketServer({ noServer: true });
@@ -19,6 +21,7 @@ const server = serve({ fetch: app.fetch, port: env.PORT, websocket: { server: ws
 // Docker sends SIGTERM on deploys; finish in-flight requests, then close the pool.
 const shutdown = (signal: string) => {
   deps.logger.info({ signal }, 'Shutting down');
+  stopReminders();
   wss.close();
   server.close(() => {
     void close().finally(() => process.exit(0));

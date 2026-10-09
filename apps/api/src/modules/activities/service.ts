@@ -163,7 +163,7 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
 }
 
 /** "Sat 14 Nov, 17:45" in Sri Lanka time, for chat lines and notifications. */
-const whenText = (date: Date) =>
+export const whenText = (date: Date) =>
   new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Colombo',
     weekday: 'short',
@@ -234,6 +234,8 @@ export async function updateActivity(
         capacity: input.capacity,
         place: input.place,
         startsAt,
+        // A new time gets its own reminders.
+        ...(timeChanged && { reminderSentAt: null, followUpSentAt: null }),
         ...(groupChanged
           ? {
               group,

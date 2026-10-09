@@ -23,12 +23,14 @@ import {
   Eyebrow,
   Footer,
   Heading,
+  IconButton,
   LoadError,
   Loading,
   MoreButton,
   Photo,
   PressableScale,
   Scrim,
+  ShareIcon,
   successHaptic,
   useEnterOnChange,
 } from '@/components/ui';
@@ -37,6 +39,7 @@ import { NotFound } from '@/components/ui/NotFound';
 import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { distanceLabel, firstName, hueFor, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
+import { shareActivity } from '@/lib/share';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 import { spring } from '@/theme/motion';
@@ -213,6 +216,14 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               {a.title}
             </Text>
           </AnimatedView>
+          {a.cancelled ? null : (
+            <IconButton
+              tone="glass"
+              icon={<ShareIcon />}
+              label="Share"
+              onPress={() => void shareActivity(a)}
+            />
+          )}
           {!a.viewer.hosting || canManage ? (
             <MoreButton tone="glass" onPress={() => setMenuOpen(true)} />
           ) : null}

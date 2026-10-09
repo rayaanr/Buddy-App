@@ -89,6 +89,9 @@ export const activities = pgTable(
     coverUrl: text(),
     /** Set when the host calls it off. */
     cancelledAt: timestamp({ withTimezone: true }),
+    /** When the "coming up" and "how was it?" notifications went out (see jobs/reminders). */
+    reminderSentAt: timestamp({ withTimezone: true }),
+    followUpSentAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [

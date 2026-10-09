@@ -49,7 +49,11 @@ export function activityRoutes(deps: Deps) {
       hub.publish(id, { type: 'message', message: await toChatMessage(db, urls, result.message) });
     }
     if (result.notice) {
-      void push.notifyActivity(id, { ...result.notice, data: { activityId: id } }, [hostId]);
+      void push.notifyActivity(
+        id,
+        { ...result.notice, data: { activityId: id }, channelId: 'reminders' },
+        [hostId],
+      );
     }
   };
   return (

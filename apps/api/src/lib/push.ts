@@ -8,6 +8,8 @@ export interface PushMessage {
   title: string;
   body: string;
   data: Record<string, string>;
+  /** Android notification channel the app created (see apps/mobile/src/api/push.ts). */
+  channelId?: 'chat' | 'reminders';
 }
 
 export interface PushSender {
