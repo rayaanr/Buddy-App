@@ -11,6 +11,7 @@
     "dev:api": "node scripts/dev.mjs --api",
     "setup": "node scripts/dev.mjs --setup",
     "mobile": "bun run --filter @buddy/mobile start",
+    "mobile:prod": "bun run --filter @buddy/mobile start:prod",
     "api": "bun run --filter @buddy/api dev",
     "db:up": "docker compose up -d --wait db",
     "db:migrate": "bun run --filter @buddy/api db:migrate",

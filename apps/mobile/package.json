@@ -63,6 +63,7 @@
   },
   "scripts": {
     "start": "expo start --port 7481",
+    "start:prod": "sh scripts/start-prod.sh",
     "android": "expo start --port 7481 --android",
     "ios": "expo start --port 7481 --ios",
     "web": "expo start --port 7481 --web",
