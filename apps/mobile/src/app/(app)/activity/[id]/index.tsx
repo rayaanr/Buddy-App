@@ -42,7 +42,7 @@ import {
   useEnterOnChange,
 } from '@/components/ui';
 import { MembersSheet } from '@/components/activity/MembersSheet';
-import { useNow } from '@/hooks/useNow';
+import { useHasPassed } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import {
   distanceLabel,
@@ -80,11 +80,11 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const mute = useMuteChat();
   const cancel = useCancelActivity();
   const { top } = useScreenInsets();
-  const now = useNow();
+  const started = useHasPassed(a.startsAt);
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   // Hosts can change or call off an activity until it starts.
-  const canManage = a.viewer.hosting && !a.cancelled && new Date(a.startsAt) > now;
+  const canManage = a.viewer.hosting && !a.cancelled && !started;
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -113,8 +113,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const isIn = a.viewer.joined || a.viewer.hosting;
   const position = a.viewer.waitlistPosition;
   // Full: wait for a spot, unless it has started or the waitlist is full too.
-  const canWait =
-    !isIn && left <= 0 && new Date(a.startsAt) > now && a.waitingCount < LIMITS.waitlistMax;
+  const canWait = !isIn && left <= 0 && !started && a.waitingCount < LIMITS.waitlistMax;
   // The footer's buttons pop when you join, leave or start waiting.
   const footerStyle = useEnterOnChange(isIn ? 'in' : position ? 'waiting' : 'out', 'pop');
   const busy = join.isPending || leave.isPending || waitlist.isPending;

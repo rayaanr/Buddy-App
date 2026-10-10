@@ -1,8 +1,9 @@
 import { clockLabel, isDeletedAccount } from '@buddy/shared';
 import { router } from 'expo-router';
+import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import type { ChatItem } from '@/api/chat';
+import type { ChatItem, MessageStatus } from '@/api/chat';
 import { AnimatedView, Avatar, DoubleTickIcon, TickIcon, useEnterOnChange } from '@/components/ui';
 import { colors } from '@/theme';
 
@@ -42,10 +43,13 @@ interface MessageBubbleProps {
   onReport: (message: ChatRow['message']) => void;
 }
 
-export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
+/** Memoised: the thread re-renders as messages arrive, but unchanged rows don't. */
+export const MessageBubble = memo(function MessageBubble({
+  row,
+  onRetry,
+  onReport,
+}: MessageBubbleProps) {
   const { message: m, mine, status, startsRun, gap, showMeta } = row;
-  // "Sending… → Sent → Seen" eases in as the status changes.
-  const metaStyle = useEnterOnChange(status);
 
   if (m.kind === 'system') {
     return <Text className="my-1.5 self-center font-sans text-[12.5px] text-subtle">{m.body}</Text>;
@@ -93,16 +97,6 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
     );
   }
 
-  const time = clockLabel(new Date(m.createdAt));
-  const meta =
-    status === 'sending'
-      ? 'Sending…'
-      : status === 'failed'
-        ? 'Not sent · Tap to retry'
-        : status === 'seen'
-          ? `Seen · ${time}`
-          : time;
-
   return (
     <View className="max-w-[78%] items-end self-end" style={{ marginTop: gap }}>
       <Pressable
@@ -118,19 +112,37 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
           <Text className="font-sans text-[15.5px] leading-[21.5px] text-bg">{m.body}</Text>
         </View>
       </Pressable>
-      {showMeta ? (
-        <AnimatedView style={[styles.meta, metaStyle]}>
-          <Text
-            className="font-sans text-[12px]"
-            style={{ color: status === 'failed' ? colors.danger : colors.subtle }}
-          >
-            {meta}
-          </Text>
-          {status === 'sent' ? <TickIcon color={colors.muted} /> : null}
-          {status === 'seen' ? <DoubleTickIcon /> : null}
-        </AnimatedView>
-      ) : null}
+      {showMeta && status ? <MessageMeta status={status} createdAt={m.createdAt} /> : null}
     </View>
+  );
+});
+
+/**
+ * "Sending… → Sent → Seen" under your latest message, easing in as it
+ * changes. Its own component so only that row holds the animation.
+ */
+function MessageMeta({ status, createdAt }: { status: MessageStatus; createdAt: string }) {
+  const style = useEnterOnChange(status);
+  const time = clockLabel(new Date(createdAt));
+  const meta =
+    status === 'sending'
+      ? 'Sending…'
+      : status === 'failed'
+        ? 'Not sent · Tap to retry'
+        : status === 'seen'
+          ? `Seen · ${time}`
+          : time;
+  return (
+    <AnimatedView style={[styles.meta, style]}>
+      <Text
+        className="font-sans text-[12px]"
+        style={{ color: status === 'failed' ? colors.danger : colors.subtle }}
+      >
+        {meta}
+      </Text>
+      {status === 'sent' ? <TickIcon color={colors.muted} /> : null}
+      {status === 'seen' ? <DoubleTickIcon /> : null}
+    </AnimatedView>
   );
 }
 

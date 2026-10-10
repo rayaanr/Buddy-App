@@ -1,7 +1,7 @@
 import type { ChatMessage } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Pressable, Text, TextInput, View, type ListRenderItem } from 'react-native';
 
 import { useChat } from '@/api/chat';
 import { ApiRequestError } from '@/api/client';
@@ -28,11 +28,11 @@ export default function ChatScreen() {
   const me = useMe();
   const activity = useActivity(id);
   const chat = useChat(id, me.data?.id);
-  const { top, bottom } = useScreenInsets();
-  const [text, setText] = useState('');
+  const { top } = useScreenInsets();
 
-  const list = useRef<FlatList<ChatRow>>(null);
-  const rows = useMemo(() => toChatRows(chat.items), [chat.items]);
+  // Newest first: the list is inverted, so the latest message sits at the
+  // bottom and stays there as messages arrive, without scrolling by hand.
+  const rows = useMemo(() => toChatRows(chat.items).reverse(), [chat.items]);
 
   // Messages already here when the chat opened appear as-is; new ones animate in.
   const [openedWith, setOpenedWith] = useState<Set<string> | null>(null);
@@ -40,23 +40,28 @@ export default function ChatScreen() {
     setOpenedWith(new Set(chat.items.map((i) => i.message.id)));
   }
 
+  const reportMessage = useCallback(
+    (m: ChatMessage) =>
+      router.push({ pathname: '/report', params: { type: 'message', id: m.id, activityId: id } }),
+    [id],
+  );
+  const { retry } = chat;
+  const renderItem = useCallback<ListRenderItem<ChatRow>>(
+    ({ item }) => (
+      <AnimatedView
+        entering={openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined}
+      >
+        <MessageBubble row={item} onRetry={retry} onReport={reportMessage} />
+      </AnimatedView>
+    ),
+    [openedWith, retry, reportMessage],
+  );
+
   const status = chat.error instanceof ApiRequestError ? chat.error.status : null;
   if (status === 403) return <NotFound message="Join this activity to see its chat." />;
   if (status === 404) return <NotFound message="This chat is no longer available." />;
 
   const a = activity.data;
-  // Until `me` loads, a send couldn't be attributed: keep the text, don't drop it.
-  const canSend = !!text.trim() && !!me.data;
-  const reportMessage = (m: ChatMessage) =>
-    router.push({
-      pathname: '/report',
-      params: { type: 'message', id: m.id, activityId: id },
-    });
-  const send = () => {
-    if (!canSend) return;
-    chat.send(text);
-    setText('');
-  };
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
@@ -83,27 +88,25 @@ export default function ChatScreen() {
         </View>
       ) : (
         <FlatList
-          ref={list}
+          inverted
           data={rows}
           keyExtractor={(r) => r.message.id}
-          renderItem={({ item }) => (
-            <AnimatedView
-              entering={openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined}
-            >
-              <MessageBubble row={item} onRetry={chat.retry} onReport={reportMessage} />
-            </AnimatedView>
-          )}
+          renderItem={renderItem}
+          // Inverted: paddingTop is the visual bottom.
           contentContainerStyle={{
             paddingHorizontal: 18,
-            paddingTop: 14,
-            paddingBottom: 18,
+            paddingTop: 18,
+            paddingBottom: 14,
             gap: 6,
           }}
-          // Keep the latest message (and typing indicator) in view as the thread grows.
-          onContentSizeChange={() => list.current?.scrollToEnd({ animated: true })}
+          // Reading older messages: new ones don't yank the view down. Near
+          // the bottom: it follows the conversation.
+          maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 80 }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
+          // Inverted: the header shows at the bottom, the footer at the top.
+          ListHeaderComponent={chat.typingName ? <TypingIndicator name={chat.typingName} /> : null}
+          ListFooterComponent={
             a ? (
               <Pressable
                 onPress={() => router.push(`/activity/${a.id}`)}
@@ -114,47 +117,76 @@ export default function ChatScreen() {
               </Pressable>
             ) : null
           }
-          ListFooterComponent={chat.typingName ? <TypingIndicator name={chat.typingName} /> : null}
         />
       )}
 
-      <View
-        className="flex-row gap-2.5 border-t border-line px-3.5 pt-3"
-        style={{ paddingBottom: bottom(28) }}
-      >
-        <TextInput
-          value={text}
-          onChangeText={(t) => {
-            setText(t);
-            if (t) chat.notifyTyping();
-          }}
-          onSubmitEditing={send}
-          submitBehavior="submit"
-          returnKeyType="send"
-          placeholder="Message the group"
-          placeholderTextColor={colors.subtle}
-          selectionColor={colors.lime}
-          className="h-[50px] min-w-0 flex-1 rounded-[25px] border border-field bg-surface px-5 font-sans text-[15.5px] text-ink"
-        />
-        <PressableScale
-          onPress={send}
-          disabled={!canSend}
-          haptic="light"
-          scale="strong"
-          accessibilityRole="button"
-          accessibilityLabel="Send"
-          className={cn(
-            'h-[50px] items-center justify-center rounded-[25px] px-5',
-            canSend ? 'bg-lime' : 'bg-disabled',
-          )}
-        >
-          <Text
-            className={cn('font-sans-semibold text-[15px]', canSend ? 'text-bg' : 'text-muted')}
-          >
-            Send
-          </Text>
-        </PressableScale>
-      </View>
+      <Composer
+        // Until `me` loads, a send couldn't be attributed: keep the text.
+        ready={!!me.data}
+        onSend={chat.send}
+        onTyping={chat.notifyTyping}
+      />
     </KeyboardScreen>
+  );
+}
+
+/**
+ * The message box. Its text lives here, so typing re-renders only this, not
+ * every message in the thread.
+ */
+function Composer({
+  ready,
+  onSend,
+  onTyping,
+}: {
+  ready: boolean;
+  onSend: (text: string) => void;
+  onTyping: () => void;
+}) {
+  const { bottom } = useScreenInsets();
+  const [text, setText] = useState('');
+  const canSend = ready && !!text.trim();
+  const send = () => {
+    if (!canSend) return;
+    onSend(text);
+    setText('');
+  };
+
+  return (
+    <View
+      className="flex-row gap-2.5 border-t border-line px-3.5 pt-3"
+      style={{ paddingBottom: bottom(28) }}
+    >
+      <TextInput
+        value={text}
+        onChangeText={(t) => {
+          setText(t);
+          if (t) onTyping();
+        }}
+        onSubmitEditing={send}
+        submitBehavior="submit"
+        returnKeyType="send"
+        placeholder="Message the group"
+        placeholderTextColor={colors.subtle}
+        selectionColor={colors.lime}
+        className="h-[50px] min-w-0 flex-1 rounded-[25px] border border-field bg-surface px-5 font-sans text-[15.5px] text-ink"
+      />
+      <PressableScale
+        onPress={send}
+        disabled={!canSend}
+        haptic="light"
+        scale="strong"
+        accessibilityRole="button"
+        accessibilityLabel="Send"
+        className={cn(
+          'h-[50px] items-center justify-center rounded-[25px] px-5',
+          canSend ? 'bg-lime' : 'bg-disabled',
+        )}
+      >
+        <Text className={cn('font-sans-semibold text-[15px]', canSend ? 'text-bg' : 'text-muted')}>
+          Send
+        </Text>
+      </PressableScale>
+    </View>
   );
 }

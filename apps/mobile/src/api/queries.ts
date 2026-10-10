@@ -292,10 +292,13 @@ export function useUpdateMe() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (patch: UpdateMeInput) => unwrap(api.me.$patch({ json: patch })),
-    onSuccess: (me: Me) => {
+    onSuccess: (me: Me, patch) => {
       qc.setQueryData(keys.me, me);
-      // Interests and area change rankings and distances.
-      return qc.invalidateQueries({ queryKey: keys.activities });
+      // Interests and home town change rankings and distances; a name, bio or
+      // notification switch doesn't touch any activity list.
+      if (patch.interests || patch.placeId !== undefined) {
+        return qc.invalidateQueries({ queryKey: keys.activities });
+      }
     },
   });
 }

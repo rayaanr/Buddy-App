@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 
@@ -15,11 +15,17 @@ interface PhotoProps {
   children?: ReactNode;
 }
 
-/** Stock photo over a striped hue placeholder, matching the prototype's fallback. */
+/**
+ * Stock photo over a striped hue placeholder, matching the prototype's
+ * fallback. The stripes (an SVG pattern) are dropped once the photo has
+ * loaded, so lists don't keep one hidden SVG under every card.
+ */
 export function Photo({ uri, hue, className, style, children }: PhotoProps) {
+  const [loadedUri, setLoadedUri] = useState<string | null>(null);
+  const loaded = !!uri && loadedUri === uri;
   return (
     <View className={className} style={[styles.base, { backgroundColor: hue }, style]}>
-      <Stripes hue={hue} />
+      {loaded ? null : <Stripes hue={hue} />}
       {uri ? (
         <Image
           source={{ uri }}
@@ -27,6 +33,7 @@ export function Photo({ uri, hue, className, style, children }: PhotoProps) {
           contentFit="cover"
           transition={200}
           cachePolicy="memory-disk"
+          onLoad={() => setLoadedUri(uri)}
         />
       ) : null}
       {children}

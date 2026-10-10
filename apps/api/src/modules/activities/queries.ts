@@ -1,5 +1,6 @@
 import { DELETED_ACCOUNT, type ActivitySummary, type DiscoverFilter } from '@buddy/shared';
 import { and, asc, eq, gte, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 
 import type { Db, Tx } from '../../db/client';
 import type { LatLng } from '../../db/geography';
@@ -12,6 +13,8 @@ import {
   user,
 } from '../../db/schema';
 import type { Urls } from '../../lib/urls';
+
+const viewerMember = alias(activityMembers, 'viewer_member');
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 
 /** Activities stay listed until an hour after they start. */
@@ -102,19 +105,13 @@ export async function findActivitySummaries(
       communityName: communities.name,
       goingCount: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
       waitingCount: sql<number>`(select count(*)::int from activity_waitlist w where w.activity_id = ${activities.id})`,
-      chatMuted: viewerId
-        ? sql<boolean>`coalesce((select m.chat_muted from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId}), false)`
-        : sql<boolean>`false`,
+      chatMuted: sql<boolean>`coalesce(${viewerMember.chatMuted}, false)`,
       waitlistPosition: viewerId
         ? sql<
             number | null
           >`(select count(*)::int from activity_waitlist w, activity_waitlist mine where mine.activity_id = ${activities.id} and mine.user_id = ${viewerId} and w.activity_id = mine.activity_id and (w.joined_at, w.user_id) <= (mine.joined_at, mine.user_id) having count(*) > 0)`
         : sql<null>`null`,
-      viewerRole: viewerId
-        ? sql<
-            string | null
-          >`(select m.role from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId})`
-        : sql<null>`null`,
+      viewerRole: viewerMember.role,
       distanceKm: near
         ? sql<number>`ST_Distance(${activities.location}, ${pointSql(near)}) / 1000`
         : sql<null>`null`,
@@ -124,6 +121,13 @@ export async function findActivitySummaries(
     .leftJoin(user, eq(user.id, activities.hostId))
     .leftJoin(profiles, eq(profiles.userId, activities.hostId))
     .leftJoin(communities, eq(communities.id, activities.communityId))
+    // The viewer's own membership row, if any (role and mute in one lookup).
+    .leftJoin(
+      viewerMember,
+      viewerId
+        ? and(eq(viewerMember.activityId, activities.id), eq(viewerMember.userId, viewerId))
+        : sql`false`,
+    )
     .where(and(...where, visibleTo(viewerId)))
     .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));
 
