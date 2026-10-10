@@ -59,6 +59,10 @@ async function register(Notifications: NotificationsModule) {
       name: 'Reminders and changes',
       importance: Notifications.AndroidImportance.HIGH,
     });
+    await Notifications.setNotificationChannelAsync('communities', {
+      name: 'New in your communities',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
   }
   const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: projectId() });
   await unwrap(api.me['push-tokens'].$post({ json: { token } }));

@@ -17,6 +17,7 @@ import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
+import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
 import User from 'lucide-react-native/icons/user';
@@ -109,6 +110,11 @@ export const ShareIcon = icon(
   Share,
   { size: 19, color: colors.ink, strokeWidth: 1.9 },
   'ShareIcon',
+);
+export const SearchIcon = icon(
+  Search,
+  { size: 18, color: colors.muted, strokeWidth: 2 },
+  'SearchIcon',
 );
 export const PencilIcon = icon(
   Pencil,

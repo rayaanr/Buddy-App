@@ -9,9 +9,11 @@ import type {
   DiscoverFilter,
   RemovalReason,
   Me,
+  ResolveReportInput,
   UpdateMeInput,
 } from '@buddy/shared';
 import {
+  keepPreviousData,
   QueryClient,
   useMutation,
   useQuery,
@@ -49,6 +51,8 @@ export const keys = {
   activities: ['activities'] as const,
   communities: ['communities'] as const,
   community: (id: string) => ['communities', id] as const,
+  communityMembers: (id: string) => ['communities', id, 'members'] as const,
+  reports: (status: 'open' | 'resolved') => ['admin', 'reports', status] as const,
   user: (id: string) => ['users', id] as const,
   messages: (activityId: string) => ['chat', activityId] as const,
   blocked: ['blocked'] as const,
@@ -60,7 +64,8 @@ export const useMe = (enabled = true) =>
   useQuery({ queryKey: keys.me, queryFn: () => unwrap(api.me.$get()), enabled });
 
 /** Discover, measured from where the Discover store says (home, near me, or a town). */
-export function useFeed(filter: DiscoverFilter) {
+/** Discover's list; `search` (2+ letters) looks island-wide instead. */
+export function useFeed(filter: DiscoverFilter, search = '') {
   const origin = useDiscoverStore((s) => s.origin);
   const radiusKm = useDiscoverStore((s) => s.radiusKm);
   const here = useDiscoverStore((s) => s.here);
@@ -71,9 +76,13 @@ export function useFeed(filter: DiscoverFilter) {
     where.lng = here.lng.toFixed(3);
   }
   if (origin.kind === 'town') where.placeId = String(origin.id);
+  const q = search.trim();
+  if (q.length >= 2) where.q = q;
   return useQuery({
     queryKey: keys.feed(filter, where),
     queryFn: () => unwrap(api.activities.$get({ query: { filter, ...where } })),
+    // While typing, keep the last results up rather than flashing a skeleton.
+    placeholderData: where.q ? keepPreviousData : undefined,
     // Near me, before the phone has said where it is: wait rather than show home.
     enabled: origin.kind !== 'here' || !!here,
   });
@@ -364,4 +373,70 @@ export async function deleteAccount() {
   await unwrap(api.me.$delete());
   useAccountStore.getState().forget();
   await signOut();
+}
+
+// ── Community creator tools ──────────────────────────────────────────────
+
+export const useCommunityMembers = (id: string) =>
+  useQuery({
+    queryKey: keys.communityMembers(id),
+    queryFn: async () =>
+      (await unwrap(api.communities[':id'].members.$get({ param: { id } }))).members,
+  });
+
+export function useRemoveCommunityMember(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      unwrap(api.communities[':id'].members[':userId'].$delete({ param: { id, userId } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.community(id) }),
+  });
+}
+
+export function useDeleteCommunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.communities[':id'].$delete({ param: { id } })),
+    onSuccess: (_, id) => {
+      // Gone: drop it (and its members) rather than refetch a 404.
+      qc.removeQueries({ queryKey: keys.community(id) });
+      return Promise.all([
+        qc.invalidateQueries({ queryKey: keys.communities, exact: true }),
+        qc.invalidateQueries({ queryKey: keys.activities }),
+      ]);
+    },
+  });
+}
+
+// ── Moderation (admins only) ─────────────────────────────────────────────
+
+export const useAdminReports = (status: 'open' | 'resolved') =>
+  useQuery({
+    queryKey: keys.reports(status),
+    queryFn: async () => (await unwrap(api.admin.reports.$get({ query: { status } }))).reports,
+  });
+
+/** Everything a decision can change: reports, and what people see. */
+const refreshAfterModeration = (qc: QueryClient) =>
+  qc.invalidateQueries({
+    predicate: (q) =>
+      ['admin', 'activities', 'communities', 'users'].includes(String(q.queryKey[0])),
+  });
+
+export function useResolveReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...json }: { id: string } & ResolveReportInput) =>
+      unwrap(api.admin.reports[':id'].resolve.$post({ param: { id }, json })),
+    onSuccess: () => refreshAfterModeration(qc),
+  });
+}
+
+export function useLiftSuspension() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      unwrap(api.admin.suspensions[':id'].$delete({ param: { id: userId } })),
+    onSuccess: () => refreshAfterModeration(qc),
+  });
 }

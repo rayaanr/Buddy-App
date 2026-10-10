@@ -22,7 +22,9 @@ import {
   LocateIcon,
   MapPinIcon,
   Refresh,
+  SearchField,
 } from '@/components/ui';
+import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { LocationSheet } from '@/components/discover/LocationSheet';
 import { currentPointIfAllowed } from '@/lib/location';
@@ -33,11 +35,17 @@ import { fadeIn } from '@/theme/motion';
 export default function DiscoverScreen() {
   const { top } = useScreenInsets();
   const [filter, setFilter] = useState<DiscoverFilter>('All');
+  const [search, setSearch] = useState('');
+  const searching = useDebounced(search.trim(), 300);
+  const isSearch = searching.length >= 2;
   const me = useMe();
-  const feed = useFeed(filter);
+  const feed = useFeed(filter, isSearch ? searching : '');
   const fromCommunities = useFromCommunities();
 
-  const [hero, ...rows] = feed.data?.activities ?? [];
+  const results = feed.data?.activities ?? [];
+  // Search results are all equal: no big card on top.
+  const hero = isSearch ? undefined : results[0];
+  const rows = isSearch ? results : results.slice(1);
   const origin = useDiscoverStore((s) => s.origin);
   const radiusKm = useDiscoverStore((s) => s.radiusKm);
   const here = useDiscoverStore((s) => s.here);
@@ -45,7 +53,8 @@ export default function DiscoverScreen() {
   const homeLabel = me.data?.area ?? '';
   const originLabel =
     origin.kind === 'here' ? 'Near me' : origin.kind === 'town' ? origin.label : homeLabel;
-  const widenedTo = feed.data && feed.data.radiusKm > radiusKm ? feed.data.radiusKm : null;
+  const widenedTo =
+    !isSearch && feed.data && feed.data.radiusKm > radiusKm ? feed.data.radiusKm : null;
   // "Near me" waits for the phone's position: show the skeleton, not "Nothing here".
   const locating = origin.kind === 'here' && !here && !feed.data;
 
@@ -66,7 +75,7 @@ export default function DiscoverScreen() {
     };
   }, [origin.kind, here]);
   const communityItems = fromCommunities.data ?? [];
-  const showCommunityRow = filter === 'All' && communityItems.length > 0;
+  const showCommunityRow = !isSearch && filter === 'All' && communityItems.length > 0;
 
   return (
     <ScrollView
@@ -102,11 +111,19 @@ export default function DiscoverScreen() {
         />
       </View>
       <Heading className="mt-0.5 px-[22px]">What’s happening</Heading>
+      <View className="mt-3.5 px-[22px]">
+        <SearchField
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search padel, Galle, food walk…"
+          label="Search activities"
+        />
+      </View>
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingTop: 16, paddingBottom: 18 }}
+        contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingTop: 12, paddingBottom: 18 }}
       >
         {DISCOVER_FILTERS.map((f) => (
           <Chip
@@ -146,6 +163,13 @@ export default function DiscoverScreen() {
       ) : null}
 
       <View className="gap-3 px-[22px]">
+        {isSearch && feed.data ? (
+          <Text className="font-sans text-[13.5px] text-muted">
+            {results.length
+              ? `${results.length === 50 ? '50+' : results.length} across Sri Lanka, nearest first`
+              : ''}
+          </Text>
+        ) : null}
         {feed.isLoading || locating ? (
           <>
             <ActivityHeroSkeleton />
@@ -161,7 +185,16 @@ export default function DiscoverScreen() {
             <ActivityRow activity={a} />
           </AnimatedView>
         ))}
-        {feed.data && !hero ? (
+        {isSearch && feed.data && !results.length ? (
+          <EmptyState
+            card
+            title={`Nothing matches “${searching}”`}
+            subtitle="Try another word, or host it yourself."
+            cta="Host an activity"
+            onPress={() => router.push('/create')}
+          />
+        ) : null}
+        {!isSearch && feed.data && !hero ? (
           <EmptyState
             card
             title="Nothing here yet"

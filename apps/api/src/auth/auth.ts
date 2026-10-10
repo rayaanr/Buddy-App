@@ -1,5 +1,7 @@
 import { expo } from '@better-auth/expo';
+import { ERROR_CODES } from '@buddy/shared';
 import { betterAuth } from 'better-auth';
+import { APIError } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins';
 import { createHash } from 'node:crypto';
@@ -10,6 +12,7 @@ import type { Env } from '../env';
 import type { Logger } from '../logger';
 import { signInCodeEmail, type Mailer } from '../lib/mailer';
 import type { RateLimiter } from '../lib/rate-limit';
+import { isSuspended } from '../modules/moderation/service';
 
 const DAY_SECONDS = 24 * 60 * 60;
 
@@ -80,6 +83,19 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
       },
     },
     databaseHooks: {
+      session: {
+        create: {
+          // Suspended by a moderator: no new sessions (existing ones were ended).
+          before: async (s) => {
+            if (await isSuspended(db, s.userId)) {
+              throw new APIError('FORBIDDEN', {
+                code: ERROR_CODES.suspended,
+                message: 'This account has been suspended for breaking Buddy’s rules.',
+              });
+            }
+          },
+        },
+      },
       user: {
         create: {
           // Sign-up asks only for an email; the name is an optional next step.

@@ -22,8 +22,15 @@ export const me = z.object({
   avatarUrl: z.url().nullable(),
   /** False until first-run setup is finished or skipped; the app shows it until then. */
   onboarded: z.boolean(),
+  /** Can review reports (Settings → Moderation). */
+  isAdmin: z.boolean(),
   /** Push notification switches. */
-  notifications: z.object({ chat: z.boolean(), reminders: z.boolean() }),
+  notifications: z.object({
+    chat: z.boolean(),
+    reminders: z.boolean(),
+    /** New activities in your communities. */
+    communities: z.boolean(),
+  }),
   stats: z.object({
     joined: z.number().int(),
     hosted: z.number().int(),
@@ -46,7 +53,9 @@ export const updateMeInput = z
     availability: uniqueList(availability),
     /** Key returned by the upload endpoint; null removes the photo. */
     avatarKey: z.string().nullable(),
-    notifications: z.object({ chat: z.boolean(), reminders: z.boolean() }).partial(),
+    notifications: z
+      .object({ chat: z.boolean(), reminders: z.boolean(), communities: z.boolean() })
+      .partial(),
     /** Finishes first-run setup (every step can be skipped). */
     onboarded: z.literal(true),
   })

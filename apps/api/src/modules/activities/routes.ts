@@ -1,6 +1,9 @@
 import {
+  type ActivityDetail,
   cancelActivityInput,
   createActivityInput,
+  firstName,
+  whenLong,
   feedQuery,
   muteInput,
   removeGuestInput,
@@ -15,9 +18,10 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import { activities, activityMembers, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
-import { HOUR, limits, MINUTE } from '../../lib/rate-limit';
+import { DAY, HOUR, limits, MINUTE } from '../../lib/rate-limit';
 import { idParam, validate } from '../../lib/validate';
 import { toChatMessage } from '../chat/service';
+import { communityAudience } from '../communities/service';
 import { originFor } from '../profiles/service';
 import { createAnnouncer } from './announce';
 import { picksFor } from './picks';
@@ -57,6 +61,22 @@ export function activityRoutes(deps: Deps) {
   const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
 
   const announce = createAnnouncer(deps);
+
+  /**
+   * A new activity in a community: its members hear about it. At most a few a
+   * day per host and community, so one person can't flood everyone's phone.
+   */
+  const tellCommunity = async (a: ActivityDetail, host: { id: string; name: string }) => {
+    const community = a.community!;
+    if (!deps.limiter.hit(`community-post:${community.id}:${host.id}`, 3, DAY).ok) return;
+    const audience = await communityAudience(db, community.id, host.id);
+    void push.notifyUsers(audience, {
+      title: community.name,
+      body: `${firstName(host.name)} is hosting ${a.title}, ${whenLong(new Date(a.startsAt))}`,
+      data: { activityId: a.id },
+      channelId: 'communities',
+    });
+  };
   return (
     new Hono<AppEnv>()
       .use(requireUser)
@@ -66,6 +86,29 @@ export function activityRoutes(deps: Deps) {
         const me = currentUser(c);
         const q = c.req.valid('query');
         const near = await originFor(db, me.id, q);
+        if (q.q) {
+          // Like-escaped, so "50%" or "a_b" mean themselves.
+          const term = `%${q.q.toLowerCase().replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+          const items = await findActivitySummaries(db, urls, {
+            viewerId: me.id,
+            near,
+            where: [
+              upcoming(),
+              notCancelled(),
+              filterCondition(q.filter),
+              sql`(lower(${activities.title}) like ${term}
+                or lower(${activities.place}) like ${term}
+                or lower(${activities.area}) like ${term}
+                or lower(coalesce(${activities.interest}, '')) like ${term})`,
+            ],
+            orderBy: [
+              sql`${activities.location} <-> ${pointSql(near)}`,
+              sql`${activities.startsAt}`,
+            ],
+            limit: q.limit,
+          });
+          return c.json({ activities: items, radiusKm: q.radiusKm });
+        }
         const within = (km: number) =>
           findActivitySummaries(db, urls, {
             viewerId: me.id,
@@ -170,7 +213,9 @@ export function activityRoutes(deps: Deps) {
         validate('json', createActivityInput),
         async (c) => {
           const me = currentUser(c);
-          return c.json(await createActivity(db, { urls, storage }, me, c.req.valid('json')), 201);
+          const detail = await createActivity(db, { urls, storage }, me, c.req.valid('json'));
+          if (detail.community) void tellCommunity(detail, me);
+          return c.json(detail, 201);
         },
       )
 

@@ -264,7 +264,7 @@ describe('Expo push sender', () => {
     const me = await t.call<{ notifications: { chat: boolean; reminders: boolean } }>('/v1/me', {
       headers: nethmi.headers,
     });
-    expect(me.body.notifications).toEqual({ chat: false, reminders: true });
+    expect(me.body.notifications).toEqual({ chat: false, reminders: true, communities: true });
 
     const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
       const batch = JSON.parse(String(init.body)) as unknown[];

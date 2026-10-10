@@ -7,6 +7,7 @@ export * from './EmptyState';
 export * from './Footer';
 export * from './icons';
 export * from './Photo';
+export * from './SearchField';
 export * from './SegmentedControl';
 export * from './TextField';
 export * from './Toast';

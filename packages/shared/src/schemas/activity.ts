@@ -80,6 +80,8 @@ export const feedQuery = z.object({
   placeId: z.coerce.number().int().positive().optional(),
   radiusKm: z.coerce.number().positive().max(100).default(DEFAULT_RADIUS_KM),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+  /** Search: titles, places, towns and interests anywhere in Sri Lanka, nearest first. */
+  q: z.string().trim().min(2).max(60).optional(),
 });
 export type FeedQuery = z.infer<typeof feedQuery>;
 

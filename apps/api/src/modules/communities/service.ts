@@ -7,8 +7,15 @@ import type {
 import { and, asc, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
-import { activities, communities, communityMembers, profiles, user } from '../../db/schema';
-import { conflict, forbidden, notFound } from '../../lib/errors';
+import {
+  activities,
+  communities,
+  communityMembers,
+  communityRemovals,
+  profiles,
+  user,
+} from '../../db/schema';
+import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
@@ -17,6 +24,8 @@ import { originFor } from '../profiles/service';
 import { notBlockedBetween } from '../safety/blocks';
 
 const MEMBER_PREVIEW = 6;
+/** The full list is short for now; page it once communities get big. */
+const MEMBER_LIST_MAX = 500;
 
 // Spelled out: with a single table Drizzle writes a bare "id", which inside
 // these subqueries would mean the activity's or member's own id.
@@ -186,6 +195,11 @@ async function requireCommunity(db: Db, id: string) {
 /** Join and leave are idempotent; both return the updated summary. */
 export async function joinCommunity(db: Db, id: string, userId: string) {
   await requireCommunity(db, id);
+  const [removed] = await db
+    .select({ userId: communityRemovals.userId })
+    .from(communityRemovals)
+    .where(and(eq(communityRemovals.communityId, id), eq(communityRemovals.userId, userId)));
+  if (removed) throw forbidden('You were removed from this community');
   await db.insert(communityMembers).values({ communityId: id, userId }).onConflictDoNothing();
   const [summary] = await findCommunitySummaries(db, userId, id);
   return summary!;
@@ -198,4 +212,86 @@ export async function leaveCommunity(db: Db, id: string, userId: string) {
     .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, userId)));
   const [summary] = await findCommunitySummaries(db, userId, id);
   return summary!;
+}
+
+async function requireCreator(db: Db, id: string, userId: string) {
+  const [row] = await db
+    .select({ createdBy: communities.createdBy })
+    .from(communities)
+    .where(eq(communities.id, id));
+  if (!row) throw notFound('Community');
+  if (row.createdBy !== userId) throw forbidden('Only the person who started it can do that');
+}
+
+/** Everyone in the community (minus anyone blocked either way), creator first. */
+export async function listCommunityMembers(db: Db, urls: Urls, id: string, viewerId: string) {
+  await requireCommunity(db, id);
+  const rows = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      avatarKey: profiles.avatarKey,
+      avatarUrl: profiles.avatarUrl,
+      isCreator: sql<boolean>`${communities.createdBy} = ${user.id}`,
+    })
+    .from(communityMembers)
+    .innerJoin(user, eq(user.id, communityMembers.userId))
+    .innerJoin(communities, eq(communities.id, communityMembers.communityId))
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .where(
+      and(
+        eq(communityMembers.communityId, id),
+        notBlockedBetween(viewerId, communityMembers.userId),
+      ),
+    )
+    .orderBy(sql`${communities.createdBy} = ${user.id} desc`, asc(communityMembers.joinedAt))
+    .limit(MEMBER_LIST_MAX);
+  return rows.map((m) => ({
+    id: m.id,
+    name: m.name,
+    avatarUrl: urls.avatar(m.avatarKey, m.avatarUrl),
+    isCreator: m.isCreator,
+  }));
+}
+
+/** The creator removes someone; they can't join again. Their activities stay. */
+export async function removeCommunityMember(
+  db: Db,
+  id: string,
+  creatorId: string,
+  memberId: string,
+) {
+  await requireCreator(db, id, creatorId);
+  if (memberId === creatorId)
+    throw badRequest('You can’t remove yourself; delete the community instead');
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(communityMembers)
+      .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, memberId)));
+    await tx
+      .insert(communityRemovals)
+      .values({ communityId: id, userId: memberId })
+      .onConflictDoNothing();
+  });
+}
+
+/** The creator deletes it. Its activities go on without a community. */
+export async function deleteCommunity(db: Db, id: string, creatorId: string) {
+  await requireCreator(db, id, creatorId);
+  await db.delete(communities).where(eq(communities.id, id));
+}
+
+/** Members to tell about a new activity: everyone but the host and anyone blocked either way. */
+export async function communityAudience(db: Db, id: string, hostId: string) {
+  const rows = await db
+    .select({ userId: communityMembers.userId })
+    .from(communityMembers)
+    .where(
+      and(
+        eq(communityMembers.communityId, id),
+        sql`${communityMembers.userId} <> ${hostId}`,
+        notBlockedBetween(hostId, communityMembers.userId),
+      ),
+    );
+  return rows.map((r) => r.userId);
 }

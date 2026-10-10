@@ -59,6 +59,18 @@ export default function SettingsScreen() {
           label="Reminders and changes"
           sub="Coming up, how was it, new times, cancellations, waitlist spots."
         />
+        <NotificationSwitch
+          kind="communities"
+          label="New in your communities"
+          sub="When someone posts an activity in a community you’re in."
+        />
+
+        {me.data?.isAdmin ? (
+          <>
+            <SectionLabel className="mb-1 mt-7">Buddy team</SectionLabel>
+            <Row label="Moderation" onPress={() => router.push('/moderation')} />
+          </>
+        ) : null}
 
         <SectionLabel className="mb-1 mt-7">Privacy</SectionLabel>
         <Row label="Blocked people" onPress={() => router.push('/blocked')} />
@@ -87,7 +99,7 @@ function NotificationSwitch({
   label,
   sub,
 }: {
-  kind: 'chat' | 'reminders';
+  kind: 'chat' | 'reminders' | 'communities';
   label: string;
   sub: string;
 }) {

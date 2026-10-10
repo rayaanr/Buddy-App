@@ -85,7 +85,15 @@ Connections live in this process's memory (`src/realtime/hub.ts`). That's right 
 
 **Blocking hides people from each other in both directions.** The rule lives in `src/modules/safety/blocks.ts` and is applied in one place per surface: activity lists (`findActivitySummaries`), attendees, community members, chat history, live socket events, push notifications and profiles. Activities you're already going to stay visible.
 
-**Reports** go into the `reports` table with `status = 'open'`, are logged, and are emailed to `MODERATION_EMAIL` when set. Set it in production: App Review expects reports to be acted on within 24 hours. There's no admin screen yet; review them in the database.
+**Reports** go into the `reports` table with `status = 'open'`, are logged, and are emailed to `MODERATION_EMAIL` when set. Set it in production: App Review expects reports to be acted on within 24 hours.
+
+**Moderators** are the accounts listed in `ADMIN_EMAILS`. They get **Settings → Moderation** in the app, which lists open reports with what they're about. For each one they can:
+
+- **Remove the content**: delete the message (it also disappears from open chats), cancel the activity, or delete the community.
+- **Suspend the person**: they're signed out everywhere, can't sign back in, and the activities they host are cancelled with a note to the people going. A suspension can be lifted from the same screen.
+- **Dismiss** the report.
+
+Acting on one report closes the other open reports it settles (the same content, or the same person when suspending). The API is under `/v1/admin` and refuses everyone else.
 
 ## Hosting, reminders and share links
 

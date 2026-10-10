@@ -42,6 +42,16 @@ const schema = z
     CONTACT_EMAIL: z.email().default('hello@example.com'),
     /** Where new reports are emailed. Without it they're only logged. */
     MODERATION_EMAIL: z.email().optional(),
+    /** Who can act on reports in the app (Settings → Moderation), comma-separated emails. */
+    ADMIN_EMAILS: z
+      .string()
+      .default('')
+      .transform((s) =>
+        s
+          .split(',')
+          .map((e) => e.trim().toLowerCase())
+          .filter(Boolean),
+      ),
 
     /** Optional; only needed if push security is enabled in the Expo project. */
     EXPO_ACCESS_TOKEN: z.string().optional(),

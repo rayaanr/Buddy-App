@@ -76,6 +76,10 @@ export const profiles = pgTable('profiles', {
   /** Push notification switches (Settings → Notifications). */
   notifyChat: boolean().notNull().default(true),
   notifyReminders: boolean().notNull().default(true),
+  /** New activities in communities they belong to. */
+  notifyCommunities: boolean().notNull().default(true),
+  /** Suspended by a moderator: can't sign in or use the API. */
+  suspendedAt: timestamp({ withTimezone: true }),
   /** When first-run setup was finished or skipped; until then the app shows it. */
   onboardedAt: timestamp({ withTimezone: true }),
   ...timestamps,
@@ -217,6 +221,24 @@ export const activityWaitlist = pgTable(
  * People a host removed from an activity. They can't rejoin or see it again.
  * The reason is for moderation only.
  */
+/** People a community's creator removed; they can't join it again. */
+export const communityRemovals = pgTable(
+  'community_removals',
+  {
+    communityId: uuid()
+      .notNull()
+      .references(() => communities.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.communityId, t.userId] }),
+    index('community_removals_user_idx').on(t.userId),
+  ],
+);
+
 export const activityRemovals = pgTable(
   'activity_removals',
   {
@@ -311,6 +333,10 @@ export const reports = pgTable(
     /** The reporter's own words, optional. */
     details: text(),
     status: text().notNull().default('open'),
+    /** What the moderator did: dismissed, removed (the content) or suspended (the person). */
+    resolution: text(),
+    resolvedBy: uuid().references(() => user.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
   (t) => [
@@ -322,6 +348,7 @@ export const reports = pgTable(
     index('reports_activity_idx').on(t.activityId),
     index('reports_message_idx').on(t.messageId),
     index('reports_community_idx').on(t.communityId),
+    index('reports_resolved_by_idx').on(t.resolvedBy),
     check(
       'reports_reason_check',
       sql`${t.reason} in ('spam', 'harassment', 'hate', 'sexual', 'violence', 'other')`,

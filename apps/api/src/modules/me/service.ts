@@ -28,7 +28,13 @@ import { requirePlace, toPlace } from '../profiles/service';
 
 const count = sql<number>`count(*)::int`;
 
-export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
+/** `admins`: emails allowed to moderate (ADMIN_EMAILS). */
+export async function getMe(
+  db: Db,
+  urls: Urls,
+  userId: string,
+  admins: readonly string[] = [],
+): Promise<Me> {
   const [row] = await db
     .select({ user, profile: profiles, place: places })
     .from(user)
@@ -59,7 +65,12 @@ export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
     availability: profile.availability as Availability[],
     avatarUrl: urls.avatar(profile.avatarKey, profile.avatarUrl),
     onboarded: profile.onboardedAt !== null,
-    notifications: { chat: profile.notifyChat, reminders: profile.notifyReminders },
+    isAdmin: admins.includes(row.user.email.toLowerCase()),
+    notifications: {
+      chat: profile.notifyChat,
+      reminders: profile.notifyReminders,
+      communities: profile.notifyCommunities,
+    },
     stats: { joined: joined?.n ?? 0, hosted: hosted?.n ?? 0, communities: comms?.n ?? 0 },
     createdAt: row.user.createdAt.toISOString(),
   };
@@ -89,6 +100,9 @@ export async function updateMe(
       ...(input.notifications?.chat !== undefined && { notifyChat: input.notifications.chat }),
       ...(input.notifications?.reminders !== undefined && {
         notifyReminders: input.notifications.reminders,
+      }),
+      ...(input.notifications?.communities !== undefined && {
+        notifyCommunities: input.notifications.communities,
       }),
     };
     if (Object.keys(profilePatch).length) {

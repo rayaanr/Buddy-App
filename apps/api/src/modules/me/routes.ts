@@ -11,18 +11,18 @@ import { listBlocked } from '../safety/service';
 import { deleteAccount, getMe, updateMe } from './service';
 
 export function meRoutes(deps: Deps) {
-  const { db, urls, hub, storage, logger } = deps;
+  const { db, urls, hub, storage, logger, env } = deps;
   const announce = createAnnouncer(deps);
   return (
     new Hono<AppEnv>()
       .use(requireUser)
 
-      .get('/', async (c) => c.json(await getMe(db, urls, currentUser(c).id)))
+      .get('/', async (c) => c.json(await getMe(db, urls, currentUser(c).id, env.ADMIN_EMAILS)))
 
       .patch('/', validate('json', updateMeInput), async (c) => {
         const me = currentUser(c);
         await updateMe(db, storage, me.id, c.req.valid('json'));
-        return c.json(await getMe(db, urls, me.id));
+        return c.json(await getMe(db, urls, me.id, env.ADMIN_EMAILS));
       })
 
       .delete('/', async (c) => {

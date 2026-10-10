@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { useCommunity } from '@/api/queries';
+import { errorMessage } from '@/api/client';
+import { useCommunity, useDeleteCommunity } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
@@ -21,6 +22,7 @@ import {
 import { COMMUNITY_HUE } from '@/data/constants';
 import { useCommunityToggle } from '@/hooks/useCommunityToggle';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
 export default function CommunityScreen() {
@@ -29,6 +31,8 @@ export default function CommunityScreen() {
   const { toggle, pending } = useCommunityToggle();
   const { top } = useScreenInsets();
   const [menu, setMenu] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const remove = useDeleteCommunity();
 
   if (!community.data)
     return <QueryFallback query={community} notFound="This community no longer exists." />;
@@ -84,11 +88,17 @@ export default function CommunityScreen() {
               accessibilityLabel={m.name}
             />
           ))}
-          {others > 0 ? (
-            <Text className="ml-[18px] font-sans text-[14px] text-muted">
-              +{others} member{others === 1 ? '' : 's'}
+          <Pressable
+            onPress={() => router.push(`/community/${c.id}/members`)}
+            accessibilityRole="button"
+            hitSlop={8}
+            className="ml-[18px] active:opacity-70"
+          >
+            <Text className="font-sans text-[14px] text-muted">
+              {others > 0 ? `+${others} member${others === 1 ? '' : 's'} · ` : ''}
+              <Text className="font-sans-medium text-lime">See all</Text>
             </Text>
-          ) : null}
+          </Pressable>
         </View>
 
         <SectionLabel className="mb-2.5 mt-[26px]">Upcoming</SectionLabel>
@@ -144,7 +154,14 @@ export default function CommunityScreen() {
         onClose={() => setMenu(false)}
         actions={
           c.isCreator
-            ? [{ label: 'Edit community', onPress: () => router.push(`/community/${c.id}/edit`) }]
+            ? [
+                { label: 'Edit community', onPress: () => router.push(`/community/${c.id}/edit`) },
+                {
+                  label: 'Delete community',
+                  destructive: true,
+                  onPress: () => setConfirmDelete(true),
+                },
+              ]
             : [
                 {
                   label: 'Report community',
@@ -154,6 +171,27 @@ export default function CommunityScreen() {
                 },
               ]
         }
+      />
+      <ActionSheet
+        visible={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title={`Delete ${c.name}?`}
+        message="Everyone leaves it and it disappears for good. Activities posted in it stay up on their own."
+        actions={[
+          {
+            label: 'Delete community',
+            destructive: true,
+            onPress: () =>
+              remove.mutate(c.id, {
+                onSuccess: () => {
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/communities');
+                  toast('Community deleted.');
+                },
+                onError: (err) => toast(errorMessage(err)),
+              }),
+          },
+        ]}
       />
     </ScrollView>
   );

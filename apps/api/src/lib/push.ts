@@ -9,7 +9,7 @@ export interface PushMessage {
   body: string;
   data: Record<string, string>;
   /** Android notification channel the app created (see apps/mobile/src/api/push.ts). */
-  channelId?: 'chat' | 'reminders';
+  channelId?: 'chat' | 'reminders' | 'communities';
 }
 
 export interface PushSender {
@@ -61,7 +61,9 @@ export function createPushSender(db: Db, logger: Logger, accessToken?: string): 
       ? eq(profiles.notifyChat, true)
       : message.channelId === 'reminders'
         ? eq(profiles.notifyReminders, true)
-        : undefined;
+        : message.channelId === 'communities'
+          ? eq(profiles.notifyCommunities, true)
+          : undefined;
 
   return {
     async notifyActivity(activityId, message, exceptUserIds) {

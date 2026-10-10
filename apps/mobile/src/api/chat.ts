@@ -129,6 +129,12 @@ export function useChat(activityId: string, myId: string | undefined) {
           }
         } else if (event.type === 'typing') {
           setTyping({ name: event.user.name.split(' ')[0]!, until: Date.now() + TYPING_SHOW_MS });
+        } else if (event.type === 'removed') {
+          // A moderator took it down.
+          update((p) => ({
+            ...p,
+            messages: p.messages.filter((m) => m.id !== event.messageId),
+          }));
         } else if (event.type === 'read') {
           update((p) => ({
             ...p,

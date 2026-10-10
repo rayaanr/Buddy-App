@@ -45,6 +45,8 @@ export const serverEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('message'), message: chatMessage }),
   z.object({ type: z.literal('typing'), user: userSummary }),
   z.object({ type: z.literal('read'), userId: z.string(), upTo: isoDateTime }),
+  /** A moderator removed this message. */
+  z.object({ type: z.literal('removed'), messageId: z.string() }),
 ]);
 export type ServerEvent = z.infer<typeof serverEvent>;
 

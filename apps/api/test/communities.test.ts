@@ -4,10 +4,21 @@ import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { reports } from '../src/db/schema';
+import type { PushMessage } from '../src/lib/push';
 import { memoryStorage, useTestApp } from './harness';
 
 const r2 = memoryStorage();
-const t = useTestApp({ storage: r2.storage, env: { R2_PUBLIC_URL: 'https://img.example.com' } });
+const pushed: { userIds: string[]; message: PushMessage }[] = [];
+const t = useTestApp({
+  storage: r2.storage,
+  env: { R2_PUBLIC_URL: 'https://img.example.com' },
+  push: {
+    async notifyActivity() {},
+    notifyUsers: async (userIds, message) => {
+      pushed.push({ userIds, message });
+    },
+  },
+});
 
 const start = (headers: Record<string, string>, body: object) =>
   t.call<CommunityDetail>('/v1/communities', { method: 'POST', headers, body });
@@ -143,5 +154,115 @@ describe('reporting a community', () => {
     expect(res.status).toBe(201);
     const [row] = await t.deps.db.select().from(reports).where(eq(reports.communityId, body.id));
     expect(row).toMatchObject({ targetUserId: maker.userId, reason: 'spam' });
+  });
+});
+
+describe('the creator’s tools', () => {
+  async function withMembers() {
+    const maker = await t.signIn('owner@buddy.test', 'Tharindu');
+    const { body } = await start(maker.headers, { name: `Weekend Hikers ${Date.now()}` });
+    const member = await t.signIn('hiker@buddy.test', 'Ishara');
+    await t.call(`/v1/communities/${body.id}/membership`, {
+      method: 'POST',
+      headers: member.headers,
+    });
+    return { maker, member, id: body.id };
+  }
+
+  it('lists every member, creator first', async () => {
+    const { maker, member, id } = await withMembers();
+    const res = await t.call<{ members: { id: string; isCreator: boolean }[] }>(
+      `/v1/communities/${id}/members`,
+      { headers: member.headers },
+    );
+    expect(res.body.members.map((m) => [m.id, m.isCreator])).toEqual([
+      [maker.userId, true],
+      [member.userId, false],
+    ]);
+  });
+
+  it('removes a member, who then can’t rejoin; nobody else can remove people', async () => {
+    const { maker, member, id } = await withMembers();
+    const notYours = await t.call(`/v1/communities/${id}/members/${maker.userId}`, {
+      method: 'DELETE',
+      headers: member.headers,
+    });
+    expect(notYours.status).toBe(403);
+
+    const res = await t.call(`/v1/communities/${id}/members/${member.userId}`, {
+      method: 'DELETE',
+      headers: maker.headers,
+    });
+    expect(res.status).toBe(200);
+    const again = await t.call<{ error: { message: string } }>(`/v1/communities/${id}/membership`, {
+      method: 'POST',
+      headers: member.headers,
+    });
+    expect(again.status).toBe(403);
+    expect(again.body.error.message).toBe('You were removed from this community');
+  });
+
+  it('deletes the community; its activities carry on without it', async () => {
+    const { maker, id } = await withMembers();
+    const posted = await t.call<ActivityDetail>('/v1/activities', {
+      method: 'POST',
+      headers: maker.headers,
+      body: {
+        title: 'Ella Rock sunrise',
+        group: 'Sports',
+        startsAt: atLocalTime(3, '05:00').toISOString(),
+        place: 'Ella station',
+        capacity: 10,
+        communityId: id,
+      },
+    });
+    const res = await t.call(`/v1/communities/${id}`, { method: 'DELETE', headers: maker.headers });
+    expect(res.status).toBe(200);
+    expect((await t.call(`/v1/communities/${id}`, { headers: maker.headers })).status).toBe(404);
+    const activity = await t.call<ActivityDetail>(`/v1/activities/${posted.body.id}`, {
+      headers: maker.headers,
+    });
+    expect(activity.body).toMatchObject({ title: 'Ella Rock sunrise', community: null });
+  });
+});
+
+describe('new activities in a community', () => {
+  it('tell its members (not the host), a few times a day at most', async () => {
+    const maker = await t.signIn('poster@buddy.test', 'Chamari');
+    const { body } = await start(maker.headers, { name: `Galle Swimmers ${Date.now()}` });
+    const member = await t.signIn('swimmer@buddy.test', 'Kasun');
+    await t.call(`/v1/communities/${body.id}/membership`, {
+      method: 'POST',
+      headers: member.headers,
+    });
+
+    const post = (title: string) =>
+      t.call('/v1/activities', {
+        method: 'POST',
+        headers: maker.headers,
+        body: {
+          title,
+          group: 'Sports',
+          startsAt: atLocalTime(2, '07:00').toISOString(),
+          place: 'Jungle Beach',
+          capacity: 8,
+          communityId: body.id,
+        },
+      });
+
+    pushed.length = 0;
+    await post('Morning swim');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0]!.userIds).toEqual([member.userId]);
+    expect(pushed[0]!.message).toMatchObject({
+      title: body.name,
+      channelId: 'communities',
+      body: expect.stringMatching(/^Chamari is hosting Morning swim, /),
+    });
+
+    for (const n of [2, 3, 4]) await post(`Swim ${n}`);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(pushed).toHaveLength(3);
   });
 });

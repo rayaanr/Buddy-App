@@ -1,5 +1,6 @@
 import { createCommunityInput, updateCommunityInput } from '@buddy/shared';
 import { Hono } from 'hono';
+import { z } from 'zod';
 
 import { currentUser, requireUser } from '../../auth/middleware';
 import type { AppEnv, Deps } from '../../http/context';
@@ -7,10 +8,13 @@ import { DAY, limits } from '../../lib/rate-limit';
 import { idParam, validate } from '../../lib/validate';
 import {
   createCommunity,
+  deleteCommunity,
   getCommunity,
   joinCommunity,
   leaveCommunity,
   listCommunities,
+  listCommunityMembers,
+  removeCommunityMember,
   updateCommunity,
 } from './service';
 
@@ -46,5 +50,23 @@ export function communityRoutes(deps: Deps) {
     )
     .delete('/:id/membership', idParam(), async (c) =>
       c.json(await leaveCommunity(db, c.req.param('id'), currentUser(c).id)),
+    )
+    .delete('/:id', idParam(), async (c) => {
+      await deleteCommunity(db, c.req.param('id'), currentUser(c).id);
+      return c.json({ ok: true });
+    })
+    .get('/:id/members', idParam(), async (c) =>
+      c.json({
+        members: await listCommunityMembers(db, urls, c.req.param('id'), currentUser(c).id),
+      }),
+    )
+    .delete(
+      '/:id/members/:userId',
+      validate('param', z.object({ id: z.uuid(), userId: z.uuid() })),
+      async (c) => {
+        const { id, userId } = c.req.valid('param');
+        await removeCommunityMember(db, id, currentUser(c).id, userId);
+        return c.json({ ok: true });
+      },
     );
 }

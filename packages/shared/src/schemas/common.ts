@@ -48,5 +48,6 @@ export const ERROR_CODES = {
   activityFull: 'activity_full',
   waitlistFull: 'waitlist_full',
   rateLimited: 'rate_limited',
+  suspended: 'account_suspended',
   internal: 'internal_error',
 } as const;
