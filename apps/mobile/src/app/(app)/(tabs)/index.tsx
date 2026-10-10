@@ -24,6 +24,7 @@ import {
   MapPinIcon,
   Refresh,
   SearchField,
+  SparklesIcon,
 } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -103,18 +104,26 @@ export default function DiscoverScreen() {
           </Text>
           <ChevronDownIcon size={15} />
         </Pressable>
-        <View>
+        <View className="flex-row gap-2">
+          {/* Straight to the swipe deck, any time. */}
           <IconButton
-            icon={<BellIcon />}
-            label={unread ? `Notifications, ${unread} new` : 'Notifications'}
-            onPress={() => router.push('/notifications')}
+            icon={<SparklesIcon />}
+            label="Picked for you"
+            onPress={() => router.push({ pathname: '/picks', params: { from: 'button' } })}
           />
-          {unread ? (
-            <View
-              pointerEvents="none"
-              className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full border-2 border-bg bg-lime"
+          <View>
+            <IconButton
+              icon={<BellIcon />}
+              label={unread ? `Notifications, ${unread} new` : 'Notifications'}
+              onPress={() => router.push('/notifications')}
             />
-          ) : null}
+            {unread ? (
+              <View
+                pointerEvents="none"
+                className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full border-2 border-bg bg-lime"
+              />
+            ) : null}
+          </View>
         </View>
       </View>
       <Heading className="mt-0.5 px-[22px]">What’s happening</Heading>

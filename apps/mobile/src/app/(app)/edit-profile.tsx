@@ -92,7 +92,7 @@ function EditProfileForm({ me }: { me: Saved }) {
           accessibilityLabel={photo.uri ? 'Change photo' : 'Add a photo'}
           className="mt-6 self-center"
         >
-          <Avatar uri={photo.uri ?? undefined} size={96} fallback={colors.me} />
+          <Avatar uri={photo.uri ?? undefined} name={name || me.name} size={96} />
           {uploading ? (
             <View className="absolute inset-0 items-center justify-center rounded-full bg-black/50">
               <ActivityIndicator color={colors.ink} />

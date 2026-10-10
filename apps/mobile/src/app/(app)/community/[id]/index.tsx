@@ -49,8 +49,18 @@ export default function CommunityScreen() {
         </View>
       </Photo>
 
-      <View className="-mt-[30px] px-[22px]">
-        <Heading size="page">{c.name}</Heading>
+      <View className="-mt-[46px] px-[22px]">
+        <Avatar
+          uri={c.logoUrl ?? undefined}
+          name={c.name}
+          shape="rounded"
+          size={72}
+          ring={colors.bg}
+          ringWidth={3}
+        />
+        <Heading size="page" className="mt-3">
+          {c.name}
+        </Heading>
         <Text className="mt-2 font-sans text-[14.5px] text-muted">{communityMeta(c)}</Text>
 
         {c.joined ? (
@@ -81,6 +91,7 @@ export default function CommunityScreen() {
             <Avatar
               key={m.id}
               uri={m.avatarUrl ?? undefined}
+              name={m.name}
               size={38}
               ring={colors.bg}
               style={{ marginRight: -8 }}

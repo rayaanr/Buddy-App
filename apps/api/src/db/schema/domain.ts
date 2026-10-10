@@ -97,6 +97,8 @@ export const communities = pgTable(
       .notNull()
       .default(sql`'{}'::text[]`),
     coverUrl: text(),
+    /** Square logo; without one the app shows the name's initials. */
+    logoUrl: text(),
     /** Who started it (null for seeded ones, or after they delete their account); they can edit it. */
     createdBy: uuid().references(() => user.id, { onDelete: 'set null' }),
     ...timestamps,

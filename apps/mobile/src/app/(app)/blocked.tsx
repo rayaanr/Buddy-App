@@ -51,7 +51,7 @@ export default function BlockedPeopleScreen() {
               key={person.id}
               className="flex-row items-center gap-3.5 border-b border-divider py-3.5"
             >
-              <Avatar uri={person.avatarUrl ?? undefined} size={44} />
+              <Avatar uri={person.avatarUrl ?? undefined} name={person.name} size={44} />
               <Text className="flex-1 font-sans-medium text-[16px] text-ink" numberOfLines={1}>
                 {person.name}
               </Text>

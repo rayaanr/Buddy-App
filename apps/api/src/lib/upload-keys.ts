@@ -1,13 +1,12 @@
-import { IMAGE_TYPES, UUID_RE } from '@buddy/shared';
+import { IMAGE_TYPES, UUID_RE, type UploadKind } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
 
 import { badRequest, forbidden } from './errors';
 import type { Storage } from './storage';
 
 /** Where uploads go in R2: `avatars/<user id>/<uuid>.<ext>` or `covers/<user id>/<uuid>.<ext>`. */
-export type UploadKind = 'avatar' | 'cover';
 
-const FOLDER: Record<UploadKind, string> = { avatar: 'avatars', cover: 'covers' };
+const FOLDER: Record<UploadKind, string> = { avatar: 'avatars', cover: 'covers', logo: 'logos' };
 /** UUID_RE without its anchors, to embed in the key pattern. */
 const UUID = UUID_RE.source.slice(1, -1);
 

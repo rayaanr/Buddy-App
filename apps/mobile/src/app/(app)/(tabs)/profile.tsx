@@ -17,7 +17,6 @@ import {
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { locationLabel } from '@/lib/activity';
-import { colors } from '@/theme';
 
 export default function ProfileScreen() {
   const { top } = useScreenInsets();
@@ -45,7 +44,7 @@ export default function ProfileScreen() {
       }
     >
       <View className="items-center">
-        <Avatar uri={avatarUrl ?? undefined} size={86} fallback={colors.me} />
+        <Avatar uri={avatarUrl ?? undefined} name={name} size={86} />
         <View className="absolute right-0 top-0 flex-row gap-2">
           <IconButton
             icon={<PencilIcon />}

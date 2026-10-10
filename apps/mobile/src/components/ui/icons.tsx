@@ -21,6 +21,7 @@ import Plus from 'lucide-react-native/icons/plus';
 import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
+import Sparkles from 'lucide-react-native/icons/sparkles';
 import User from 'lucide-react-native/icons/user';
 import Users from 'lucide-react-native/icons/users';
 import X from 'lucide-react-native/icons/x';
@@ -113,6 +114,11 @@ export const ShareIcon = icon(
   'ShareIcon',
 );
 export const BellIcon = icon(Bell, { size: 20, color: colors.ink, strokeWidth: 1.8 }, 'BellIcon');
+export const SparklesIcon = icon(
+  Sparkles,
+  { size: 20, color: colors.lime, strokeWidth: 1.8 },
+  'SparklesIcon',
+);
 export const SearchIcon = icon(
   Search,
   { size: 18, color: colors.muted, strokeWidth: 2 },

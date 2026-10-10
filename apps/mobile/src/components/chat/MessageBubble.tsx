@@ -63,6 +63,7 @@ export const MessageBubble = memo(function MessageBubble({
       <View className="max-w-[84%] flex-row items-end gap-2 self-start" style={{ marginTop: gap }}>
         <Avatar
           uri={sender?.avatarUrl ?? undefined}
+          name={sender && !isDeletedAccount(sender) ? sender.name : undefined}
           size={30}
           hidden={!startsRun}
           onPress={person ? () => openUser(person.id) : undefined}

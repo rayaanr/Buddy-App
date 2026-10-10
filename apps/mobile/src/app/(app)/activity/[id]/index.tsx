@@ -261,7 +261,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             accessibilityRole={a.viewer.hosting || isDeletedAccount(a.host) ? undefined : 'button'}
             scale="dim"
           >
-            <Avatar uri={a.host.avatarUrl ?? undefined} size={46} />
+            <Avatar uri={a.host.avatarUrl ?? undefined} name={a.host.name} size={46} />
             <View>
               <Text className="font-sans-semibold text-[16px] text-ink">
                 Hosted by {a.viewer.hosting ? 'you' : a.host.name}
@@ -441,6 +441,7 @@ function Attendance({ activity: a, canRemove }: { activity: ActivityDetail; canR
             <Avatar
               key={p.id}
               uri={p.avatarUrl ?? undefined}
+              name={p.name}
               size={32}
               ring={colors.surface}
               style={{ marginRight: -6 }}

@@ -54,7 +54,7 @@ export default function CommunityMembersScreen() {
                 accessibilityRole="button"
                 className="flex-1 flex-row items-center gap-3 py-3 active:opacity-70"
               >
-                <Avatar uri={m.avatarUrl ?? undefined} size={40} />
+                <Avatar uri={m.avatarUrl ?? undefined} name={m.name} size={40} />
                 <Text className="flex-1 font-sans-medium text-[15.5px] text-ink" numberOfLines={1}>
                   {m.name}
                   {m.id === me.data?.id ? <Text className="text-muted"> (you)</Text> : null}

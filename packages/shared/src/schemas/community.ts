@@ -8,6 +8,7 @@ export const communitySummary = z.object({
   id: z.uuid(),
   name: z.string(),
   coverUrl: z.url().nullable(),
+  logoUrl: z.url().nullable(),
   memberCount: z.number().int(),
   /** Activities starting in the next seven days. */
   weeklyActivityCount: z.number().int(),
@@ -40,13 +41,14 @@ export const createCommunityInput = z.object({
   ...communityFields,
   about: communityFields.about.default(''),
   rules: communityFields.rules.default([]),
-  /** Key returned by the upload endpoint, if a cover photo was uploaded. */
+  /** Keys returned by the upload endpoint, if photos were uploaded. */
   coverKey: z.string().optional(),
+  logoKey: z.string().optional(),
 });
 export type CreateCommunityInput = z.input<typeof createCommunityInput>;
 
-/** The creator's edits. A null cover removes the photo. */
+/** The creator's edits. A null cover or logo removes it. */
 export const updateCommunityInput = z
-  .object({ ...communityFields, coverKey: z.string().nullable() })
+  .object({ ...communityFields, coverKey: z.string().nullable(), logoKey: z.string().nullable() })
   .partial();
 export type UpdateCommunityInput = z.infer<typeof updateCommunityInput>;

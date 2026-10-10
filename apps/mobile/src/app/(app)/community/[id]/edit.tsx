@@ -28,6 +28,7 @@ export default function EditCommunityScreen() {
           ...(v.about !== c.about && { about: v.about }),
           ...(v.rules.join('\n') !== c.rules.join('\n') && { rules: v.rules }),
           ...(v.coverKey !== undefined && { coverKey: v.coverKey }),
+          ...(v.logoKey !== undefined && { logoKey: v.logoKey }),
         };
         update.mutate(patch, {
           onSuccess: () => {

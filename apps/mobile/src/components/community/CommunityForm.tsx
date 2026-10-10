@@ -1,22 +1,27 @@
 import { LIMITS } from '@buddy/shared';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { CoverField } from '@/components/create/CoverField';
 import {
+  ActionSheet,
+  Avatar,
   BackButton,
   Button,
+  CameraIcon,
   CloseIcon,
   Footer,
   Heading,
   KeyboardAwareScrollView,
   KeyboardScreen,
+  PressableScale,
   SectionLabel,
   TextField,
 } from '@/components/ui';
 import { COMMUNITY_HUE } from '@/data/constants';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { colors } from '@/theme';
 
 interface CommunityValues {
   name: string;
@@ -24,11 +29,18 @@ interface CommunityValues {
   rules: string[];
   /** undefined: unchanged; null: removed; string: a new upload. */
   coverKey?: string | null;
+  logoKey?: string | null;
 }
 
 interface CommunityFormProps {
   heading: string;
-  initial?: { name: string; about: string; rules: string[]; coverUrl: string | null };
+  initial?: {
+    name: string;
+    about: string;
+    rules: string[];
+    coverUrl: string | null;
+    logoUrl: string | null;
+  };
   submitLabel: string;
   pendingLabel: string;
   pending: boolean;
@@ -38,7 +50,7 @@ interface CommunityFormProps {
 /** Start a community, or (its creator) edit one. */
 export function CommunityForm({
   heading,
-  initial = { name: '', about: '', rules: [], coverUrl: null },
+  initial = { name: '', about: '', rules: [], coverUrl: null, logoUrl: null },
   submitLabel,
   pendingLabel,
   pending,
@@ -49,9 +61,12 @@ export function CommunityForm({
   const [about, setAbout] = useState(initial.about);
   const [rules, setRules] = useState(initial.rules);
   const cover = usePickedImage('cover', initial.coverUrl);
+  const logo = usePickedImage('logo', initial.logoUrl);
+  const [logoMenu, setLogoMenu] = useState(false);
 
   const trimmed = name.trim();
-  const ready = trimmed.length >= LIMITS.communityNameMin && !pending && !cover.uploading;
+  const ready =
+    trimmed.length >= LIMITS.communityNameMin && !pending && !cover.uploading && !logo.uploading;
   // Always one empty line to type the next rule into, up to the limit.
   const editable = rules.length < LIMITS.communityRulesMax ? [...rules, ''] : rules;
   const setRule = (i: number, text: string) => {
@@ -69,6 +84,7 @@ export function CommunityForm({
       about: about.trim(),
       rules: rules.map((r) => r.trim()).filter(Boolean),
       coverKey: cover.key,
+      logoKey: logo.key,
     });
   };
 
@@ -83,6 +99,33 @@ export function CommunityForm({
         keyboardShouldPersistTaps="handled"
       >
         <Heading size="page">{heading}</Heading>
+
+        {/* Square, like an app icon; the name's initials stand in until there's one. */}
+        <PressableScale
+          onPress={() => (logo.uri ? setLogoMenu(true) : void logo.pick())}
+          disabled={logo.uploading}
+          accessibilityRole="button"
+          accessibilityLabel={logo.uri ? 'Change logo' : 'Add a logo'}
+          className="mt-6 self-center"
+        >
+          <Avatar
+            uri={logo.uri ?? undefined}
+            name={trimmed || 'New community'}
+            shape="rounded"
+            size={84}
+          />
+          {logo.uploading ? (
+            <View className="absolute inset-0 items-center justify-center rounded-[24px] bg-black/50">
+              <ActivityIndicator color={colors.ink} />
+            </View>
+          ) : null}
+          <View className="absolute -bottom-1 -right-1 h-8 w-8 items-center justify-center rounded-full border-2 border-bg bg-lime">
+            <CameraIcon />
+          </View>
+        </PressableScale>
+        <Text className="mt-2.5 text-center font-sans text-[13.5px] text-muted">
+          {logo.uploading ? 'Uploading…' : logo.uri ? 'Change logo' : 'Add a logo (optional)'}
+        </Text>
 
         <SectionLabel className="mb-2 mt-6">Name</SectionLabel>
         <TextField
@@ -158,6 +201,15 @@ export function CommunityForm({
           hint="Optional, but it helps people find you."
         />
       </KeyboardAwareScrollView>
+
+      <ActionSheet
+        visible={logoMenu}
+        onClose={() => setLogoMenu(false)}
+        actions={[
+          { label: 'Choose a new logo', onPress: () => void logo.pick() },
+          { label: 'Remove logo', destructive: true, onPress: logo.remove },
+        ]}
+      />
 
       <Footer>
         <Button label={pending ? pendingLabel : submitLabel} inactive={!ready} onPress={submit} />

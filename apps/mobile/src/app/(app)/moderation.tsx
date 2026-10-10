@@ -196,7 +196,7 @@ function ReportCard({ report: r, onPress }: { report: AdminReport; onPress?: () 
           onPress={() => router.push(`/user/${r.person!.id}`)}
           className="mt-3 flex-row items-center gap-2.5 self-start active:opacity-70"
         >
-          <Avatar uri={r.person.avatarUrl ?? undefined} size={30} />
+          <Avatar uri={r.person.avatarUrl ?? undefined} name={r.person.name} size={30} />
           <Text className="font-sans-medium text-[15px] text-ink">{r.person.name}</Text>
           {r.person.suspended ? (
             <Text className="rounded-full bg-danger/15 px-2 py-0.5 font-sans-medium text-[11.5px] text-danger">

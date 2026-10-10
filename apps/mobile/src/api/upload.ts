@@ -1,20 +1,17 @@
-import { IMAGE_TYPES, LIMITS, type ImageType } from '@buddy/shared';
+import { IMAGE_TYPES, LIMITS, type ImageType, type UploadKind } from '@buddy/shared';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { api, ApiRequestError, unwrap } from './client';
 
-/** Longest edge kept: covers fill the screen width at 3x; avatars are small circles. */
-const MAX_EDGE = { avatar: 800, cover: 1600 };
+/** Longest edge kept: covers fill the screen width at 3x; avatars and logos are small. */
+const MAX_EDGE: Record<UploadKind, number> = { avatar: 800, cover: 1600, logo: 600 };
 
 /**
  * Phone photos are often 4000px and several MB. Scaled down and re-saved as
  * JPEG they're a few hundred KB: quick to upload on mobile data, always under
  * the size limit, and in a format the API accepts (HEIC and the like included).
  */
-async function shrink(
-  kind: 'avatar' | 'cover',
-  image: { uri: string; width?: number; height?: number },
-) {
+async function shrink(kind: UploadKind, image: { uri: string; width?: number; height?: number }) {
   const max = MAX_EDGE[kind];
   const context = ImageManipulator.manipulate(image.uri);
   const { width = 0, height = 0 } = image;
@@ -36,7 +33,7 @@ async function shrink(
  * URL) and returns the key to save as avatarKey / coverKey.
  */
 export async function uploadImage(
-  kind: 'avatar' | 'cover',
+  kind: UploadKind,
   picked: { uri: string; mimeType?: string | null; width?: number; height?: number },
 ) {
   // If shrinking fails for some reason, try the original: it may still fit.

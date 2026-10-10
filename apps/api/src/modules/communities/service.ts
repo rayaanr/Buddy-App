@@ -37,6 +37,7 @@ async function findCommunitySummaries(db: Db, viewerId: string, id?: string) {
       id: communities.id,
       name: communities.name,
       coverUrl: communities.coverUrl,
+      logoUrl: communities.logoUrl,
       memberCount: sql<number>`(select count(*)::int from community_members cm where cm.community_id = ${communityId})`,
       weeklyActivityCount: sql<number>`(select count(*)::int from activities a where a.community_id = ${communityId} and a.cancelled_at is null and a.starts_at between now() and now() + interval '7 days')`,
       joined: sql<boolean>`exists (select 1 from community_members cm where cm.community_id = ${communityId} and cm.user_id = ${viewerId})`,
@@ -120,6 +121,7 @@ export async function createCommunity(
   input: CreateCommunityInput & { about: string; rules: string[] },
 ) {
   if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', userId);
+  if (input.logoKey) await requireUpload(storage, input.logoKey, 'logo', userId);
   const id = await db
     .transaction(async (tx) => {
       const [row] = await tx
@@ -129,6 +131,7 @@ export async function createCommunity(
           about: input.about,
           rules: input.rules,
           coverUrl: urls.fromKey(input.coverKey),
+          logoUrl: urls.fromKey(input.logoKey),
           createdBy: userId,
         })
         .returning({ id: communities.id });
@@ -156,12 +159,14 @@ export async function updateCommunity(
   if (!row) throw notFound('Community');
   if (row.createdBy !== userId) throw forbidden('Only the person who started it can edit it');
   if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', userId);
+  if (input.logoKey) await requireUpload(storage, input.logoKey, 'logo', userId);
 
   const patch = {
     ...(input.name !== undefined && { name: input.name }),
     ...(input.about !== undefined && { about: input.about }),
     ...(input.rules !== undefined && { rules: input.rules }),
     ...(input.coverKey !== undefined && { coverUrl: urls.fromKey(input.coverKey) }),
+    ...(input.logoKey !== undefined && { logoUrl: urls.fromKey(input.logoKey) }),
   };
   if (Object.keys(patch).length) {
     await db

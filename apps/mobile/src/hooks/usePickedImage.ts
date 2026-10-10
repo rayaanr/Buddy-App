@@ -1,3 +1,4 @@
+import type { UploadKind } from '@buddy/shared';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 
@@ -8,6 +9,7 @@ import { toast } from '@/store/ui';
 const CROP = {
   avatar: { aspect: [1, 1] as [number, number], shape: 'oval' as const },
   cover: { aspect: [16, 10] as [number, number], shape: 'rectangle' as const },
+  logo: { aspect: [1, 1] as [number, number], shape: 'rectangle' as const },
 };
 
 /**
@@ -15,7 +17,7 @@ const CROP = {
  * form is quick. `key` is what to save: undefined leaves the photo as it was,
  * null removes it, a string is the new upload.
  */
-export function usePickedImage(kind: 'avatar' | 'cover', initialUri: string | null) {
+export function usePickedImage(kind: UploadKind, initialUri: string | null) {
   const [photo, setPhoto] = useState<{ uri: string | null; key?: string | null }>({
     uri: initialUri,
   });

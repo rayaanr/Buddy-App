@@ -127,6 +127,13 @@
       "when": 1791674851711,
       "tag": "0017_notifications_inbox",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1791675682819,
+      "tag": "0018_community_logo",
+      "breakpoints": true
     }
   ]
 }

@@ -67,7 +67,7 @@ export function MembersSheet({
           accessibilityRole={isMe ? undefined : 'button'}
           className="flex-1 flex-row items-center gap-3.5 py-3"
         >
-          <Avatar uri={p.avatarUrl ?? undefined} size={40} />
+          <Avatar uri={p.avatarUrl ?? undefined} name={p.name} size={40} />
           <Text className="flex-1 font-sans-medium text-[16px] text-ink" numberOfLines={1}>
             {p.name}
             {isMe ? <Text className="text-muted"> (you)</Text> : null}

@@ -1,18 +1,22 @@
 import { firstName } from '@buddy/shared';
 import type { Pick } from '@buddy/shared';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { useMe, usePicks } from '@/api/queries';
 import { SwipeDeck } from '@/components/picks/SwipeDeck';
-import { CloseIcon, Heading, Loading } from '@/components/ui';
+import { CloseIcon, EmptyState, Heading, Loading } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 
-/** "Picked for you": Tinder-style deck shown to returning users. */
+/**
+ * "Picked for you": Tinder-style deck shown to returning users, and from the
+ * sparkles button on Discover (`?from=button`) any time.
+ */
 export default function PicksScreen() {
   const { top } = useScreenInsets();
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const me = useMe();
   const picks = usePicks();
 
@@ -56,7 +60,9 @@ export default function PicksScreen() {
             PICKED FOR YOU{deck ? ` · ${Math.min(index + 1, deck.length)} OF ${deck.length}` : ''}
           </Text>
           <Heading size="section" className="mt-2">
-            Welcome back{me.data ? `, ${firstName(me.data.name)}` : ''}
+            {from === 'button'
+              ? 'Worth a look'
+              : `Welcome back${me.data ? `, ${firstName(me.data.name)}` : ''}`}
           </Heading>
           <Text className="mt-1.5 font-sans text-[14.5px] text-muted">
             Near {me.data?.area ?? 'you'}, based on what you’re into.
@@ -81,6 +87,17 @@ export default function PicksScreen() {
           reason={card.reason}
           onDecide={onDecide}
         />
+      ) : null}
+      {deck && !deck.length ? (
+        <View className="flex-1 justify-center px-[22px]">
+          <EmptyState
+            card
+            title="Nothing new right now"
+            subtitle="New activities near you that match what you’re into will show up here."
+            cta="Back to Discover"
+            onPress={() => router.back()}
+          />
+        </View>
       ) : null}
     </View>
   );

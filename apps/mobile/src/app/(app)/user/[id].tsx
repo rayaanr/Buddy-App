@@ -45,6 +45,7 @@ export default function UserProfileScreen() {
       >
         <Avatar
           uri={u.avatarUrl ?? undefined}
+          name={u.name}
           size={104}
           ring={colors.line}
           ringWidth={3}

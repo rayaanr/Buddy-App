@@ -27,12 +27,15 @@ describe('starting a community', () => {
   it('creates it with the creator as its first member, able to edit it', async () => {
     const me = await t.signIn('new@buddy.test', 'Nimal');
     const cover = `covers/${me.userId}/0b6c1c44-6a1e-4e2b-9c43-2a3b4c5d6e7f.jpg`;
+    const logo = `logos/${me.userId}/1c7d2d55-7b2f-4f3c-8d54-3b4c5d6e7f80.png`;
     r2.upload(cover);
+    r2.upload(logo, 'image/png');
     const res = await start(me.headers, {
       name: '  Galle Fort Sketchers ',
       about: 'Drawing the fort on Sunday mornings.',
       rules: ['Bring your own paper'],
       coverKey: cover,
+      logoKey: logo,
     });
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
@@ -40,6 +43,7 @@ describe('starting a community', () => {
       about: 'Drawing the fort on Sunday mornings.',
       rules: ['Bring your own paper'],
       coverUrl: `https://img.example.com/${cover}`,
+      logoUrl: `https://img.example.com/${logo}`,
       memberCount: 1,
       joined: true,
       isCreator: true,
@@ -77,6 +81,12 @@ describe('starting a community', () => {
     ).toBe(400);
     const theirs = await start(me.headers, { name: 'Not my photo', coverKey: 'covers/x/y.jpg' });
     expect(theirs.status).toBe(403);
+    // A logo can't be someone's profile photo either.
+    const avatarAsLogo = await start(me.headers, {
+      name: 'Wrong folder',
+      logoKey: `avatars/${me.userId}/0b6c1c44-6a1e-4e2b-9c43-2a3b4c5d6e7f.jpg`,
+    });
+    expect(avatarAsLogo.status).toBe(403);
   });
 
   it('lets the creator rename it, change the details and remove the cover', async () => {
@@ -85,13 +95,19 @@ describe('starting a community', () => {
     const res = await t.call<CommunityDetail>(`/v1/communities/${body.id}`, {
       method: 'PATCH',
       headers: me.headers,
-      body: { name: 'Kandy Lake Walks', about: 'Evening loops of the lake.', coverKey: null },
+      body: {
+        name: 'Kandy Lake Walks',
+        about: 'Evening loops of the lake.',
+        coverKey: null,
+        logoKey: null,
+      },
     });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       name: 'Kandy Lake Walks',
       about: 'Evening loops of the lake.',
       coverUrl: null,
+      logoUrl: null,
     });
     const clash = await t.call(`/v1/communities/${body.id}`, {
       method: 'PATCH',

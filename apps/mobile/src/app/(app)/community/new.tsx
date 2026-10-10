@@ -16,7 +16,7 @@ export default function NewCommunityScreen() {
       pending={create.isPending}
       onSubmit={(v) =>
         create.mutate(
-          { ...v, coverKey: v.coverKey ?? undefined },
+          { ...v, coverKey: v.coverKey ?? undefined, logoKey: v.logoKey ?? undefined },
           {
             onSuccess: (c) => {
               router.replace(`/community/${c.id}`);

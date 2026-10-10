@@ -3,8 +3,12 @@ import { z } from 'zod';
 import { IMAGE_TYPES, LIMITS } from '../constants';
 import { isoDateTime } from './common';
 
+/** Profile photos, cover photos (activities, communities), community logos. */
+export const UPLOAD_KINDS = ['avatar', 'cover', 'logo'] as const;
+export type UploadKind = (typeof UPLOAD_KINDS)[number];
+
 export const createUploadInput = z.object({
-  kind: z.enum(['avatar', 'cover']),
+  kind: z.enum(UPLOAD_KINDS),
   contentType: z.enum(IMAGE_TYPES),
   /** File size in bytes; the signed URL only accepts exactly this size. */
   size: z.number().int().positive().max(LIMITS.uploadMaxBytes),
