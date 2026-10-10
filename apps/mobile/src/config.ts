@@ -15,7 +15,7 @@ function resolveApiUrl() {
   if (explicit) return explicit.replace(/\/$/, '');
   // A release build guessing "the dev machine" would ship pointing at localhost.
   if (!__DEV__)
-    throw new Error('EXPO_PUBLIC_API_URL must be set for release builds (see eas.json).');
+    throw new Error('EXPO_PUBLIC_API_URL must be set for release builds (see infra/README.md).');
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;

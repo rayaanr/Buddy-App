@@ -1,17 +1,17 @@
-# Deploying the API to a VPS
+# Deploying the API and landing page to a VPS
 
-One Ubuntu server runs three containers: Postgres with PostGIS (private), the API, and Caddy, which serves HTTPS and renews its certificate by itself. Migrations run each time the API starts.
+One Ubuntu server runs three containers: Postgres with PostGIS (private), the API, and Caddy, which serves HTTPS (renewing certificates by itself) and the landing page from `landing/`. Migrations run each time the API starts.
 
-| File                 | What it is                                      |
-| -------------------- | ----------------------------------------------- |
-| `docker-compose.yml` | The three services                              |
-| `Caddyfile`          | HTTPS and the proxy to the API (WebSockets too) |
-| `.env.example`       | Every production setting; copy to `.env`        |
-| `backup.sh`          | Nightly compressed `pg_dump`, keeps 14          |
+| File                 | What it is                                                        |
+| -------------------- | ----------------------------------------------------------------- |
+| `docker-compose.yml` | The three services                                                |
+| `Caddyfile`          | HTTPS, the proxy to the API (WebSockets too) and the landing page |
+| `.env.example`       | Every production setting; copy to `.env`                          |
+| `backup.sh`          | Nightly compressed `pg_dump`, keeps 14                            |
 
 ## 1. Server
 
-Ubuntu 24.04 with 2 GB of RAM or more (the image builds on the server). Point a DNS A record, e.g. `api.yourdomain.com`, at its IP before starting, or Caddy can't get a certificate.
+Ubuntu 24.04 with 2 GB of RAM or more (the image builds on the server). Set `DOMAIN` in `infra/.env` (e.g. `example.com`) and point DNS A records for `api-buddy.<DOMAIN>` (the API) and `buddy.<DOMAIN>` (the landing page) at its IP before starting, or Caddy can't get certificates.
 
 As root on a fresh server:
 
@@ -48,9 +48,15 @@ docker compose up -d --build
 docker compose logs -f api   # "Migrations applied." then "Buddy API listening"
 ```
 
-Check `https://api.yourdomain.com/health` answers `{"status":"ok"}`, and that `/privacy` and `/terms` load.
+Check `https://api-buddy.example.com/health` answers `{"status":"ok"}`, that `/privacy` and `/terms` load, and that `https://buddy.example.com` shows the landing page.
 
-Then point the app at it: set `EXPO_PUBLIC_API_URL` to `https://api.yourdomain.com` in the `production` profile of `apps/mobile/eas.json`, and build with `eas build --profile production`.
+Then point the app at it. The production URL lives on EAS, not in git (the `production` profile in `apps/mobile/eas.json` reads the EAS `production` environment). From `apps/mobile` (run it again to change it):
+
+```bash
+eas env:set --name EXPO_PUBLIC_API_URL --value https://api-buddy.<DOMAIN> --environment production --visibility plaintext
+```
+
+Then build with `eas build --profile production`. A release build without it stops at launch with an error rather than pointing at nothing.
 
 ## 3. Updates
 
@@ -58,7 +64,7 @@ Then point the app at it: set `EXPO_PUBLIC_API_URL` to `https://api.yourdomain.c
 cd ~/buddy && git pull && cd infra && docker compose up -d --build
 ```
 
-The API restarts on the new image and applies any new migrations first. Requests in flight finish before the old one stops.
+The API restarts on the new image and applies any new migrations first. Requests in flight finish before the old one stops. Landing page changes are live as soon as `git pull` finishes: Caddy reads `landing/` straight from the checkout.
 
 ## 4. Backups
 

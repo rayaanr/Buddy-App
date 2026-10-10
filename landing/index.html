@@ -1,0 +1,1632 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Buddy: find people to do things with</title>
+    <meta
+      name="description"
+      content="Sunset runs in Colombo, cricket on the beach in Galle, food walks in Jaffna. Buddy shows you what’s happening near you and who’s going."
+    />
+    <meta name="theme-color" content="#0b0c0b" />
+    <script>
+      document.documentElement.classList.add('js');
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;700;800&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <!--
+      Built from the Claude Design file "Buddy Landing.dc.html"
+      (claude.ai/design/p/2edfaa2b-793d-446e-938f-9aa2001df1fc). One file, no build step.
+      The waitlist is a mock: it validates, then remembers the entry in localStorage.
+      Set LAUNCHED in the script to true to switch the page to "get the app".
+    -->
+    <style>
+      :root {
+        --bg: #0b0c0b;
+        --ink: #f1f2ee;
+        --lime: #c9f53f;
+        --lime-hover: #d8ff5a;
+        --card: #141614;
+        --line: #1a1c1a;
+        --muted: #a3a69f;
+        --dim: #8b8e88;
+        --faint: #6f726c;
+        --red: #ff6b5a;
+        --display: 'Schibsted Grotesk', sans-serif;
+        --body: 'Geist', system-ui, sans-serif;
+        --mono: 'Geist Mono', monospace;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--body);
+        -webkit-font-smoothing: antialiased;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      a {
+        color: var(--lime);
+        text-decoration: none;
+      }
+      a:hover {
+        color: #e2ff8a;
+      }
+      input,
+      button {
+        font-family: inherit;
+      }
+      input::placeholder {
+        color: var(--faint);
+      }
+      [hidden] {
+        display: none !important;
+      }
+
+      .wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+      .section {
+        border-top: 1px solid var(--line);
+      }
+      .section > .wrap {
+        padding-top: clamp(64px, 9vw, 112px);
+        padding-bottom: clamp(64px, 9vw, 112px);
+      }
+      .kicker {
+        font: 500 13px var(--mono);
+        letter-spacing: 0.12em;
+        color: var(--lime);
+      }
+      .h2 {
+        margin: 14px 0 0;
+        font: 800 clamp(34px, 4.6vw, 56px) / 1.02 var(--display);
+        letter-spacing: -0.04em;
+        text-wrap: balance;
+      }
+
+      /* Header */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: rgba(11, 12, 11, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
+      }
+      header .wrap {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--ink);
+      }
+      .brand:hover {
+        color: var(--ink);
+      }
+      .brand span {
+        font: 800 26px var(--display);
+        letter-spacing: -0.045em;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .nav-links {
+        display: flex;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+      .nav-links a {
+        color: #b9bcb5;
+        font: 500 15px var(--body);
+      }
+      .nav-links a:hover {
+        color: var(--ink);
+      }
+      .nav-cta {
+        height: 42px;
+        padding: 0 18px;
+        border-radius: 21px;
+        background: var(--lime);
+        color: var(--bg);
+        font: 600 15px var(--body);
+        display: flex;
+        align-items: center;
+      }
+      .nav-cta:hover {
+        background: var(--lime-hover);
+        color: var(--bg);
+      }
+
+      /* Hero */
+      .hero {
+        padding-top: clamp(48px, 8vw, 96px);
+        padding-bottom: clamp(56px, 8vw, 100px);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+        gap: 56px;
+        align-items: center;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        padding: 0 14px;
+        border-radius: 16px;
+        background: #1a2010;
+        border: 1px solid #3d4a1c;
+        color: var(--lime);
+        font: 500 13px var(--mono);
+        letter-spacing: 0.06em;
+      }
+      .eyebrow i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--lime);
+      }
+      h1 {
+        margin: 22px 0 0;
+        font: 800 clamp(46px, 7vw, 84px) / 0.98 var(--display);
+        letter-spacing: -0.045em;
+      }
+      h1 > span {
+        display: block;
+      }
+      #word {
+        display: inline-block;
+        color: var(--lime);
+        transition:
+          opacity 0.28s ease,
+          transform 0.28s ease;
+      }
+      #word.out {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      .lede {
+        margin: 22px 0 0;
+        max-width: 520px;
+        font: 400 clamp(17px, 1.6vw, 20px) / 1.5 var(--body);
+        color: var(--muted);
+        text-wrap: pretty;
+      }
+      .form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .hero .form {
+        margin-top: 36px;
+        max-width: 520px;
+      }
+      .form input {
+        flex: 1 1 230px;
+        min-width: 0;
+        height: 58px;
+        border-radius: 18px;
+        border: 1px solid #2b2d2a;
+        background: var(--card);
+        color: var(--ink);
+        padding: 0 20px;
+        font: 400 16px var(--body);
+        outline: none;
+      }
+      .form.error input {
+        border-color: var(--red);
+      }
+      .btn {
+        flex: 0 0 auto;
+        height: 58px;
+        padding: 0 26px;
+        border-radius: 18px;
+        border: none;
+        background: var(--lime);
+        color: var(--bg);
+        font: 600 16.5px var(--body);
+        cursor: pointer;
+      }
+      .btn:hover {
+        background: var(--lime-hover);
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .form-error {
+        margin-top: 10px;
+        font: 400 14px var(--body);
+        color: var(--red);
+      }
+      .joined {
+        margin-top: 32px;
+        max-width: 520px;
+        padding: 20px 22px;
+        border-radius: 20px;
+        background: #1a2010;
+        border: 1px solid #3d4a1c;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      .tick {
+        width: 44px;
+        height: 44px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--lime);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .joined-text {
+        min-width: 0;
+        flex: 1;
+      }
+      .joined-text b {
+        display: block;
+        font: 600 17px var(--body);
+      }
+      .joined-text span {
+        display: block;
+        margin-top: 4px;
+        font: 400 14.5px/1.4 var(--body);
+        color: #b9c0aa;
+        overflow-wrap: anywhere;
+      }
+      .link-btn {
+        flex: none;
+        background: none;
+        border: none;
+        color: var(--dim);
+        font: 500 13.5px var(--body);
+        cursor: pointer;
+        text-decoration: underline;
+      }
+      .stores {
+        margin-top: 36px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .store {
+        height: 56px;
+        padding: 0 22px;
+        border-radius: 16px;
+        background: var(--ink);
+        color: var(--bg);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        line-height: 1.1;
+      }
+      .store:hover {
+        color: var(--bg);
+      }
+      .store small {
+        font: 400 11px var(--body);
+        color: #5d605a;
+      }
+      .store b {
+        font: 600 17px var(--body);
+      }
+      .hero-note {
+        margin: 14px 0 0;
+        font: 400 14px var(--body);
+        color: var(--faint);
+      }
+
+      /* Phone mockup */
+      .stage {
+        position: relative;
+        min-height: 620px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .glow {
+        position: absolute;
+        width: 440px;
+        max-width: 100%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(201, 245, 63, 0.14), rgba(201, 245, 63, 0) 65%);
+      }
+      .phone {
+        position: relative;
+        width: 290px;
+        height: 600px;
+        border-radius: 46px;
+        background: #000;
+        padding: 8px;
+        box-shadow:
+          0 0 0 1.5px #2b2c2a,
+          0 30px 80px rgba(0, 0, 0, 0.6);
+      }
+      .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 38px;
+        overflow: hidden;
+        background: var(--bg);
+        padding: 46px 16px 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .notch {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 86px;
+        height: 24px;
+        border-radius: 14px;
+        background: #000;
+      }
+      .picked {
+        font: 500 10px var(--mono);
+        letter-spacing: 0.12em;
+        color: var(--lime);
+      }
+      .welcome {
+        margin-top: 6px;
+        font: 700 21px/1.1 var(--display);
+        letter-spacing: -0.03em;
+      }
+      .deck {
+        position: relative;
+        flex: 1;
+        margin-top: 14px;
+      }
+      .card-back,
+      .card-top {
+        position: absolute;
+        inset: 0;
+        border-radius: 22px;
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+      }
+      .card-back {
+        transform: scale(0.94) translateY(14px);
+        transition: transform 0.48s ease;
+      }
+      .card-back::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 22px;
+        background: rgba(11, 12, 11, 0.5);
+      }
+      .card-top {
+        overflow: hidden;
+        transition: transform 0.48s cubic-bezier(0.4, 0.1, 0.6, 1);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+      }
+      .card-top::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(11, 12, 11, 0) 40%, rgba(11, 12, 11, 0.92) 100%);
+      }
+      .deck.fly .card-top {
+        transform: translateX(135%) rotate(16deg);
+      }
+      .deck.fly .card-back {
+        transform: scale(1) translateY(0);
+      }
+      .deck.snap .card-top,
+      .deck.snap .card-back {
+        transition: none;
+      }
+      .stamp {
+        position: absolute;
+        top: 40px;
+        left: 14px;
+        padding: 4px 10px;
+        border-radius: 8px;
+        border: 2.5px solid var(--lime);
+        color: var(--lime);
+        font: 800 19px var(--display);
+        transform: rotate(-12deg);
+        opacity: 0;
+        transition: opacity 0.2s;
+      }
+      .deck.fly .stamp {
+        opacity: 1;
+      }
+      .card-info {
+        position: absolute;
+        left: 14px;
+        right: 14px;
+        bottom: 14px;
+      }
+      .card-cat {
+        font: 500 9.5px var(--mono);
+        letter-spacing: 0.1em;
+        color: var(--lime);
+      }
+      .card-title {
+        margin-top: 6px;
+        font: 700 19px/1.12 var(--display);
+      }
+      .card-meta {
+        margin-top: 6px;
+        font: 400 11.5px var(--body);
+        color: #c8cbc4;
+      }
+      .actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        padding: 16px 0 22px;
+      }
+      .act-no {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #161816;
+        border: 1px solid #343632;
+        color: var(--red);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+      }
+      .act-yes {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--lime);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+        box-shadow: 0 0 22px rgba(201, 245, 63, 0.35);
+      }
+      .stage.fly .act-yes {
+        transform: scale(1.14);
+      }
+      .toast {
+        position: absolute;
+        left: calc(50% - 225px);
+        bottom: 110px;
+        max-width: 240px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: var(--ink);
+        color: var(--bg);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transform: translateY(10px);
+        transition:
+          opacity 0.3s,
+          transform 0.3s;
+      }
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .toast i {
+        width: 24px;
+        height: 24px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--lime);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .toast span {
+        font: 500 13px/1.3 var(--body);
+      }
+      @media (max-width: 520px) {
+        .toast {
+          left: 12px;
+        }
+      }
+
+      /* How it works */
+      .steps {
+        margin-top: 44px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        gap: 16px;
+      }
+      .step {
+        border-radius: 26px;
+        background: var(--card);
+        border: 1px solid #1e201e;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .ill {
+        height: 210px;
+        margin: 10px 10px 0;
+        border-radius: 18px;
+        background: #0e0f0e;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .step-body {
+        padding: 14px 26px 28px;
+      }
+      .step-n {
+        font: 500 14px var(--mono);
+        color: var(--lime);
+      }
+      .step-t {
+        margin-top: 10px;
+        font: 700 24px/1.15 var(--display);
+        letter-spacing: -0.02em;
+      }
+      .step-d {
+        margin: 10px 0 0;
+        font: 400 16px/1.5 var(--body);
+        color: var(--muted);
+        text-wrap: pretty;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 7px;
+        padding: 0 18px;
+      }
+      .chip {
+        height: 32px;
+        padding: 0 12px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        background: transparent;
+        color: #c8cbc4;
+        border: 1px solid #2f312e;
+        font: 500 13px var(--body);
+        transition:
+          background 0.3s,
+          color 0.3s,
+          border-color 0.3s;
+      }
+      .chip.on {
+        background: var(--lime);
+        color: var(--bg);
+        border-color: var(--lime);
+      }
+      .mini {
+        position: relative;
+        width: 132px;
+        height: 160px;
+      }
+      .mini-back {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        background: #1c1f1b;
+        border: 1px solid #2a2c29;
+        transform: scale(0.92) translateY(10px);
+      }
+      .mini-card {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        background: #1a2010;
+        border: 1.5px solid var(--lime);
+        transform: translateX(-10px) rotate(-4deg);
+        transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        gap: 7px;
+      }
+      .mini-card span {
+        height: 7px;
+        border-radius: 4px;
+      }
+      .mini-btns {
+        position: absolute;
+        left: 50%;
+        bottom: -24px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
+      }
+      .mini-btns span {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        transition: opacity 0.3s;
+      }
+      .mini-no {
+        background: #161816;
+        border: 1px solid #343632;
+      }
+      .mini-yes {
+        background: var(--lime);
+        opacity: 0.45;
+      }
+      .mini.right .mini-card {
+        transform: translateX(16px) rotate(7deg);
+      }
+      .mini.right .mini-yes {
+        opacity: 1;
+      }
+      .mini.right .mini-no {
+        opacity: 0.45;
+      }
+      .msgs {
+        width: 100%;
+        padding: 0 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .msg {
+        align-self: flex-start;
+        max-width: 82%;
+        padding: 9px 13px;
+        border-radius: 15px;
+        background: #1c1e1c;
+        color: var(--ink);
+        font: 400 13px/1.35 var(--body);
+        opacity: 0;
+        transform: translateY(8px);
+        transition:
+          opacity 0.35s,
+          transform 0.35s;
+      }
+      .msg.me {
+        align-self: flex-end;
+        background: var(--lime);
+        color: var(--bg);
+      }
+      .msg.on {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Host */
+      .host {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+        gap: 48px;
+        align-items: center;
+      }
+      .host-lede {
+        margin: 18px 0 0;
+        max-width: 500px;
+        font: 400 18px/1.5 var(--body);
+        color: var(--muted);
+        text-wrap: pretty;
+      }
+      .points {
+        margin-top: 28px;
+        display: flex;
+        flex-direction: column;
+      }
+      .point {
+        display: flex;
+        gap: 16px;
+        padding: 16px 0;
+        border-top: 1px solid #1e201e;
+      }
+      .point-n {
+        font: 500 14px/1.6 var(--mono);
+        color: var(--lime);
+        flex: none;
+      }
+      .point-t {
+        font: 600 17px var(--body);
+      }
+      .point-d {
+        margin-top: 4px;
+        font: 400 15px/1.45 var(--body);
+        color: var(--dim);
+      }
+      .comms {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .comm {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 16px 12px 12px;
+        border-radius: 22px;
+        background: var(--card);
+        border: 1px solid #1e201e;
+      }
+      .comm-tile {
+        width: 64px;
+        height: 64px;
+        flex: none;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 800 21px var(--display);
+        letter-spacing: -0.03em;
+        color: var(--lime);
+      }
+      .comm-text {
+        flex: 1;
+        min-width: 0;
+      }
+      .comm-name {
+        font: 600 17px var(--body);
+      }
+      .comm-meta {
+        margin-top: 4px;
+        font: 400 14px var(--body);
+        color: var(--dim);
+      }
+      .faces {
+        display: flex;
+        flex: none;
+      }
+      .faces span {
+        width: 30px;
+        height: 30px;
+        margin-left: -8px;
+        border-radius: 50%;
+        border: 2px solid var(--card);
+        background-color: #3a3d39;
+        background-position: center;
+        background-size: cover;
+      }
+
+      /* FAQ */
+      #faq {
+        background: #101110;
+      }
+      #faq .wrap {
+        max-width: 860px;
+      }
+      #faq .h2 {
+        margin-bottom: 30px;
+      }
+      .faq {
+        border-top: 1px solid #222422;
+      }
+      .faq button {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        padding: 22px 0;
+        background: none;
+        border: none;
+        color: var(--ink);
+        cursor: pointer;
+        text-align: left;
+        font: 600 clamp(17px, 1.8vw, 20px) var(--body);
+      }
+      .faq .plus {
+        flex: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid #343632;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--lime);
+        font: 400 20px var(--body);
+        transition: transform 0.2s;
+      }
+      .faq.open .plus {
+        transform: rotate(45deg);
+      }
+      .faq p {
+        display: none;
+        margin: -6px 0 0;
+        padding: 0 54px 24px 0;
+        font: 400 16.5px/1.55 var(--body);
+        color: var(--muted);
+        text-wrap: pretty;
+      }
+      .faq.open p {
+        display: block;
+      }
+
+      /* Final CTA */
+      .cta {
+        border-radius: 36px;
+        background: var(--lime);
+        color: var(--bg);
+        padding: clamp(36px, 6vw, 72px);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+        gap: 36px;
+        align-items: center;
+      }
+      .cta h2 {
+        margin: 0;
+        font: 800 clamp(38px, 5.4vw, 68px) / 0.98 var(--display);
+        letter-spacing: -0.045em;
+        text-wrap: balance;
+      }
+      .cta-sub {
+        margin: 16px 0 0;
+        max-width: 460px;
+        font: 400 18px/1.5 var(--body);
+        color: #2c3410;
+      }
+      .cta .form input {
+        flex-basis: 220px;
+        height: 60px;
+        border: 1.5px solid rgba(11, 12, 11, 0.25);
+        background: #f6ffd9;
+        color: var(--bg);
+      }
+      .cta .form.error input {
+        border-color: #7a1d10;
+      }
+      .cta .btn {
+        height: 60px;
+        background: var(--bg);
+        color: var(--lime);
+      }
+      .cta .btn:hover {
+        background: #1f211e;
+      }
+      .cta .form-error {
+        font-weight: 500;
+        color: #7a1d10;
+      }
+      .cta-done {
+        padding: 20px 22px;
+        border-radius: 20px;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .cta-done b {
+        display: block;
+        font: 600 18px var(--body);
+      }
+      .cta-done span {
+        display: block;
+        margin-top: 4px;
+        font: 400 15px var(--body);
+        color: #b9bcb5;
+      }
+      .cta .stores {
+        margin-top: 0;
+      }
+      .cta .store {
+        height: 60px;
+        padding: 0 22px 0 16px;
+        background: var(--bg);
+        color: var(--ink);
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 12px;
+      }
+      .cta .store i {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: var(--lime);
+        flex: none;
+      }
+      .cta .store span {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.1;
+      }
+      .cta .store small {
+        font-size: 12px;
+        color: #b9bcb5;
+      }
+      .cta .store b {
+        font-size: 18px;
+      }
+
+      /* Footer */
+      footer .wrap {
+        padding-top: 32px;
+        padding-bottom: 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .foot-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .foot-brand b {
+        font: 800 22px var(--display);
+        letter-spacing: -0.045em;
+      }
+      .foot-brand span {
+        margin-left: 10px;
+        font: 400 14px var(--body);
+        color: var(--faint);
+      }
+      .foot-links {
+        display: flex;
+        gap: 22px;
+        flex-wrap: wrap;
+        font: 400 14px var(--body);
+      }
+      .foot-links a {
+        color: var(--dim);
+      }
+      .foot-links a:hover {
+        color: var(--ink);
+      }
+
+      /* Scroll reveal (only once JS has run, so the page still shows without it) */
+      .js [data-reveal] {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+          opacity 0.8s ease,
+          transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .js [data-reveal].shown {
+        opacity: 1;
+        transform: none;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        .js [data-reveal] {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="logo" viewBox="0 0 74 48">
+        <circle cx="24" cy="24" r="22" fill="#c9f53f" />
+        <circle cx="50" cy="24" r="20" fill="none" stroke="#f1f2ee" stroke-width="4" />
+        <path d="M37 7.6a22 22 0 0 1 0 32.8a20 20 0 0 1 0-32.8z" fill="#0b0c0b" />
+      </symbol>
+      <symbol id="check" viewBox="0 0 24 24">
+        <path
+          d="M5 12.5l4.5 4.5L19 7.5"
+          fill="none"
+          stroke="#0b0c0b"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </symbol>
+    </svg>
+
+    <header>
+      <div class="wrap">
+        <a href="#top" class="brand" aria-label="Buddy home">
+          <svg width="40" height="26"><use href="#logo" /></svg>
+          <span>buddy</span>
+        </a>
+        <nav>
+          <div class="nav-links">
+            <a href="#how">How it works</a>
+            <a href="#host">Host</a>
+            <a href="#faq">FAQ</a>
+          </div>
+          <a href="#join" class="nav-cta" data-text="navCta"></a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section id="top" class="wrap hero">
+        <div data-reveal="0">
+          <div class="eyebrow"><i></i><span data-text="eyebrow"></span></div>
+          <h1>
+            <span>Find people</span>
+            <span>to <span id="word">run</span></span>
+            <span>with.</span>
+          </h1>
+          <p class="lede">
+            Sunset runs in Colombo, cricket on the beach in Galle, food walks in Jaffna. Buddy shows
+            you what’s happening near you and who’s going. Join in two taps.
+          </p>
+
+          <div data-when="signup">
+            <form class="form" data-form>
+              <input
+                name="contact"
+                autocomplete="email"
+                placeholder="Email or mobile number"
+                aria-label="Email or mobile number"
+              />
+              <button class="btn" type="submit">Join the waitlist</button>
+            </form>
+            <div class="form-error" data-error hidden>
+              Enter a valid email or a Sri Lankan mobile number.
+            </div>
+          </div>
+          <div class="joined" data-when="joined">
+            <div class="tick">
+              <svg width="20" height="20" stroke-width="2.6"><use href="#check" /></svg>
+            </div>
+            <div class="joined-text">
+              <b>You’re #<span data-text="position"></span> on the list</b>
+              <span
+                >We’ll message <span data-text="contact"></span> when Buddy opens in your
+                city.</span
+              >
+            </div>
+            <button class="link-btn" type="button" data-reset>Change</button>
+          </div>
+          <div class="stores" data-when="launched">
+            <a href="#join" class="store"><small>Download on</small><b>App Store</b></a>
+            <a href="#join" class="store"><small>Download on</small><b>Google Play</b></a>
+          </div>
+          <p class="hero-note" data-text="heroNote"></p>
+        </div>
+
+        <div class="stage" id="stage" data-reveal="2" aria-hidden="true">
+          <div class="glow"></div>
+          <div class="phone">
+            <div class="screen">
+              <div class="notch"></div>
+              <div class="picked">PICKED FOR YOU · <span id="progress">1 OF 5</span></div>
+              <div class="welcome">Welcome back, Kavindu</div>
+              <div class="deck" id="deck">
+                <div class="card-back" id="card-back"></div>
+                <div class="card-top" id="card-top">
+                  <div class="stamp">GOING?</div>
+                  <div class="card-info">
+                    <div class="card-cat" id="card-cat"></div>
+                    <div class="card-title" id="card-title"></div>
+                    <div class="card-meta" id="card-meta"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="actions">
+                <div class="act-no">✕</div>
+                <div class="act-yes">
+                  <svg width="22" height="22" stroke-width="2.6"><use href="#check" /></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="toast" id="toast">
+            <i
+              ><svg width="12" height="12" stroke-width="3"><use href="#check" /></svg
+            ></i>
+            <span>You’re in: <span id="toast-text"></span></span>
+          </div>
+        </div>
+      </section>
+
+      <section id="how" class="section">
+        <div class="wrap">
+          <div data-reveal="0">
+            <div class="kicker">HOW IT WORKS</div>
+            <h2 class="h2" style="max-width: 700px">
+              From “I’m bored” to “see you there” in a minute.
+            </h2>
+          </div>
+          <div class="steps">
+            <div class="step" data-reveal="0">
+              <div class="ill"><div class="chips" id="chips"></div></div>
+              <div class="step-body">
+                <div class="step-n">01</div>
+                <div class="step-t">Pick what you’re into</div>
+                <p class="step-d">
+                  Running, cricket, board games, food walks. Choose a few and tell us when you’re
+                  usually free.
+                </p>
+              </div>
+            </div>
+            <div class="step" data-reveal="1">
+              <div class="ill">
+                <div class="mini" id="mini">
+                  <div class="mini-back"></div>
+                  <div class="mini-card">
+                    <span style="width: 50%; background: #c9f53f"></span>
+                    <span
+                      style="width: 85%; height: 9px; border-radius: 5px; background: #f1f2ee"
+                    ></span>
+                    <span style="width: 60%; background: #5d605a"></span>
+                  </div>
+                  <div class="mini-btns">
+                    <span class="mini-no"></span><span class="mini-yes"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="step-body">
+                <div class="step-n">02</div>
+                <div class="step-t">Swipe what’s nearby</div>
+                <p class="step-d">
+                  Each time you open Buddy you get picks near you. Swipe right on anything that
+                  looks good.
+                </p>
+              </div>
+            </div>
+            <div class="step" data-reveal="2">
+              <div class="ill">
+                <div class="msgs" id="msgs">
+                  <div class="msg">Anyone up for a tuk-tuk from Bambalapitiya?</div>
+                  <div class="msg">Me! 5.40 at the station?</div>
+                  <div class="msg me">In. See you there</div>
+                </div>
+              </div>
+              <div class="step-body">
+                <div class="step-n">03</div>
+                <div class="step-t">Join and say hi</div>
+                <p class="step-d">
+                  Tap join and you’re in the group chat with everyone going. Meet up, play, eat,
+                  repeat.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="host" class="section">
+        <div class="wrap host">
+          <div data-reveal="0">
+            <div class="kicker">HOSTS &amp; COMMUNITIES</div>
+            <h2 class="h2">Start something. People will come.</h2>
+            <p class="host-lede">
+              Post a run, a game night or a market walk in under a minute. Set the spots, pick a
+              place, and Buddy shows it to people nearby who are into the same things. Run a club
+              already? Bring it over as a community.
+            </p>
+            <div class="points">
+              <div class="point">
+                <span class="point-n">01</span>
+                <div>
+                  <div class="point-t">Post in under a minute</div>
+                  <div class="point-d">Title, type, time, place, spots. Done.</div>
+                </div>
+              </div>
+              <div class="point">
+                <span class="point-n">02</span>
+                <div>
+                  <div class="point-t">Reach the right people</div>
+                  <div class="point-d">
+                    Buddy shows your activity to people nearby with matching interests.
+                  </div>
+                </div>
+              </div>
+              <div class="point">
+                <span class="point-n">03</span>
+                <div>
+                  <div class="point-t">Grow a regular crowd</div>
+                  <div class="point-d">
+                    Turn repeat activities into a community with members and its own page.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="comms" id="comms"></div>
+        </div>
+      </section>
+
+      <section id="faq" class="section">
+        <div class="wrap">
+          <div class="kicker">FAQ</div>
+          <h2 class="h2" data-reveal="0">Questions</h2>
+          <div id="faqs"></div>
+        </div>
+      </section>
+
+      <section id="join" class="section">
+        <div class="wrap">
+          <div class="cta" data-reveal="0">
+            <div>
+              <h2 data-text="finalTitle"></h2>
+              <p class="cta-sub" data-text="finalSub"></p>
+            </div>
+            <div>
+              <div data-when="signup">
+                <form class="form" data-form>
+                  <input
+                    name="contact"
+                    autocomplete="email"
+                    placeholder="Email or mobile number"
+                    aria-label="Email or mobile number"
+                  />
+                  <button class="btn" type="submit">Join the waitlist</button>
+                </form>
+                <div class="form-error" data-error hidden>
+                  Enter a valid email or a Sri Lankan mobile number.
+                </div>
+              </div>
+              <div class="cta-done" data-when="joined">
+                <b>You’re #<span data-text="position"></span> on the list</b>
+                <span>We’ll be in touch when Buddy opens in your city.</span>
+              </div>
+              <div class="stores" data-when="launched">
+                <a href="#join" class="store"
+                  ><i></i><span><small>Download on</small><b>App Store</b></span></a
+                >
+                <a href="#join" class="store"
+                  ><i></i><span><small>Download on</small><b>Google Play</b></span></a
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="section">
+      <div class="wrap">
+        <div class="foot-brand">
+          <svg width="34" height="22"><use href="#logo" /></svg>
+          <b>buddy</b>
+          <span>Made in Colombo</span>
+        </div>
+        <div class="foot-links">
+          <a href="#faq">Privacy</a>
+          <a href="#faq">Terms</a>
+          <a href="mailto:hello@buddy.lk">hello@buddy.lk</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Flip to true once the apps are in the stores.
+      const LAUNCHED = false;
+
+      const LS = 'buddy-waitlist-v1';
+      const $ = (sel, root = document) => root.querySelector(sel);
+      const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+      const unsplash = (id) =>
+        `url(https://images.unsplash.com/photo-${id}?w=600&q=70&auto=format&fit=crop)`;
+      const face = (p) => `url(https://randomuser.me/api/portraits/${p}.jpg)`;
+
+      const DECK = [
+        {
+          cat: 'RUNNING',
+          title: 'Sunset 5K at Galle Face',
+          meta: 'Tonight · 18:00 · 1.2 km',
+          img: '1552674605-db6ffd4facb5',
+          bg: '#5a3420',
+        },
+        {
+          cat: 'CRICKET',
+          title: 'Beach cricket, Mount Lavinia',
+          meta: 'Sun · 16:30 · 9 km',
+          img: '1531415074968-036ba1b575da',
+          bg: '#1f4a2a',
+        },
+        {
+          cat: 'SOCIAL',
+          title: 'Board games night',
+          meta: 'Tonight · 19:30 · 0.8 km',
+          img: '1529156069898-49953e39b3ac',
+          bg: '#5a2a2a',
+        },
+        {
+          cat: 'FOOD MARKETS',
+          title: 'Pettah market food walk',
+          meta: 'Sun · 08:30 · 3 km',
+          img: '1488459716781-31db52582fe9',
+          bg: '#5a4818',
+        },
+        {
+          cat: 'CLIMBING',
+          title: 'Bouldering social',
+          meta: 'Sat · 16:00 · 4.2 km',
+          img: '1522163182402-834f871fd851',
+          bg: '#24452c',
+        },
+      ];
+      const WORDS = ['run', 'play cricket', 'climb', 'explore', 'do things'];
+      const CHIPS = [
+        'Running',
+        'Cricket',
+        'Padel',
+        'Board games',
+        'Surfing',
+        'Cooking',
+        'Hiking',
+        'Live music',
+      ];
+      const PICKED = [0, 3, 6];
+      const COMMS = [
+        {
+          name: 'Colombo Runners',
+          meta: '2.4k members · 4 runs a week',
+          ini: 'CR',
+          tile: '#5a3420',
+          faces: ['women/44', 'men/52', 'women/21'],
+        },
+        {
+          name: 'Kandy Climbers',
+          meta: '640 members · weekend trips',
+          ini: 'KC',
+          tile: '#24452c',
+          faces: ['men/45', 'men/36', 'women/65'],
+        },
+        {
+          name: 'Galle Fort Sketch Club',
+          meta: '310 members · Sundays',
+          ini: 'GF',
+          tile: '#45345a',
+          faces: ['women/68', 'women/33', 'women/12'],
+        },
+        {
+          name: 'Colombo Board Gamers',
+          meta: '860 members · 3 nights a week',
+          ini: 'CB',
+          tile: '#5a2a2a',
+          faces: ['men/22', 'women/57', 'men/75'],
+        },
+      ];
+      const FAQS = [
+        [
+          'Is Buddy free?',
+          'Yes. Joining and hosting activities is free. Some activities have their own costs, like a court booking, and the host lists them up front.',
+        ],
+        [
+          'Where will it be available?',
+          'We open in Colombo first, then Kandy, Galle, Jaffna and Negombo. Join the waitlist with your city and we’ll tell you when it’s live near you.',
+        ],
+        [
+          'How do you keep it safe?',
+          'Every account is verified with a Sri Lankan mobile number. Activities happen in public places, you can see who’s going before you join, and you can report or block anyone in one tap.',
+        ],
+        [
+          'Can I bring my running club or group?',
+          'Yes. Communities have their own page, members and regular activities. Waitlist hosts get early access to set theirs up.',
+        ],
+        [
+          'Which languages will it support?',
+          'English at launch, with Sinhala and Tamil following soon after.',
+        ],
+      ];
+
+      // ---- Waitlist (mock: kept in this browser only) ----
+
+      let saved = null;
+      try {
+        saved = JSON.parse(localStorage.getItem(LS));
+      } catch {}
+
+      const valid = (v) => {
+        const t = v.trim();
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t)) return true;
+        return /^0?7\d{8}$/.test(t.replace(/[\s-]/g, '').replace(/^\+94/, '0'));
+      };
+
+      function render() {
+        const joined = !!saved;
+        const text = {
+          navCta: LAUNCHED ? 'Get the app' : 'Join waitlist',
+          eyebrow: LAUNCHED ? 'NOW LIVE ACROSS SRI LANKA' : 'COMING SOON ACROSS SRI LANKA',
+          heroNote: LAUNCHED
+            ? 'Free on iPhone and Android.'
+            : 'Free. iPhone and Android apps at launch.',
+          finalTitle: LAUNCHED
+            ? 'Get Buddy. Go do something.'
+            : joined
+              ? 'You’re on the list.'
+              : 'Be first in your city.',
+          finalSub: LAUNCHED
+            ? 'Free on iPhone and Android, across Sri Lanka.'
+            : 'Join the waitlist and we’ll let you know the day Buddy opens near you. Store downloads follow at launch.',
+          position: joined ? saved.position.toLocaleString('en-US') : '',
+          contact: joined ? saved.contact : '',
+        };
+        $$('[data-text]').forEach((el) => (el.textContent = text[el.dataset.text]));
+        const show = {
+          signup: !LAUNCHED && !joined,
+          joined: !LAUNCHED && joined,
+          launched: LAUNCHED,
+        };
+        $$('[data-when]').forEach((el) => (el.hidden = !show[el.dataset.when]));
+      }
+
+      function setError(on) {
+        $$('[data-form]').forEach((f) => f.classList.toggle('error', on));
+        $$('[data-error]').forEach((e) => (e.hidden = !on));
+      }
+
+      // Both forms share one value, like a single field shown twice.
+      $$('[data-form]').forEach((form) => {
+        const input = form.elements.contact;
+        input.addEventListener('input', () => {
+          $$('[data-form] input').forEach((i) => i !== input && (i.value = input.value));
+          setError(false);
+        });
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          if (!valid(input.value)) return setError(true);
+          saved = { contact: input.value.trim(), position: 1200 + Math.floor(Math.random() * 400) };
+          try {
+            localStorage.setItem(LS, JSON.stringify(saved));
+          } catch {}
+          $$('[data-form] input').forEach((i) => (i.value = ''));
+          setError(false);
+          render();
+        });
+      });
+
+      $('[data-reset]').addEventListener('click', () => {
+        saved = null;
+        try {
+          localStorage.removeItem(LS);
+        } catch {}
+        render();
+      });
+
+      render();
+
+      // ---- Static lists ----
+
+      $('#chips').innerHTML = CHIPS.map((c) => `<span class="chip">${c}</span>`).join('');
+
+      $('#comms').innerHTML = COMMS.map(
+        (c, i) => `
+          <div class="comm" data-reveal="${i + 1}">
+            <div class="comm-tile" style="background:${c.tile}">${c.ini}</div>
+            <div class="comm-text"><div class="comm-name">${c.name}</div><div class="comm-meta">${c.meta}</div></div>
+            <div class="faces">${c.faces.map((f) => `<span style="background-image:${face(f)}"></span>`).join('')}</div>
+          </div>`,
+      ).join('');
+
+      $('#faqs').innerHTML = FAQS.map(
+        ([q, a], i) => `
+          <div class="faq${i === 0 ? ' open' : ''}">
+            <button type="button" aria-expanded="${i === 0}"><span>${q}</span><span class="plus">+</span></button>
+            <p>${a}</p>
+          </div>`,
+      ).join('');
+      $$('.faq').forEach((item) =>
+        $('button', item).addEventListener('click', () => {
+          const opening = !item.classList.contains('open');
+          $$('.faq').forEach((f) => {
+            f.classList.remove('open');
+            $('button', f).setAttribute('aria-expanded', 'false');
+          });
+          item.classList.toggle('open', opening);
+          $('button', item).setAttribute('aria-expanded', String(opening));
+        }),
+      );
+
+      // ---- Animations ----
+
+      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Hero swipe deck
+      let deck = 0;
+      const cardBg = (d) => `${unsplash(d.img)} center/cover no-repeat, ${d.bg}`;
+      function paintDeck() {
+        const top = DECK[deck % DECK.length];
+        const back = DECK[(deck + 1) % DECK.length];
+        $('#card-top').style.background = cardBg(top);
+        $('#card-back').style.background = cardBg(back);
+        $('#card-cat').textContent = top.cat;
+        $('#card-title').textContent = top.title;
+        $('#card-meta').textContent = top.meta;
+        $('#progress').textContent = `${(deck % DECK.length) + 1} OF ${DECK.length}`;
+      }
+      paintDeck();
+      DECK.forEach(
+        (d) =>
+          (new Image().src = `https://images.unsplash.com/photo-${d.img}?w=600&q=70&auto=format&fit=crop`),
+      );
+
+      // Interests, swipe and chat illustrations, ticking together
+      let tick = 0;
+      function paintTick() {
+        $$('#chips .chip').forEach((c, i) =>
+          c.classList.toggle('on', PICKED.includes(i) || i === tick % CHIPS.length),
+        );
+        $('#mini').classList.toggle('right', tick % 2 === 1);
+        $$('#msgs .msg').forEach((m, k) => m.classList.toggle('on', tick % 4 >= k));
+      }
+      paintTick();
+
+      if (still) {
+        $$('#msgs .msg').forEach((m) => m.classList.add('on'));
+      } else {
+        const deckEl = $('#deck'),
+          stage = $('#stage'),
+          toast = $('#toast');
+        let toastTimer;
+        setInterval(() => {
+          deckEl.classList.add('fly');
+          stage.classList.add('fly');
+          setTimeout(() => {
+            const joinedTitle = DECK[deck % DECK.length].title;
+            deckEl.classList.add('snap');
+            deckEl.classList.remove('fly');
+            stage.classList.remove('fly');
+            deck++;
+            paintDeck();
+            $('#toast-text').textContent = joinedTitle;
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 1700);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => deckEl.classList.remove('snap')),
+            );
+          }, 480);
+        }, 3000);
+
+        setInterval(() => {
+          tick++;
+          paintTick();
+        }, 1300);
+
+        const word = $('#word');
+        let w = 0;
+        setInterval(() => {
+          word.classList.add('out');
+          setTimeout(() => {
+            w++;
+            word.textContent = WORDS[w % WORDS.length];
+            word.classList.remove('out');
+          }, 280);
+        }, 2200);
+      }
+
+      // Scroll reveal (the js class is set in <head> so nothing flashes first)
+      const revealEls = $$('[data-reveal]');
+      revealEls.forEach(
+        (el) => (el.style.transitionDelay = (Number(el.dataset.reveal) || 0) * 110 + 'ms'),
+      );
+      const reveal = (el) => el.classList.add('shown');
+      if (!('IntersectionObserver' in window) || still) {
+        revealEls.forEach(reveal);
+      } else {
+        const io = new IntersectionObserver(
+          (entries) =>
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                reveal(e.target);
+                io.unobserve(e.target);
+              }
+            }),
+          { threshold: 0.12 },
+        );
+        revealEls.forEach((el) => io.observe(el));
+      }
+    </script>
+  </body>
+</html>

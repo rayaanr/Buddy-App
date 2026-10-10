@@ -1,6 +1,16 @@
-# HTTPS for the API: Caddy gets and renews the certificate for API_DOMAIN
-# (set in infra/.env), and passes WebSockets (live chat) straight through.
-{$API_DOMAIN} {
+# Hostnames come from DOMAIN in infra/.env. Caddy gets and renews a
+# certificate for each by itself.
+
+# The API. WebSockets (live chat) pass straight through.
+api-buddy.{$DOMAIN} {
 	encode zstd gzip
 	reverse_proxy api:7400
+}
+
+# The landing page (landing/index.html, mounted read-only).
+buddy.{$DOMAIN} {
+	encode zstd gzip
+	root * /srv/landing
+	file_server
+	header Cache-Control "public, max-age=300"
 }

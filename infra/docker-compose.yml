@@ -1,4 +1,4 @@
-# Production: Postgres + PostGIS, the API, and Caddy for HTTPS, on one VPS.
+# Production: Postgres + PostGIS, the API, and Caddy (HTTPS + the landing page), on one VPS.
 # Settings come from infra/.env (copy .env.example). From this folder:
 #
 #   docker compose up -d --build      # first start and every update
@@ -33,7 +33,7 @@ services:
       NODE_ENV: production
       PORT: 7400
       DATABASE_URL: postgres://buddy:${DB_PASSWORD}@db:5432/buddy
-      BETTER_AUTH_URL: https://${API_DOMAIN:?Set API_DOMAIN in infra/.env}
+      BETTER_AUTH_URL: https://api-buddy.${DOMAIN:?Set DOMAIN in infra/.env}
       # Caddy is the one proxy in front; rate limits read the client IP it sets.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
     depends_on:
@@ -48,9 +48,10 @@ services:
       - '443:443'
       - '443:443/udp'
     environment:
-      API_DOMAIN: ${API_DOMAIN}
+      DOMAIN: ${DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../landing:/srv/landing:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
