@@ -1,0 +1,63 @@
+# Production: Postgres + PostGIS, the API, and Caddy for HTTPS, on one VPS.
+# Settings come from infra/.env (copy .env.example). From this folder:
+#
+#   docker compose up -d --build      # first start and every update
+#   docker compose logs -f api
+#
+# See infra/README.md for the full server setup.
+name: buddy-prod
+
+services:
+  db:
+    image: imresamu/postgis:17-3.5-alpine
+    environment:
+      POSTGRES_USER: buddy
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in infra/.env}
+      POSTGRES_DB: buddy
+    # No ports: Postgres is reachable only from the API on this network.
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U buddy -d buddy']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 7400
+      DATABASE_URL: postgres://buddy:${DB_PASSWORD}@db:5432/buddy
+      BETTER_AUTH_URL: https://${API_DOMAIN:?Set API_DOMAIN in infra/.env}
+      # Caddy is the one proxy in front; rate limits read the client IP it sets.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      API_DOMAIN: ${API_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

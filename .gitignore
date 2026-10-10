@@ -36,3 +36,6 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 .DS_Store
+
+# Production database dumps (infra/backup.sh)
+infra/backups/

@@ -10,6 +10,7 @@ Find people nearby to do things with: runs, games, markets and more, in Colombo.
 | [`apps/api`](apps/api)               | Hono API on Node: Postgres + PostGIS, email sign-in, real-time chat |
 | [`packages/shared`](packages/shared) | Zod schemas shared by the app and the API                           |
 | [`design`](design)                   | Claude Design handoff the app was built from                        |
+| [`infra`](infra)                     | Production deploy to a VPS (Compose, Caddy, backups)                |
 | [`docs/PLAN.md`](docs/PLAN.md)       | Backend plan and roadmap                                            |
 
 [Bun](https://bun.sh) workspaces tie the packages together: run `bun install` once at the root. Bun installs packages and runs scripts; the API and the tools (Expo, Vitest, Jest, tsx) still run on Node 22, locally and in production.

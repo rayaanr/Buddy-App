@@ -102,14 +102,15 @@ Known gaps carried forward: tapping a push notification opens the app but not th
 - Store data declarations (email, location); App Review demo account.
 - Final icon and splash, real bundle ID, EAS build profiles per environment.
 
-### Phase 9: Deploy (on hold)
+### Phase 9: Deploy
 
-Deferred until the app has been tested locally.
+The setup is in `infra/` (see `infra/README.md`); it has been run end to end locally.
 
-- VPS hardening: only 80/443 open, SSH keys only, automatic security updates, Postgres private.
-- `infra/docker-compose.yml` (API, Postgres, Caddy); migrations run on deploy. Use the same `imresamu/postgis:17-3.5-alpine` image as `compose.yaml`.
-- Nightly `pg_dump` to R2, plus one tested restore.
-- Uptime monitoring and logs; optional GitHub Actions deploy over SSH.
+- ✅ VPS hardening steps: only 80/443 open, SSH keys only, automatic security updates, Postgres private.
+- ✅ `infra/docker-compose.yml` (API, Postgres on `imresamu/postgis:17-3.5-alpine`, Caddy); migrations run on deploy.
+- ✅ Nightly `pg_dump` script (`infra/backup.sh`), optional copy to R2; restore tested locally.
+- Rent the server, point DNS, fill in `infra/.env`, first deploy, test a restore there.
+- Uptime monitoring; optional GitHub Actions deploy over SSH.
 
 ## Milestones
 

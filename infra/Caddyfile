@@ -1,0 +1,6 @@
+# HTTPS for the API: Caddy gets and renews the certificate for API_DOMAIN
+# (set in infra/.env), and passes WebSockets (live chat) straight through.
+{$API_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:7400
+}
