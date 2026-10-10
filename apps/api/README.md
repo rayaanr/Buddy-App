@@ -5,6 +5,8 @@ Request and response shapes live in [`packages/shared`](../../packages/shared).
 
 ## Local setup
 
+The quickest way is `bun run dev` (or `bun run dev:api` for the API alone) from the repo root: it does every step below for you, seeds only an empty database, and is safe to rerun. See the [root README](../../README.md#quick-start).
+
 Everything in Docker (from the repo root; see [`compose.yaml`](../../compose.yaml)):
 
 ```bash
@@ -13,7 +15,7 @@ docker compose exec api node dist/seed.js   # sample data; wipes existing data
 docker compose logs -f api                  # sign-in codes appear here
 ```
 
-Or only the database in Docker, with the API running from source for reloads and tests:
+Or by hand: only the database in Docker, with the API running from source for reloads and tests:
 
 ```bash
 # 1. Postgres + PostGIS (creates the buddy and buddy_test databases)

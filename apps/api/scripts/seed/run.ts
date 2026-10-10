@@ -3,10 +3,12 @@
  *
  *   bun run --filter @buddy/api db:seed         core + demo extras
  *   bun run --filter @buddy/api db:seed --core  just what the tests use
+ *   … db:seed --if-empty                         only into a database with no users yet
  *
- * In Docker: docker compose -f infra/docker-compose.dev.yml exec api node dist/seed.js
+ * In Docker: docker compose exec api node dist/seed.js
  */
 import { createDb } from '../../src/db/client';
+import { user } from '../../src/db/schema';
 import { DEMO_EMAIL, seed } from './index';
 
 if (process.env.NODE_ENV === 'production') {
@@ -20,9 +22,14 @@ if (!url) {
 }
 
 const { db, close } = createDb(url, { max: 1 });
+const hasData = async () => (await db.select({ id: user.id }).from(user).limit(1)).length > 0;
 try {
-  const counts = await seed(db, { demo: !process.argv.includes('--core') });
-  console.log('Seeded', counts);
+  if (process.argv.includes('--if-empty') && (await hasData())) {
+    console.log('Database already has data, so not seeding. `bun run db:seed` starts it over.');
+  } else {
+    const counts = await seed(db, { demo: !process.argv.includes('--core') });
+    console.log('Seeded', counts);
+  }
   console.log(
     `Sign in as ${DEMO_EMAIL} (or <first name>@buddy.test); codes appear in the API log.`,
   );

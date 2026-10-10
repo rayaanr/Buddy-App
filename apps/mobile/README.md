@@ -6,12 +6,17 @@ Expo app for **Buddy**: find people nearby to do things with. Built from a Claud
 
 ## Run it
 
-The app needs the API running. Follow [`apps/api/README.md`](../api/README.md) first (Postgres, `.env`, migrate, seed), then:
+From the repo root:
 
 ```bash
-bun install                 # from the repo root (Bun workspaces)
+bun run dev                 # sets up the database and starts the API (:7400) and Expo (:7481)
+```
+
+Then press `i` / `a`, or scan the QR code. To run them separately (setup steps in [`apps/api/README.md`](../api/README.md)):
+
+```bash
 bun run api                 # terminal 1: API on :7400 (or: docker compose up -d)
-bun run mobile              # terminal 2: press i / a, or scan the QR code
+bun run mobile              # terminal 2: Expo on :7481
 ```
 
 **Where the app looks for the API:** `EXPO_PUBLIC_API_URL` if set; otherwise the machine running the Expo dev server, port 7400. A phone on the same Wi-Fi works without configuration.

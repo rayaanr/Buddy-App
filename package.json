@@ -7,8 +7,15 @@
     "packages/*"
   ],
   "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "node scripts/dev.mjs --api",
+    "setup": "node scripts/dev.mjs --setup",
     "mobile": "bun run --filter @buddy/mobile start",
     "api": "bun run --filter @buddy/api dev",
+    "db:up": "docker compose up -d --wait db",
+    "db:migrate": "bun run --filter @buddy/api db:migrate",
+    "db:seed": "bun run --filter @buddy/api db:seed",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test",
     "lint": "bun run --filter '*' lint",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
