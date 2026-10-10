@@ -45,17 +45,12 @@ export default function ChatScreen() {
   if (status === 404) return <NotFound message="This chat is no longer available." />;
 
   const a = activity.data;
-  const canSend = !!text.trim();
+  // Until `me` loads, a send couldn't be attributed: keep the text, don't drop it.
+  const canSend = !!text.trim() && !!me.data;
   const reportMessage = (m: ChatMessage) =>
     router.push({
       pathname: '/report',
-      params: {
-        type: 'message',
-        id: m.id,
-        userId: m.sender?.id,
-        name: m.sender?.name,
-        excerpt: m.body,
-      },
+      params: { type: 'message', id: m.id, activityId: id },
     });
   const send = () => {
     if (!canSend) return;
@@ -84,7 +79,7 @@ export default function ChatScreen() {
         <Loading className="flex-1" />
       ) : chat.error ? (
         <View className="flex-1 justify-center px-[18px]">
-          <LoadError error={chat.error} onRetry={() => router.replace(`/activity/${id}/chat`)} />
+          <LoadError error={chat.error} onRetry={() => void chat.refetch()} />
         </View>
       ) : (
         <FlatList

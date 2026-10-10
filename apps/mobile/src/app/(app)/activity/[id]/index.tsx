@@ -22,7 +22,6 @@ import {
 } from '@/api/queries';
 import {
   ActionSheet,
-  type SheetAction,
   AnimatedView,
   ArrowRightIcon,
   Avatar,
@@ -32,18 +31,17 @@ import {
   Footer,
   Heading,
   IconButton,
-  LoadError,
-  Loading,
   MoreButton,
   Photo,
   PressableScale,
+  QueryFallback,
   Scrim,
   ShareIcon,
+  type SheetAction,
   successHaptic,
   useEnterOnChange,
 } from '@/components/ui';
 import { MembersSheet } from '@/components/activity/MembersSheet';
-import { NotFound } from '@/components/ui/NotFound';
 import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import {
@@ -67,17 +65,8 @@ export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const activity = useActivity(id);
 
-  if (activity.isLoading) return <Loading className="flex-1 bg-bg" />;
-  if (activity.error instanceof ApiRequestError && activity.error.status === 404) {
-    return <NotFound message="This activity is no longer available." />;
-  }
-  if (!activity.data) {
-    return (
-      <View className="flex-1 justify-center bg-bg px-[22px]">
-        <LoadError error={activity.error} onRetry={() => void activity.refetch()} />
-      </View>
-    );
-  }
+  if (!activity.data)
+    return <QueryFallback query={activity} notFound="This activity is no longer available." />;
   return <ActivityView activity={activity.data} />;
 }
 
@@ -184,7 +173,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             onPress: () =>
               router.push({
                 pathname: '/report',
-                params: { type: 'activity', id: a.id, userId: a.host.id, name: a.host.name },
+                params: { type: 'activity', id: a.id },
               }),
           },
         ]),

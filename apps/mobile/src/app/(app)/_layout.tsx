@@ -23,11 +23,18 @@ export default function AppLayout() {
   }, []);
 
   // Returning users land on Discover with the "Picked for you" deck on top.
+  // If picks fail to load, drop the request: a later refetch must not pop the
+  // deck up over whatever screen they're on by then.
   useEffect(() => {
-    if (!picksPending || !picks.data) return;
+    if (!picksPending) return;
+    if (picks.error) {
+      useUiStore.getState().consumePicks();
+      return;
+    }
+    if (!picks.data) return;
     if (!useUiStore.getState().consumePicks() || picks.data.length === 0) return;
     requestAnimationFrame(() => router.push('/picks'));
-  }, [picksPending, picks.data]);
+  }, [picksPending, picks.data, picks.error]);
 
   // Keep what the signed-out "Good to see you" screen needs.
   useEffect(() => {

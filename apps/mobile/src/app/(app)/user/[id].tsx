@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
-import { ApiRequestError, errorMessage } from '@/api/client';
+import { errorMessage } from '@/api/client';
 import { useMe, useSetBlocked, useUser } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import {
@@ -12,13 +12,11 @@ import {
   BackButton,
   Button,
   Heading,
-  LoadError,
-  Loading,
   MoreButton,
+  QueryFallback,
   SectionLabel,
   Tag,
 } from '@/components/ui';
-import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { firstName, monthYear } from '@/lib/activity';
 import { toast } from '@/store/ui';
@@ -31,17 +29,8 @@ export default function UserProfileScreen() {
   const { top } = useScreenInsets();
   const [sheet, setSheet] = useState<'menu' | 'confirm-block' | null>(null);
 
-  if (user.isLoading) return <Loading className="flex-1 bg-bg" />;
-  if (user.error instanceof ApiRequestError && user.error.status === 404) {
-    return <NotFound message="This person is no longer on Buddy." />;
-  }
-  if (!user.data) {
-    return (
-      <View className="flex-1 justify-center bg-bg px-[22px]">
-        <LoadError error={user.error} onRetry={() => void user.refetch()} />
-      </View>
-    );
-  }
+  if (!user.data)
+    return <QueryFallback query={user} notFound="This person is no longer on Buddy." />;
   const u = user.data;
   const common = new Set(u.commonInterests);
   const isMe = me.data?.id === u.id;
@@ -177,7 +166,7 @@ function SafetySheet({
           onPress: () =>
             router.push({
               pathname: '/report',
-              params: { type: 'user', id: person.id, userId: person.id, name: person.name },
+              params: { type: 'user', id: person.id },
             }),
         },
         person.blockedByYou

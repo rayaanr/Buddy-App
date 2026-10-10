@@ -19,7 +19,6 @@ export default function CreateActivityScreen() {
       fallbackPlace={me.data?.area ?? 'your home town'}
       autoFocus
       onSubmit={(v) => {
-        if (!me.data) return;
         create.mutate(
           {
             ...v,

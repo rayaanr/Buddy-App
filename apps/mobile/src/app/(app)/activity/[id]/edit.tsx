@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { errorMessage } from '@/api/client';
 import { useActivity, useUpdateActivity } from '@/api/queries';
 import { ActivityForm, draftFrom } from '@/components/create/ActivityForm';
-import { Loading } from '@/components/ui';
+import { QueryFallback } from '@/components/ui';
 import { toast } from '@/store/ui';
 
 /** Host → ⋯ → Edit activity. Only what changed is sent. */
@@ -13,7 +13,8 @@ export default function EditActivityScreen() {
   const activity = useActivity(id);
   const update = useUpdateActivity(id);
   const a = activity.data;
-  if (!a) return <Loading className="flex-1 bg-bg" />;
+  if (!a)
+    return <QueryFallback query={activity} notFound="This activity is no longer available." />;
 
   return (
     <ActivityForm

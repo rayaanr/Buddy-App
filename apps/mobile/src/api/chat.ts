@@ -1,7 +1,7 @@
 import { serverEvent, type ChatMessage, type MessagesPage } from '@buddy/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { API_URL } from '@/config';
@@ -65,6 +65,11 @@ export function useChat(activityId: string, myId: string | undefined) {
   const [typing, setTyping] = useState<{ name: string; until: number } | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const lastTypingSent = useRef(0);
+  // Read by socket handlers; a ref so `me` loading doesn't reconnect the socket.
+  const myIdRef = useRef(myId);
+  useLayoutEffect(() => {
+    myIdRef.current = myId;
+  }, [myId]);
 
   const update = useCallback(
     (fn: (page: MessagesPage) => MessagesPage) =>
@@ -119,7 +124,9 @@ export function useChat(activityId: string, myId: string | undefined) {
             next.delete(event.message.id);
             return next;
           });
-          if (event.message.sender?.id && event.message.sender.id !== myId) setTyping(null);
+          if (event.message.sender?.id && event.message.sender.id !== myIdRef.current) {
+            setTyping(null);
+          }
         } else if (event.type === 'typing') {
           setTyping({ name: event.user.name.split(' ')[0]!, until: Date.now() + TYPING_SHOW_MS });
         } else if (event.type === 'read') {
@@ -165,7 +172,7 @@ export function useChat(activityId: string, myId: string | undefined) {
       disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activityId, myId]);
+  }, [activityId]);
 
   // Hide "is typing…" after a few seconds without a new signal.
   useEffect(() => {
@@ -287,6 +294,7 @@ export function useChat(activityId: string, myId: string | undefined) {
     items,
     isLoading: history.isLoading,
     error: history.error,
+    refetch: history.refetch,
     typingName: typing?.name ?? null,
     send,
     retry,

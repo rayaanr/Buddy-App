@@ -1,3 +1,4 @@
+import { UUID_RE } from '@buddy/shared';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -93,7 +94,8 @@ export function useOpenFromNotifications() {
     const open = (response: Notifications.NotificationResponse | null) => {
       const data = response?.notification.request.content.data as
         { activityId?: string; screen?: string } | undefined;
-      if (!data?.activityId) return;
+      // Only ever from our own server, but it becomes a route: accept only an id.
+      if (!data?.activityId || !UUID_RE.test(data.activityId)) return;
       Notifications.clearLastNotificationResponse();
       router.push(
         data.screen === 'chat'

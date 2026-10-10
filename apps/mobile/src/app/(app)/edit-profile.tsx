@@ -25,8 +25,8 @@ import {
   Heading,
   KeyboardAwareScrollView,
   KeyboardScreen,
-  Loading,
   PressableScale,
+  QueryFallback,
   SectionLabel,
   TextField,
 } from '@/components/ui';
@@ -39,7 +39,7 @@ import { colors } from '@/theme';
 /** Profile → Edit profile: photo, name, bio, home town, interests and when you're free, saved together. */
 export default function EditProfileScreen() {
   const me = useMe();
-  if (!me.data) return <Loading className="flex-1 bg-bg" />;
+  if (!me.data) return <QueryFallback query={me} />;
   return <EditProfileForm me={me.data} />;
 }
 

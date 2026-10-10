@@ -6,10 +6,13 @@ import {
   type RefreshControlProps,
 } from 'react-native';
 
-import { errorMessage } from '@/api/client';
+import type { UseQueryResult } from '@tanstack/react-query';
+
+import { ApiRequestError, errorMessage } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 import { Button } from './Button';
+import { NotFound } from './NotFound';
 
 /** Centered spinner for a screen or section that's loading for the first time. */
 export function Loading({ className }: { className?: string }) {
@@ -32,6 +35,31 @@ export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => v
         {errorMessage(error)}
       </Text>
       <Button label="Try again" size="sm" variant="outline" onPress={onRetry} className="mt-4" />
+    </View>
+  );
+}
+
+/**
+ * What a screen shows while its query has no data: a spinner while loading,
+ * `notFound` for a 404 (with a way back), otherwise the error and a retry.
+ * Every screen that loads one thing uses it, so none can spin forever.
+ *
+ *   if (!activity.data) return <QueryFallback query={activity} notFound="…" />;
+ */
+export function QueryFallback({
+  query,
+  notFound,
+}: {
+  query: Pick<UseQueryResult, 'isError' | 'error' | 'refetch'>;
+  notFound?: string;
+}) {
+  if (!query.isError) return <Loading className="flex-1 bg-bg" />;
+  if (notFound && query.error instanceof ApiRequestError && query.error.status === 404) {
+    return <NotFound message={notFound} />;
+  }
+  return (
+    <View className="flex-1 justify-center bg-bg px-[22px]">
+      <LoadError error={query.error} onRetry={() => void query.refetch()} />
     </View>
   );
 }

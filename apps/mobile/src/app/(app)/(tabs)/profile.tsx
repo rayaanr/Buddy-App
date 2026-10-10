@@ -9,7 +9,7 @@ import {
   Button,
   Heading,
   IconButton,
-  Loading,
+  QueryFallback,
   Refresh,
   SectionLabel,
   SettingsIcon,
@@ -25,7 +25,7 @@ export default function ProfileScreen() {
   const history = useHistory();
   const [signingOut, setSigningOut] = useState(false);
 
-  if (!me.data) return <Loading className="flex-1 bg-bg" />;
+  if (!me.data) return <QueryFallback query={me} />;
   const { name, area, bio, createdAt, interests, avatarUrl, stats: s } = me.data;
 
   const stats = [

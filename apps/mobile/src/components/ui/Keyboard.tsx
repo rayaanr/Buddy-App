@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useEffectEvent } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -59,10 +59,18 @@ export function KeyboardAwareScrollView({ onScroll, onLayout, ...props }: Scroll
 
   // The keyboard opening usually shrinks this view (via KeyboardScreen), which
   // triggers onLayout below; this covers screens where nothing resizes.
+  const onKeyboardShown = useEffectEvent(revealFocusedInput);
   useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => setTimeout(revealFocusedInput, 50));
-    return () => sub.remove();
-  });
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      clearTimeout(timer);
+      timer = setTimeout(onKeyboardShown, 50);
+    });
+    return () => {
+      sub.remove();
+      clearTimeout(timer);
+    };
+  }, []);
 
   return (
     <ScrollView

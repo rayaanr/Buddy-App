@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 
-import { ApiRequestError } from '@/api/client';
 import { useCommunity } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
@@ -10,14 +9,12 @@ import {
   BackButton,
   Button,
   Heading,
-  LoadError,
-  Loading,
   Photo,
+  QueryFallback,
   Scrim,
   SectionLabel,
   TickIcon,
 } from '@/components/ui';
-import { NotFound } from '@/components/ui/NotFound';
 import { COMMUNITY_HUE } from '@/data/constants';
 import { useCommunityToggle } from '@/hooks/useCommunityToggle';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -29,17 +26,8 @@ export default function CommunityScreen() {
   const { toggle, pending } = useCommunityToggle();
   const { top } = useScreenInsets();
 
-  if (community.isLoading) return <Loading className="flex-1 bg-bg" />;
-  if (community.error instanceof ApiRequestError && community.error.status === 404) {
-    return <NotFound message="This community no longer exists." />;
-  }
-  if (!community.data) {
-    return (
-      <View className="flex-1 justify-center bg-bg px-[22px]">
-        <LoadError error={community.error} onRetry={() => void community.refetch()} />
-      </View>
-    );
-  }
+  if (!community.data)
+    return <QueryFallback query={community} notFound="This community no longer exists." />;
   const c = community.data;
   const others = c.memberCount - c.members.length;
 

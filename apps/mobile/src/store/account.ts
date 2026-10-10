@@ -50,9 +50,11 @@ export const useAccountStore = create<AccountState>()(
       name: 'buddy-account',
       version: 2,
       storage: persistStorage,
-      partialize: ({ remembered }) => ({ remembered }),
+      // pendingSignUp too: an app restart between the code and onboarding
+      // must not lose the town picked on Sign up.
+      partialize: ({ remembered, pendingSignUp }) => ({ remembered, pendingSignUp }),
       // Version 1 stored the whole mock session; start fresh.
-      migrate: () => ({ remembered: null }),
+      migrate: () => ({ remembered: null, pendingSignUp: null }),
     },
   ),
 );

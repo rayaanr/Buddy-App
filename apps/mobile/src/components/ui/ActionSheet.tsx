@@ -1,10 +1,10 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
 import { Button } from './Button';
-import { Sheet } from './Sheet';
 import { CONTROL_FONT_SCALE } from '@/theme';
+import { Sheet } from './Sheet';
 
 export interface SheetAction {
   label: string;
@@ -38,6 +38,13 @@ export function ActionSheet({
   cancelLabel = 'Cancel',
 }: ActionSheetProps) {
   const pending = useRef<(() => void) | null>(null);
+  // Callers often clear what the sheet was about as it closes; keep showing
+  // the last content while it slides away instead of reflowing mid-animation.
+  // (Actions aren't kept: callers build them inline, and a tap runs the one it hit.)
+  const [shown, setShown] = useState({ title, message });
+  if (visible && (shown.title !== title || shown.message !== message)) {
+    setShown({ title, message });
+  }
 
   return (
     <Sheet
@@ -50,14 +57,16 @@ export function ActionSheet({
       }}
     >
       <View className="px-[22px]">
-        {title || message ? (
+        {shown.title || shown.message ? (
           <View className="items-center gap-1 pb-4">
-            {title ? (
-              <Text className="text-center font-sans-semibold text-[16px] text-ink">{title}</Text>
+            {shown.title ? (
+              <Text className="text-center font-sans-semibold text-[16px] text-ink">
+                {shown.title}
+              </Text>
             ) : null}
-            {message ? (
+            {shown.message ? (
               <Text className="text-center font-sans text-[14px] leading-[20px] text-muted">
-                {message}
+                {shown.message}
               </Text>
             ) : null}
           </View>
@@ -65,7 +74,7 @@ export function ActionSheet({
         <View className="overflow-hidden rounded-[20px] bg-surface">
           {actions.map((action, i) => (
             <Pressable
-              key={action.label}
+              key={i}
               onPress={() => {
                 pending.current = action.onPress;
                 onClose();

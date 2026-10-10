@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** A UUID, for checking ids that arrive outside a Zod schema (paths, links, notifications). */
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** ISO-8601 timestamp as sent over the wire (UTC, e.g. "2026-10-09T12:30:00.000Z"). */
 export const isoDateTime = z.iso.datetime();
 

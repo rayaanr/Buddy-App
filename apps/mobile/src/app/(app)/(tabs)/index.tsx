@@ -53,11 +53,17 @@ export default function DiscoverScreen() {
   // permission was taken away since, go back to home.
   useEffect(() => {
     if (origin.kind !== 'here' || here) return;
+    let cancelled = false;
     void currentPointIfAllowed().then((point) => {
       const store = useDiscoverStore.getState();
+      // Picked somewhere else meanwhile: that choice wins.
+      if (cancelled || store.origin.kind !== 'here') return;
       if (point) store.setHere(point);
       else store.setOrigin({ kind: 'home' });
     });
+    return () => {
+      cancelled = true;
+    };
   }, [origin.kind, here]);
   const communityItems = fromCommunities.data ?? [];
   const showCommunityRow = filter === 'All' && communityItems.length > 0;

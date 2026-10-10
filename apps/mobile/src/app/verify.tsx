@@ -42,32 +42,32 @@ export default function VerifyScreen() {
     setBusy(true);
     setError(null);
     try {
-      const user = await verifySignInCode(email, otp, pending?.name);
-      const store = useAccountStore.getState();
-      if (pending) {
-        // New account: save the town picked on Sign up before onboarding.
-        const me = await unwrap(api.me.$patch({ json: { placeId: pending.placeId } }));
-        qc.setQueryData(keys.me, me);
-        store.setPendingSignUp(null);
-      } else {
-        // Returning user: the "Picked for you" deck opens once they land in the app.
-        useUiStore.getState().requestPicks();
-      }
-      store.remember({
-        email,
-        name: user.name,
-        area: pending?.area ?? store.remembered?.area ?? 'Sri Lanka',
-      });
-      // The root navigator switches screens when the session updates.
+      await verifySignInCode(email, otp, pending?.name);
     } catch (err) {
       setError(errorMessage(err));
       setCode('');
       input.current?.focus();
-    } finally {
       setBusy(false);
+      return;
     }
+    // Signed in: the root navigator switches screens when the session updates,
+    // so nothing below may report errors on this screen.
+    if (pending) {
+      // New account: save the town picked on Sign up. If this fails, the
+      // details stay pending and onboarding saves them with the interests.
+      try {
+        const me = await unwrap(api.me.$patch({ json: { placeId: pending.placeId } }));
+        qc.setQueryData(keys.me, me);
+        useAccountStore.getState().setPendingSignUp(null);
+      } catch {
+        // Retried from onboarding.
+      }
+    } else {
+      // Returning user: the "Picked for you" deck opens once they land in the app.
+      useUiStore.getState().requestPicks();
+    }
+    setBusy(false);
   };
-
   const onChange = (text: string) => {
     const digits = text.replace(/\D/g, '').slice(0, CODE_LENGTH);
     setCode(digits);

@@ -21,8 +21,10 @@ export default function PicksScreen() {
   const [deck, setDeck] = useState<Pick[] | null>(picks.data ?? null);
   const [index, setIndex] = useState(0);
   if (!deck && picks.data) setDeck(picks.data);
+  // Couldn't load a deck: nothing to show. (Once loaded it's frozen, so a
+  // failed background refetch mid-swipe must not close it.)
   useEffect(() => {
-    if (deck?.length === 0 || picks.error) router.back();
+    if (!deck && picks.error) router.back();
   }, [deck, picks.error]);
 
   const card = deck?.[index];

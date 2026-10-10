@@ -1,10 +1,20 @@
-import { LIMITS, REPORT_REASONS, type CreateReportInput, type ReportReason } from '@buddy/shared';
+import {
+  isDeletedAccount,
+  LIMITS,
+  REPORT_REASONS,
+  type ActivityDetail,
+  type CreateReportInput,
+  type MessagesPage,
+  type PublicProfile,
+  type ReportReason,
+} from '@buddy/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
-import { useReport, useSetBlocked } from '@/api/queries';
+import { keys, useReport, useSetBlocked } from '@/api/queries';
 import {
   Button,
   CheckIcon,
@@ -20,29 +30,37 @@ import { firstName } from '@/lib/activity';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
 
-export type ReportTarget = 'user' | 'message' | 'activity';
+type ReportTarget = 'user' | 'message' | 'activity';
 
 /**
  * Report a person, a chat message or an activity, optionally blocking the
- * person too. Params: `type` and `id` of what's reported, plus `userId` and
- * `name` of the person behind it, and `excerpt` for a message.
+ * person too. Params: `type` and `id` of what's reported, plus `activityId`
+ * for a message. Names and the message text come from what the app already
+ * loaded, never from the link, so a crafted link can't mislabel the report.
  */
 export default function ReportScreen() {
   const { top } = useScreenInsets();
-  const p = useLocalSearchParams<{
-    type: ReportTarget;
-    id: string;
-    userId?: string;
-    name?: string;
-    excerpt?: string;
-  }>();
+  const p = useLocalSearchParams<{ type: ReportTarget; id: string; activityId?: string }>();
+  const qc = useQueryClient();
   const report = useReport();
   const setBlocked = useSetBlocked();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [alsoBlock, setAlsoBlock] = useState(p.type === 'message');
 
-  const who = p.name ? firstName(p.name) : null;
+  const message =
+    p.type === 'message' && p.activityId
+      ? qc
+          .getQueryData<MessagesPage>(keys.messages(p.activityId))
+          ?.messages.find((m) => m.id === p.id)
+      : undefined;
+  const person =
+    p.type === 'message'
+      ? message?.sender
+      : p.type === 'activity'
+        ? qc.getQueryData<ActivityDetail>(keys.activity(p.id))?.host
+        : qc.getQueryData<PublicProfile>(keys.user(p.id));
+  const who = person && !isDeletedAccount(person) ? firstName(person.name) : null;
   const title =
     p.type === 'message'
       ? `Report ${who ? `${who}’s` : 'this'} message`
@@ -60,11 +78,17 @@ export default function ReportScreen() {
           ? { activityId: p.id }
           : { userId: p.id };
     try {
-      await report.mutateAsync({ reason, details: details.trim() || undefined, ...target });
-      if (alsoBlock && p.userId) await setBlocked.mutateAsync({ userId: p.userId, blocked: true });
+      const filed = await report.mutateAsync({
+        reason,
+        details: details.trim() || undefined,
+        ...target,
+      });
+      // Block whoever the server says this was about.
+      const blocking = alsoBlock && who && filed.targetUserId;
+      if (blocking) await setBlocked.mutateAsync({ userId: filed.targetUserId!, blocked: true });
       router.back();
       toast(
-        alsoBlock && who
+        blocking
           ? `Reported and blocked ${who}. We’ll review it within 24 hours.`
           : 'Thanks. We’ll review it within 24 hours.',
       );
@@ -89,10 +113,10 @@ export default function ReportScreen() {
         <Text className="mt-2 font-sans text-[15px] leading-[22px] text-muted">
           Reports are private. {who ?? 'They'} won’t know you reported them.
         </Text>
-        {p.excerpt ? (
+        {message ? (
           <View className="mt-4 rounded-[18px] rounded-bl-md bg-surface px-4 py-3">
             <Text className="font-sans text-[15px] leading-[21px] text-ink" numberOfLines={4}>
-              {p.excerpt}
+              {message.body}
             </Text>
           </View>
         ) : null}
@@ -138,7 +162,7 @@ export default function ReportScreen() {
           textAlignVertical="top"
         />
 
-        {p.userId && who ? (
+        {who ? (
           <Pressable
             onPress={() => setAlsoBlock((b) => !b)}
             role="checkbox"
