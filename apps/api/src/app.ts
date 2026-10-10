@@ -11,6 +11,7 @@ import type { AppEnv, Deps } from './http/context';
 import { HttpError } from './lib/errors';
 import { clientIp } from './lib/rate-limit';
 import { activityRoutes } from './modules/activities/routes';
+import { brandRoutes } from './modules/brand/routes';
 import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { legalRoutes } from './modules/legal/routes';
@@ -86,6 +87,7 @@ export function createApp(deps: Deps) {
   });
 
   // Public pages: shared links, privacy policy and terms.
+  app.route('/', brandRoutes());
   app.route('/', shareRoutes(deps));
   app.route('/', legalRoutes(deps));
 

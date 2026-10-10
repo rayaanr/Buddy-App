@@ -108,7 +108,7 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
             return;
           }
           // Not awaited by the caller's response path to avoid timing leaks; errors are logged.
-          mailer.send(signInCodeEmail(email, otp)).catch((err: unknown) => {
+          mailer.send(signInCodeEmail(email, otp, env.BETTER_AUTH_URL)).catch((err: unknown) => {
             logger.error({ err, email: emailTag(email) }, 'Failed to send sign-in code');
           });
         },

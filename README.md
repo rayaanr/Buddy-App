@@ -38,6 +38,7 @@ bun run mobile       # just the Expo dev server
 bun run db:up        # start the Docker Postgres
 bun run db:migrate   # apply migrations
 bun run db:seed      # reload the sample data (wipes the database)
+bun run brand        # regenerate app icons, favicons and logo files from the logo source
 
 bun run lint         # lint every package
 bun run knip         # find unused files, exports and dependencies
@@ -67,5 +68,11 @@ Buddy stays off the usual defaults so it can run next to other projects:
 Sign in as `kavindu@buddy.test`, or any seeded person as `<first name>@buddy.test` (`nethmi@`, `dilan@`, `shehani@`…). No email is sent in development: the 6-digit code shows up in the API log.
 
 The app finds the API on the machine running the Expo dev server, so a phone on the same Wi-Fi needs no setup.
+
+## The logo
+
+The logo is defined once, in [`packages/shared/src/brand.ts`](packages/shared/src/brand.ts): the mark's SVG, its colourways (dark, light, mono) and how the wordmark sits beside it. The app, the API's public pages, the sign-in email and the landing page all draw from it.
+
+To change it, edit `MARK` (and the font in [`scripts/brand.mjs`](scripts/brand.mjs) if the lettering changes), then run `bun run brand`. That regenerates the wordmark outline, the app icon, Android's adaptive icon layers, the splash image, the favicons, the landing page's inline logo and the PNG used in emails. Commit what it changes.
 
 Each app has its own README with setup details.

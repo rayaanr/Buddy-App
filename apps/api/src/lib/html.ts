@@ -1,3 +1,4 @@
+import { logoSvg } from '@buddy/shared';
 import { secureHeaders } from 'hono/secure-headers';
 
 /** Escapes text for HTML element content and quoted attributes. */
@@ -12,12 +13,14 @@ export const pageHeaders = secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'none'"],
     styleSrc: ["'unsafe-inline'"],
-    imgSrc: ['https:'],
+    imgSrc: ["'self'", 'https:'],
     baseUri: ["'none'"],
     formAction: ["'none'"],
     frameAncestors: ["'none'"],
   },
 });
+
+const LOGO = logoSvg({ height: 26 });
 
 export interface PageMeta {
   title?: string;
@@ -46,6 +49,7 @@ export function page(body: string, m: PageMeta) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>${escapeHtml(m.title ? `${m.title} · Buddy` : 'Buddy')}</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     ${tags}
     <style>
       body { margin: 0; background: #0b0c0b; color: #f1f2ee; font: 16px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -62,9 +66,11 @@ export function page(body: string, m: PageMeta) {
       .where, .going, .host, .hint { color: #8b8e88; }
       .button { display: block; margin: 26px 0 12px; padding: 17px; border-radius: 18px; background: #c9f53f; color: #0b0c0b; text-align: center; font-weight: 600; text-decoration: none; }
       .hint { font-size: 14px; }
+      .brand { display: block; max-width: 560px; margin: 0 auto; padding: 18px 22px 14px; line-height: 0; }
     </style>
   </head>
-  <body>${body}
+  <body>
+    <header class="brand">${LOGO}</header>${body}
   </body>
 </html>`;
 }

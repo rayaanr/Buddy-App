@@ -1,3 +1,4 @@
+import { EMAIL_LOGO } from '../brand/email-logo';
 import type { Env } from '../env';
 import type { Logger } from '../logger';
 
@@ -47,11 +48,17 @@ export function createMailer(env: Env, logger: Logger): Mailer {
     : logMailer(logger);
 }
 
-export function signInCodeEmail(to: string, code: string): Mail {
+/**
+ * `baseUrl` is the API's public URL, which serves the logo image
+ * (mail apps don't show SVG, so emails use a PNG).
+ */
+export function signInCodeEmail(to: string, code: string, baseUrl: string): Mail {
+  const logo = new URL('/brand/email-logo.png', baseUrl).href;
+  const { width, height } = EMAIL_LOGO;
   return {
     to,
     subject: `${code} is your Buddy code`,
     text: `Your Buddy sign-in code is ${code}. It expires in 5 minutes. If you didn't ask for it, you can ignore this email.`,
-    html: `<p>Your Buddy sign-in code is</p><p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p><p>It expires in 5 minutes. If you didn't ask for it, you can ignore this email.</p>`,
+    html: `<p><img src="${logo}" width="${width / 2}" height="${height / 2}" alt="Buddy"></p><p>Your Buddy sign-in code is</p><p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p><p>It expires in 5 minutes. If you didn't ask for it, you can ignore this email.</p>`,
   };
 }

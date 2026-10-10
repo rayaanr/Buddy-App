@@ -67,3 +67,31 @@ describe('privacy policy and terms', () => {
     }
   });
 });
+
+describe('the logo', () => {
+  it('heads the public pages, with a favicon the page may load', async () => {
+    const res = await t.app.request('/privacy');
+    const html = await res.text();
+    expect(html).toMatch(/<header class="brand"><svg [^>]*aria-label="Buddy"/);
+    expect(html).toContain('<link rel="icon" href="/favicon.svg"');
+    expect(res.headers.get('content-security-policy')).toContain("img-src 'self'");
+
+    const icon = await t.app.request('/favicon.svg');
+    expect(icon.headers.get('content-type')).toBe('image/svg+xml');
+    expect(await icon.text()).toMatch(/^<svg /);
+  });
+
+  it('is in the sign-in email, as an image the API serves', async () => {
+    await t.requestCode('logo@buddy.test');
+    await new Promise((r) => setTimeout(r, 10));
+    const mail = t.mail.sent.findLast((m) => m.to === 'logo@buddy.test')!;
+    expect(mail.html).toContain('<img src="http://localhost:7400/brand/email-logo.png"');
+
+    const png = await t.app.request('/brand/email-logo.png');
+    expect(png.headers.get('content-type')).toBe('image/png');
+    // PNG signature.
+    expect([...new Uint8Array(await png.arrayBuffer()).slice(0, 4)]).toEqual([
+      0x89, 0x50, 0x4e, 0x47,
+    ]);
+  });
+});
