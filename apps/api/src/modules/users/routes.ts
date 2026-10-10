@@ -3,12 +3,12 @@ import { and, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 
 import { currentUser, requireUser } from '../../auth/middleware';
-import { activities, activityMembers, blocks, profiles, user } from '../../db/schema';
+import { activities, activityMembers, blocks, places, profiles, user } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { idParam } from '../../lib/validate';
 import { countHosted, findActivitySummaries, notCancelled, upcoming } from '../activities/queries';
-import { homePlace, originFor } from '../profiles/service';
+import { originFor } from '../profiles/service';
 import { blockUser, unblockUser } from '../safety/service';
 
 export function userRoutes({ db, urls }: Deps) {
@@ -22,11 +22,13 @@ export function userRoutes({ db, urls }: Deps) {
         .select({
           user,
           profile: profiles,
+          place: places,
           blockedByYou: sql<boolean>`exists (select 1 from ${blocks} b where b.blocker_id = ${viewer.id} and b.blocked_id = ${user.id})`,
           blockedYou: sql<boolean>`exists (select 1 from ${blocks} b where b.blocker_id = ${user.id} and b.blocked_id = ${viewer.id})`,
         })
         .from(user)
         .innerJoin(profiles, eq(profiles.userId, user.id))
+        .innerJoin(places, eq(places.id, profiles.placeId))
         .where(eq(user.id, id));
       // Someone who blocked you looks the same as someone who doesn't exist.
       if (!row || row.blockedYou) throw notFound('Person');
@@ -53,7 +55,7 @@ export function userRoutes({ db, urls }: Deps) {
       const profile: PublicProfile = {
         id,
         name: row.user.name,
-        area: placeLabel(await homePlace(db, id)),
+        area: placeLabel(row.place),
         bio: row.profile.bio,
         avatarUrl: urls.avatar(row.profile.avatarKey, row.profile.avatarUrl),
         interests,

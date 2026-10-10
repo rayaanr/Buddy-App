@@ -40,15 +40,17 @@ export default function DiscoverScreen() {
   const [hero, ...rows] = feed.data?.activities ?? [];
   const origin = useDiscoverStore((s) => s.origin);
   const radiusKm = useDiscoverStore((s) => s.radiusKm);
+  const here = useDiscoverStore((s) => s.here);
   const [where, setWhere] = useState({ open: false, key: 0 });
   const homeLabel = me.data?.area ?? '';
   const originLabel =
     origin.kind === 'here' ? 'Near me' : origin.kind === 'town' ? origin.label : homeLabel;
   const widenedTo = feed.data && feed.data.radiusKm > radiusKm ? feed.data.radiusKm : null;
+  // "Near me" waits for the phone's position: show the skeleton, not "Nothing here".
+  const locating = origin.kind === 'here' && !here && !feed.data;
 
   // "Near me" from last time: find the phone again, without asking. If
   // permission was taken away since, go back to home.
-  const here = useDiscoverStore((s) => s.here);
   useEffect(() => {
     if (origin.kind !== 'here' || here) return;
     void currentPointIfAllowed().then((point) => {
@@ -133,12 +135,12 @@ export default function DiscoverScreen() {
 
       {widenedTo ? (
         <Text className="px-[22px] pb-3 font-sans text-[13.5px] leading-[19px] text-muted">
-          Nothing within {radiusKm} km, so this shows up to {widenedTo} km away.
+          Not much within {radiusKm} km, so this shows up to {widenedTo} km away, nearest first.
         </Text>
       ) : null}
 
       <View className="gap-3 px-[22px]">
-        {feed.isLoading ? (
+        {feed.isLoading || locating ? (
           <>
             <ActivityHeroSkeleton />
             <ActivityRowSkeleton />

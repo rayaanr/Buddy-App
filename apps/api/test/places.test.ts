@@ -156,6 +156,26 @@ describe('venue providers', () => {
     }
   });
 
+  it('skips a failing provider for a minute instead of waiting on every search', async () => {
+    const fetcher = vi.fn(() => Promise.reject(new Error('offline')));
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      const env = loadEnv({
+        DATABASE_URL: 'postgres://unused',
+        BETTER_AUTH_URL: 'http://localhost:7400',
+        BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-123',
+        VENUE_PROVIDER: 'osm',
+      });
+      const search = createVenueSearch(env, t.deps.db, t.deps.logger);
+      await search.search('galle');
+      await search.search('galle face');
+      await search.search('kandy');
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('needs a Google key when Google is chosen', () => {
     expect(() =>
       loadEnv({

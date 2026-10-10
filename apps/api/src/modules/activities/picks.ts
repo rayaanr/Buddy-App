@@ -51,9 +51,14 @@ export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick
       ],
       limit: DECK_SIZE,
     });
-  // Few people nearby (outside the cities): look further before giving up.
-  let candidates = await within(RADIUS_KM);
-  for (const km of WIDER_KM) if (candidates.length < DECK_SIZE) candidates = await within(km);
+  // Few nearby (outside the cities): keep those first and top up from further away.
+  const candidates = await within(RADIUS_KM);
+  for (const km of WIDER_KM) {
+    if (candidates.length >= DECK_SIZE) break;
+    const have = new Set(candidates.map((a) => a.id));
+    const more = (await within(km)).filter((a) => !have.has(a.id));
+    candidates.push(...more.slice(0, DECK_SIZE - candidates.length));
+  }
 
   const joined = new Set(communityIds);
   return candidates.map((activity) => ({

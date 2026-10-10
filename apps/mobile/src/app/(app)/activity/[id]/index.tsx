@@ -190,11 +190,19 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
         ]),
   ];
 
-  const onCancel = () =>
-    cancel.mutate(a.id, {
-      onSuccess: () => toast('Cancelled. Everyone going has been told.'),
-      onError: (err) => toast(errorMessage(err)),
-    });
+  const onCancel = (stopRepeating = false) =>
+    cancel.mutate(
+      { id: a.id, stopRepeating },
+      {
+        onSuccess: () =>
+          toast(
+            stopRepeating
+              ? 'Cancelled, and it won’t repeat. Everyone going has been told.'
+              : 'Cancelled. Everyone going has been told.',
+          ),
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
   const onWaitlist = () =>
     waitlist.mutate(
       { id: a.id, waiting: !!position },
@@ -377,9 +385,24 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
         visible={confirmCancel}
         onClose={() => setConfirmCancel(false)}
         title="Cancel this activity?"
-        message="Everyone going gets a notification. You can’t undo this."
+        message={
+          a.repeatsWeekly
+            ? 'Everyone going gets a notification. You can’t undo this. Next week’s still goes up unless you stop it repeating.'
+            : 'Everyone going gets a notification. You can’t undo this.'
+        }
         cancelLabel="Keep it"
-        actions={[{ label: 'Cancel activity', destructive: true, onPress: onCancel }]}
+        actions={
+          a.repeatsWeekly
+            ? [
+                { label: 'Cancel this week only', destructive: true, onPress: () => onCancel() },
+                {
+                  label: 'Cancel and stop repeating',
+                  destructive: true,
+                  onPress: () => onCancel(true),
+                },
+              ]
+            : [{ label: 'Cancel activity', destructive: true, onPress: () => onCancel() }]
+        }
       />
     </View>
   );

@@ -1,4 +1,5 @@
 import {
+  cancelActivityInput,
   createActivityInput,
   feedQuery,
   muteInput,
@@ -108,6 +109,14 @@ export function activityRoutes(deps: Deps) {
               filterCondition(q.filter),
               sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${km * 1000})`,
             ],
+            // Widened: nearest first, so the few close ones aren't crowded out
+            // by sooner ones far away.
+            ...(km > q.radiusKm && {
+              orderBy: [
+                sql`${activities.location} <-> ${pointSql(near)}`,
+                sql`${activities.startsAt}`,
+              ],
+            }),
             limit: q.limit,
           });
         // Outside the cities there may be nothing close: widen until there's something.
@@ -199,10 +208,11 @@ export function activityRoutes(deps: Deps) {
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
-      .post('/:id/cancel', idParam(), async (c) => {
+      // No JSON body (older apps) validates as {}: cancel this week only.
+      .post('/:id/cancel', idParam(), validate('json', cancelActivityInput), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
-        await announce(id, me.id, await cancelActivity(db, me, id));
+        await announce(id, me.id, await cancelActivity(db, me, id, c.req.valid('json')));
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 

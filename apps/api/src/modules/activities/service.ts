@@ -467,11 +467,16 @@ export async function updateActivity(
   });
 }
 
-/** Host calls it off. People who were going keep it (marked cancelled) and its chat. */
+/**
+ * Host calls it off. People who were going keep it (marked cancelled) and its
+ * chat. For a weekly activity, `stopRepeating` ends the series too; otherwise
+ * only this week is off and next week's still goes up.
+ */
 export async function cancelActivity(
   db: Db,
   host: { id: string; name: string },
   activityId: string,
+  { stopRepeating = false }: { stopRepeating?: boolean } = {},
 ) {
   return db.transaction(async (tx) => {
     const row = await lockForHost(tx, host.id, activityId);
@@ -479,6 +484,12 @@ export async function cancelActivity(
       .update(activities)
       .set({ cancelledAt: new Date() })
       .where(eq(activities.id, activityId));
+    if (stopRepeating && row.seriesId) {
+      await tx
+        .update(activities)
+        .set({ repeatsWeekly: false })
+        .where(eq(activities.seriesId, row.seriesId));
+    }
     const message = await insertSystemMessage(
       tx,
       activityId,

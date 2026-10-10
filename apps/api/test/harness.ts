@@ -100,7 +100,11 @@ export function useTestApp(
   ) {
     const res = await app.request(path, {
       method: init.method ?? 'GET',
-      headers: { 'content-type': 'application/json', ...init.headers },
+      // Like real clients: a JSON content-type only when there's a body.
+      headers: {
+        ...(init.body !== undefined && { 'content-type': 'application/json' }),
+        ...init.headers,
+      },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
     });
     const text = await res.text();

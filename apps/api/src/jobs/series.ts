@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
 import { activities, activityMembers, activityRemovals, user } from '../db/schema';
@@ -19,15 +19,26 @@ const EVERY_MS = 60_000;
  * several API instances at once.
  */
 export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
-  const due = await db
-    .selectDistinctOn([activities.seriesId])
+  // The latest occurrence of each series; due when it still repeats and has
+  // started. (A cancelled week still counts: only that week was called off.)
+  const latestIds = db
+    .selectDistinctOn([activities.seriesId], { id: activities.id })
     .from(activities)
     .where(sql`${activities.seriesId} is not null`)
     .orderBy(activities.seriesId, sql`${activities.startsAt} desc`);
+  const due = await db
+    .select()
+    .from(activities)
+    .where(
+      and(
+        inArray(activities.id, latestIds),
+        eq(activities.repeatsWeekly, true),
+        sql`${activities.startsAt} <= now()`,
+      ),
+    );
 
   let posted = 0;
   for (const latest of due) {
-    if (!latest.repeatsWeekly || latest.startsAt.getTime() > Date.now()) continue;
     const weeks = Math.max(1, Math.ceil((Date.now() - latest.startsAt.getTime()) / WEEK_MS));
     const startsAt = new Date(latest.startsAt.getTime() + weeks * WEEK_MS);
 

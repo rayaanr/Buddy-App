@@ -259,7 +259,8 @@ export function useUpdateActivity(id: string) {
 export function useCancelActivity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => unwrap(api.activities[':id'].cancel.$post({ param: { id } })),
+    mutationFn: ({ id, stopRepeating = false }: { id: string; stopRepeating?: boolean }) =>
+      unwrap(api.activities[':id'].cancel.$post({ param: { id }, json: { stopRepeating } })),
     onSuccess: (detail) => refreshActivityLists(qc, detail),
   });
 }

@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { errorMessage } from '@/api/client';
 import { nearestPlace, usePlaceSearch } from '@/api/queries';
 import { LocateIcon, MapPinIcon, Sheet, TextField } from '@/components/ui';
+import { useDebounced } from '@/hooks/useDebounced';
 import { currentPoint } from '@/lib/location';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -33,7 +34,8 @@ export function PlaceSearch({
   currentLocation = true,
 }: PlaceSearchProps) {
   const [query, setQuery] = useState('');
-  const results = usePlaceSearch(query);
+  // One request once typing pauses, not one per keystroke.
+  const results = usePlaceSearch(useDebounced(query, 250));
   const [locating, setLocating] = useState(false);
   const typed = query.trim().length > 0;
 

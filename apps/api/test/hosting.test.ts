@@ -116,6 +116,25 @@ describe('cover photos', () => {
   });
 });
 
+describe('meeting points', () => {
+  it('must be in Sri Lanka', async () => {
+    const host = await t.signIn('shehani@buddy.test');
+    const { id } = await padel(host.headers);
+    const london = await t.call(`/v1/activities/${id}`, {
+      method: 'PATCH',
+      headers: host.headers,
+      body: { location: { lat: 51.5, lng: -0.12 } },
+    });
+    expect(london.status).toBe(400);
+    const kandy = await t.call<ActivityDetail>(`/v1/activities/${id}`, {
+      method: 'PATCH',
+      headers: host.headers,
+      body: { location: { lat: 7.2925, lng: 80.6413 } },
+    });
+    expect(kandy.body.area).toBe('Kandy');
+  });
+});
+
 describe('cancelling an activity', () => {
   it('tells the people going, keeps it for them, and hides it from everyone else', async () => {
     pushes.length = 0;

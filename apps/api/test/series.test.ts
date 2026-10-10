@@ -139,4 +139,29 @@ describe('weekly activities', () => {
     await run();
     expect(await series(once.id)).toHaveLength(1);
   });
+
+  it('cancelling one week keeps the series; cancelling with stop ends it', async () => {
+    const host = await t.signIn();
+    const cancel = (id: string, stopRepeating: boolean) =>
+      t.call<ActivityDetail>(`/v1/activities/${id}/cancel`, {
+        method: 'POST',
+        headers: host.headers,
+        body: { stopRepeating },
+      });
+
+    const thisWeekOnly = await weekly(host.headers);
+    await cancel(thisWeekOnly.id, false);
+    await startedAgo(thisWeekOnly.id, '10 minutes');
+    await run();
+    const kept = await series(thisWeekOnly.id);
+    expect(kept).toHaveLength(2);
+    expect(kept[1]!.cancelledAt).toBeNull();
+
+    const stopped = await weekly(host.headers);
+    const res = await cancel(stopped.id, true);
+    expect(res.body).toMatchObject({ cancelled: true, repeatsWeekly: false });
+    await startedAgo(stopped.id, '10 minutes');
+    await run();
+    expect(await series(stopped.id)).toHaveLength(1);
+  });
 });

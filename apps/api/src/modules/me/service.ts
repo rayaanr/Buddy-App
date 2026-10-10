@@ -9,18 +9,26 @@ import {
 import { and, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
-import { activities, activityMembers, communityMembers, profiles, user } from '../../db/schema';
+import {
+  activities,
+  activityMembers,
+  communityMembers,
+  profiles,
+  user,
+  places,
+} from '../../db/schema';
 import { forbidden, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
-import { homePlace, requirePlace } from '../profiles/service';
+import { requirePlace, toPlace } from '../profiles/service';
 
 const count = sql<number>`count(*)::int`;
 
 export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
   const [row] = await db
-    .select({ user, profile: profiles })
+    .select({ user, profile: profiles, place: places })
     .from(user)
     .innerJoin(profiles, eq(profiles.userId, user.id))
+    .innerJoin(places, eq(places.id, profiles.placeId))
     .where(eq(user.id, userId));
   if (!row) throw notFound('Profile');
 
@@ -34,7 +42,7 @@ export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
   ]);
 
   const { profile } = row;
-  const place = await homePlace(db, userId);
+  const place = toPlace(row.place);
   return {
     id: row.user.id,
     email: row.user.email,

@@ -2,6 +2,18 @@ import { z } from 'zod';
 
 import { location } from './common';
 
+/** Sri Lanka, as [west, south, east, north] (with a little sea around it). */
+export const SRI_LANKA_BBOX = [79.5, 5.85, 81.95, 9.9] as const;
+
+export const inSriLanka = ({ lat, lng }: { lat: number; lng: number }) =>
+  lng >= SRI_LANKA_BBOX[0] &&
+  lng <= SRI_LANKA_BBOX[2] &&
+  lat >= SRI_LANKA_BBOX[1] &&
+  lat <= SRI_LANKA_BBOX[3];
+
+/** A meeting point: anywhere in Sri Lanka. */
+export const meetingPoint = location.refine(inSriLanka, 'Pick a place in Sri Lanka');
+
 /** A town in Sri Lanka (home towns, browsing, where an activity is). */
 export const place = z.object({
   id: z.number().int(),

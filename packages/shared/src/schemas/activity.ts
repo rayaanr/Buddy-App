@@ -8,6 +8,7 @@ import {
   LIMITS,
 } from '../constants';
 import { isoDateTime, location, userSummary } from './common';
+import { meetingPoint } from './place';
 
 export const activityGroup = z.enum(ACTIVITY_GROUPS);
 export const discoverFilter = z.enum(DISCOVER_FILTERS);
@@ -95,7 +96,7 @@ export const createActivityInput = z.object({
   startsAt: isoDateTime,
   place: z.string().trim().min(2).max(LIMITS.placeMax),
   /** The meeting point (from venue search or the host's location); defaults to the host's home town. */
-  location: location.optional(),
+  location: meetingPoint.optional(),
   capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
   description: z.string().trim().max(LIMITS.descriptionMax).default(''),
   /** Key returned by the upload endpoint, if a cover photo was uploaded. */
@@ -104,7 +105,7 @@ export const createActivityInput = z.object({
 });
 export type CreateActivityInput = z.input<typeof createActivityInput>;
 
-/** Host edits. Area and location stay as created; spots can't drop below who's going. */
+/** Host edits. Spots can't drop below who's going; the town label follows a new location. */
 export const updateActivityInput = z
   .object({
     title: z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax),
@@ -112,7 +113,7 @@ export const updateActivityInput = z
     startsAt: isoDateTime,
     place: z.string().trim().min(2).max(LIMITS.placeMax),
     /** A new meeting point; the town label follows it. */
-    location,
+    location: meetingPoint,
     capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
     description: z.string().trim().max(LIMITS.descriptionMax),
     /** A new uploaded cover; null goes back to the stock photo for the type. */
@@ -125,6 +126,9 @@ export const updateActivityInput = z
 export type UpdateActivityInput = z.infer<typeof updateActivityInput>;
 
 export const muteInput = z.object({ muted: z.boolean() });
+
+/** Cancelling a weekly activity can end the series too (else next week still goes up). */
+export const cancelActivityInput = z.object({ stopRepeating: z.boolean().default(false) });
 
 /** Why a host removed someone. Kept private (for moderation), never shown to them. */
 export const REMOVAL_REASONS = ['not_a_fit', 'behaviour', 'other'] as const;

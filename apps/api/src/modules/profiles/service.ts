@@ -15,6 +15,16 @@ const columns = {
   location: places.location,
 };
 
+/** A places row as the API shows it. */
+export const toPlace = (p: typeof places.$inferSelect): Place => ({
+  id: p.id,
+  name: p.name,
+  aka: p.aka,
+  district: p.district,
+  province: p.province,
+  location: p.location,
+});
+
 export async function findPlace(db: Db | Tx, id: number): Promise<Place | null> {
   const [row] = await db.select(columns).from(places).where(eq(places.id, id));
   return row ?? null;

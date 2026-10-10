@@ -1,4 +1,4 @@
-import { placeLabel, type Venue } from '@buddy/shared';
+import { inSriLanka, placeLabel, SRI_LANKA_BBOX, type Venue } from '@buddy/shared';
 
 import type { Db } from '../db/client';
 import type { LatLng } from '../db/geography';
@@ -25,13 +25,8 @@ export interface VenueResults {
   attribution: string | null;
 }
 
-/** Sri Lanka, as [west, south, east, north]. */
-const LK_BBOX = [79.5, 5.85, 81.95, 9.9] as const;
 const LIMIT = 8;
 const TIMEOUT_MS = 4000;
-
-const inSriLanka = ({ lat, lng }: LatLng) =>
-  lng >= LK_BBOX[0] && lng <= LK_BBOX[2] && lat >= LK_BBOX[1] && lat <= LK_BBOX[3];
 
 const joinParts = (parts: (string | undefined | null)[]) =>
   [...new Set(parts.filter((p): p is string => !!p && p.trim() !== ''))].join(', ');
@@ -59,7 +54,7 @@ export function photonProvider(baseUrl: string, fetcher = fetch): VenueProvider 
       url.searchParams.set('q', query);
       url.searchParams.set('limit', String(LIMIT));
       url.searchParams.set('lang', 'en');
-      url.searchParams.set('bbox', LK_BBOX.join(','));
+      url.searchParams.set('bbox', SRI_LANKA_BBOX.join(','));
       if (near) {
         url.searchParams.set('lat', String(near.lat));
         url.searchParams.set('lon', String(near.lng));
@@ -152,6 +147,8 @@ export function townsProvider(db: Db): VenueProvider {
 
 const CACHE_MS = 10 * 60 * 1000;
 const CACHE_SIZE = 500;
+/** After a failure, skip the provider this long (no 4 s wait on every keystroke). */
+const BACKOFF_MS = 60 * 1000;
 
 /**
  * The configured provider, with a short cache (people retype the same
@@ -171,6 +168,11 @@ export function createVenueSearch(env: Env, db: Db, logger: Logger): VenueSearch
         ? photonProvider(env.PHOTON_URL)
         : towns;
   const cache = new Map<string, { at: number; results: VenueResults }>();
+  let downUntil = 0;
+  const fromTowns = async (query: string, near?: LatLng): Promise<VenueResults> => ({
+    venues: await towns.search(query, near),
+    attribution: null,
+  });
 
   return {
     async search(query, near) {
@@ -179,13 +181,19 @@ export function createVenueSearch(env: Env, db: Db, logger: Logger): VenueSearch
       const hit = cache.get(key);
       if (hit && Date.now() - hit.at < CACHE_MS) return hit.results;
 
+      if (primary !== towns && Date.now() < downUntil) return fromTowns(query, near);
+
       let results: VenueResults;
       try {
         results = { venues: await primary.search(query, near), attribution: primary.attribution };
       } catch (err) {
         if (primary === towns) throw err;
-        logger.warn({ err, provider: env.VENUE_PROVIDER }, 'Venue search failed; using towns');
-        return { venues: await towns.search(query, near), attribution: null };
+        downUntil = Date.now() + BACKOFF_MS;
+        logger.warn(
+          { err, provider: env.VENUE_PROVIDER },
+          'Venue search failed; using towns for a minute',
+        );
+        return fromTowns(query, near);
       }
       if (cache.size >= CACHE_SIZE) cache.delete(cache.keys().next().value!);
       cache.set(key, { at: Date.now(), results });

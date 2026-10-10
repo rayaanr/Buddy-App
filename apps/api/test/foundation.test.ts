@@ -77,6 +77,10 @@ describe('activities feed', () => {
     );
     expect(near.body.radiusKm).toBe(50);
     expect(near.body.activities.length).toBeGreaterThan(1);
+    // Widened: nearest first, so the close one leads.
+    const distances = near.body.activities.map((a) => a.distanceKm!);
+    expect(near.body.activities[0]!.title).toBe('Beach cricket, softball');
+    expect(distances).toEqual([...distances].sort((a, b) => a - b));
 
     // Browsing Jaffna (~300 km away) widens until it reaches Colombo's activities.
     const jaffna = await t.call<{ activities: ActivitySummary[]; radiusKm: number }>(
