@@ -10,6 +10,7 @@ export * from './Photo';
 export * from './SearchField';
 export * from './SegmentedControl';
 export * from './TextField';
+export * from './Toggle';
 export * from './Toast';
 export * from './Typography';
 export * from './QueryState';

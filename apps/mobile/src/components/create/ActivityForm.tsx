@@ -8,7 +8,7 @@ import {
 } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import { CoverField } from '@/components/create/CoverField';
 import { DatePickerSheet } from '@/components/create/DatePickerSheet';
@@ -23,6 +23,7 @@ import {
   KeyboardScreen,
   SectionLabel,
   TextField,
+  Toggle,
 } from '@/components/ui';
 import {
   ACTIVITY_TYPES,
@@ -333,15 +334,10 @@ export function ActivityForm({
               Next week’s goes up once this one starts, and this group hears about it.
             </Text>
           </View>
-          <Switch
+          <Toggle
             value={draft.repeat}
             onValueChange={(repeat) => set({ repeat })}
-            accessibilityLabel="Repeat every week"
-            trackColor={{ false: colors.outline, true: colors.lime }}
-            thumbColor={draft.repeat ? colors.bg : colors.ink}
-            ios_backgroundColor={colors.outline}
-            // react-native-web colours the "on" thumb with its own prop.
-            {...{ activeThumbColor: colors.bg }}
+            label="Repeat every week"
           />
         </View>
 

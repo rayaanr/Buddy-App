@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
 import { useState } from 'react';
-import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { unregisterPush } from '@/api/push';
@@ -12,11 +12,11 @@ import {
   Heading,
   ScreenHeader,
   SectionLabel,
+  Toggle,
 } from '@/components/ui';
 import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
-import { colors } from '@/theme';
 
 /** Profile → Settings: account details and the less common account actions. */
 export default function SettingsScreen() {
@@ -115,7 +115,7 @@ function NotificationSwitch({
         <Text className="font-sans text-[15.5px] text-ink">{label}</Text>
         <Text className="mt-0.5 font-sans text-[13px] leading-[18px] text-muted">{sub}</Text>
       </View>
-      <Switch
+      <Toggle
         value={value}
         onValueChange={(on) =>
           update.mutate(
@@ -123,12 +123,7 @@ function NotificationSwitch({
             { onError: (err) => toast(errorMessage(err)) },
           )
         }
-        accessibilityLabel={label}
-        trackColor={{ false: colors.outline, true: colors.lime }}
-        thumbColor={value ? colors.bg : colors.ink}
-        ios_backgroundColor={colors.outline}
-        // react-native-web colours the "on" thumb with its own prop.
-        {...{ activeThumbColor: colors.bg }}
+        label={label}
       />
     </View>
   );
