@@ -43,13 +43,21 @@ describe('DatePickerSheet', () => {
 });
 
 describe('TimePickerSheet', () => {
-  it('returns the chosen hour and minute', async () => {
+  it('starts on the current time and returns what the wheels are turned to', async () => {
     const onChange = jest.fn();
     await render(<TimePickerSheet open onClose={() => {}} value="18:30" onChange={onChange} />);
-    expect(screen.getByText('18:30', hidden)).toBeTruthy();
-    fireEvent.press(screen.getByLabelText('07 hour', hidden));
-    fireEvent.press(screen.getByLabelText('45 minutes', hidden));
-    fireEvent.press(screen.getByText('Set time', hidden));
-    expect(onChange).toHaveBeenCalledWith('07:45');
+    const hour = screen.getByLabelText('Hour', hidden);
+    const minutes = screen.getByLabelText('Minutes', hidden);
+    expect(hour.props.accessibilityValue).toEqual({ text: '18' });
+    expect(minutes.props.accessibilityValue).toEqual({ text: '30' });
+
+    // Screen readers turn a wheel one step at a time.
+    const turn = (wheel: typeof hour, actionName: 'increment' | 'decrement') =>
+      fireEvent(wheel, 'accessibilityAction', { nativeEvent: { actionName } });
+    turn(hour, 'decrement');
+    turn(minutes, 'increment');
+    turn(minutes, 'increment');
+    fireEvent.press(screen.getByText('Set 17:40', hidden));
+    expect(onChange).toHaveBeenCalledWith('17:40');
   });
 });

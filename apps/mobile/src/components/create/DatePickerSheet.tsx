@@ -70,6 +70,11 @@ export function DatePickerSheet({
     ...Array.from({ length: firstWeekday }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
+  // One row per week, padded to seven: percentage widths in a wrapping row
+  // round differently per phone and can push Sunday onto the next line.
+  const weeks = Array.from({ length: Math.ceil(cells.length / 7) }, (_, w) =>
+    Array.from({ length: 7 }, (_, d) => cells[w * 7 + d] ?? null),
+  );
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -100,43 +105,47 @@ export function DatePickerSheet({
           ))}
         </View>
 
-        <View className="mt-2 flex-row flex-wrap">
-          {cells.map((d, i) => {
-            if (d === null) return <View key={`blank-${i}`} className="h-12 w-[14.2857%]" />;
-            const day = toDay(y, m, d);
-            const selected = day === value;
-            const isToday = day === min;
-            const disabled = day < min || day > max;
-            return (
-              <View key={day} className="h-12 w-[14.2857%] items-center justify-center">
-                <Pressable
-                  onPress={() => {
-                    onChange(day);
-                    onClose();
-                  }}
-                  disabled={disabled}
-                  hitSlop={4}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${d} ${MONTHS[m - 1]}`}
-                  accessibilityState={{ selected, disabled }}
-                  className={cn(
-                    'h-10 w-10 items-center justify-center rounded-full active:opacity-70',
-                    selected && 'bg-lime',
-                    !selected && isToday && 'border border-lime-outline',
-                  )}
-                >
-                  <Text
-                    className={cn(
-                      'font-sans-medium text-[15px]',
-                      selected ? 'text-bg' : disabled ? 'text-subtle opacity-40' : 'text-ink',
-                    )}
-                  >
-                    {d}
-                  </Text>
-                </Pressable>
-              </View>
-            );
-          })}
+        <View className="mt-2">
+          {weeks.map((week, w) => (
+            <View key={w} className="flex-row">
+              {week.map((d, i) => {
+                if (d === null) return <View key={`blank-${i}`} className="h-12 flex-1" />;
+                const day = toDay(y, m, d);
+                const selected = day === value;
+                const isToday = day === min;
+                const disabled = day < min || day > max;
+                return (
+                  <View key={day} className="h-12 flex-1 items-center justify-center">
+                    <Pressable
+                      onPress={() => {
+                        onChange(day);
+                        onClose();
+                      }}
+                      disabled={disabled}
+                      hitSlop={4}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${d} ${MONTHS[m - 1]}`}
+                      accessibilityState={{ selected, disabled }}
+                      className={cn(
+                        'h-10 w-10 items-center justify-center rounded-full active:opacity-70',
+                        selected && 'bg-lime',
+                        !selected && isToday && 'border border-lime-outline',
+                      )}
+                    >
+                      <Text
+                        className={cn(
+                          'font-sans-medium text-[15px]',
+                          selected ? 'text-bg' : disabled ? 'text-subtle opacity-40' : 'text-ink',
+                        )}
+                      >
+                        {d}
+                      </Text>
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
         </View>
       </View>
     </Sheet>
