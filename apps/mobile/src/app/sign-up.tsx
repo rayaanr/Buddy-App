@@ -1,5 +1,6 @@
 import { placeLabel, type Place } from '@buddy/shared';
 import { router } from 'expo-router';
+import { openBrowserAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -16,6 +17,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { TownField } from '@/components/places/TownField';
+import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useAccountStore } from '@/store/account';
 
@@ -108,6 +110,25 @@ export default function SignUpScreen() {
           Anywhere in Sri Lanka. We show activities near here; only your town is shown to others.
         </Text>
         {error ? <Text className="mt-4 font-sans text-[13.5px] text-danger">{error}</Text> : null}
+        <Text className="mt-6 font-sans text-[13px] leading-[19px] text-subtle">
+          By creating an account you agree to the{' '}
+          <Text
+            className="text-ink-dim underline"
+            accessibilityRole="link"
+            onPress={() => void openBrowserAsync(TERMS_URL)}
+          >
+            Terms of use
+          </Text>{' '}
+          and{' '}
+          <Text
+            className="text-ink-dim underline"
+            accessibilityRole="link"
+            onPress={() => void openBrowserAsync(PRIVACY_URL)}
+          >
+            Privacy policy
+          </Text>
+          .
+        </Text>
       </KeyboardAwareScrollView>
 
       <Footer>

@@ -69,7 +69,7 @@ function Grid({
       {values.map((v) => {
         const active = v === selected;
         return (
-          <View key={v} className="h-11 w-1/6 p-0.5">
+          <View key={v} className="h-12 w-1/6 p-0.5">
             <Pressable
               onPress={() => onSelect(v)}
               role="radio"

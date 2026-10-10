@@ -191,7 +191,12 @@ export function ActivityForm({
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} hitSlop={8} className="flex-1 py-1.5">
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            accessibilityRole="button"
+            className="flex-1 py-1.5"
+          >
             <Text className="font-sans text-[16px] text-muted">Cancel</Text>
           </Pressable>
           <Text className="font-sans-semibold text-[16px] text-ink">{heading}</Text>

@@ -18,6 +18,7 @@ import {
 } from '@tanstack/react-query';
 
 import { authClient } from './auth-client';
+import { askForPush } from './push';
 import { useAccountStore } from '@/store/account';
 import { useDiscoverStore } from '@/store/discover';
 import { ApiRequestError, api, unwrap } from './client';
@@ -191,7 +192,10 @@ export function useJoinActivity() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => unwrap(api.activities[':id'].membership.$post({ param: { id } })),
-    onSuccess: (detail) => refreshActivityLists(qc, detail),
+    onSuccess: (detail) => {
+      void askForPush();
+      return refreshActivityLists(qc, detail);
+    },
   });
 }
 
@@ -235,7 +239,10 @@ export function useWaitlist() {
           ? api.activities[':id'].waitlist.$delete({ param: { id } })
           : api.activities[':id'].waitlist.$post({ param: { id } }),
       ),
-    onSuccess: (detail) => refreshActivityLists(qc, detail),
+    onSuccess: (detail) => {
+      void askForPush();
+      return refreshActivityLists(qc, detail);
+    },
   });
 }
 
@@ -243,7 +250,10 @@ export function useCreateActivity() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateActivityInput) => unwrap(api.activities.$post({ json: input })),
-    onSuccess: (detail) => refreshActivityLists(qc, detail),
+    onSuccess: (detail) => {
+      void askForPush();
+      return refreshActivityLists(qc, detail);
+    },
   });
 }
 

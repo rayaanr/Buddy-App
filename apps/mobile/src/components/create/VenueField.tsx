@@ -116,7 +116,7 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
         <Pressable
           onPress={locating ? undefined : () => void pinHere()}
           accessibilityRole="button"
-          hitSlop={6}
+          hitSlop={8}
           className="flex-row items-center gap-1.5 rounded-full border border-outline px-3 py-1.5 active:opacity-70"
         >
           {locating ? (

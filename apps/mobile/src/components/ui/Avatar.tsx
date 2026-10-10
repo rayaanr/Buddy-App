@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { colors } from '@/theme';
 
@@ -14,8 +14,11 @@ interface AvatarProps {
   accessibilityLabel?: string;
   /** Keeps layout space but hides the face (used for grouped chat messages). */
   hidden?: boolean;
-  style?: object;
+  style?: StyleProp<ViewStyle>;
 }
+
+/** Small avatars still get a 44 pt touch area. */
+const MIN_TOUCH = 44;
 
 export function Avatar({
   uri,
@@ -56,7 +59,7 @@ export function Avatar({
       disabled={hidden}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      hitSlop={4}
+      hitSlop={Math.max(4, (MIN_TOUCH - size) / 2)}
     >
       {body}
     </Pressable>

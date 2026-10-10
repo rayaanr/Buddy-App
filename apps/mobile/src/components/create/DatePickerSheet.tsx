@@ -78,7 +78,8 @@ export function DatePickerSheet({
           <IconButton
             icon={<ChevronLeftIcon color={canPrev ? colors.ink : colors.subtle} />}
             label="Previous month"
-            onPress={() => canPrev && step(-1)}
+            disabled={!canPrev}
+            onPress={() => step(-1)}
           />
           <Text className="font-sans-semibold text-[17px] text-ink">
             {MONTHS[m - 1]} {y}
@@ -86,7 +87,8 @@ export function DatePickerSheet({
           <IconButton
             icon={<ChevronRightIcon color={canNext ? colors.ink : colors.subtle} />}
             label="Next month"
-            onPress={() => canNext && step(1)}
+            disabled={!canNext}
+            onPress={() => step(1)}
           />
         </View>
 
@@ -113,6 +115,7 @@ export function DatePickerSheet({
                     onClose();
                   }}
                   disabled={disabled}
+                  hitSlop={4}
                   accessibilityRole="button"
                   accessibilityLabel={`${d} ${MONTHS[m - 1]}`}
                   accessibilityState={{ selected, disabled }}

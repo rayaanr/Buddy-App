@@ -18,37 +18,59 @@ Notifications.setNotificationHandler({
 });
 
 let registeredToken: string | null = null;
+let askedThisSession = false;
+
+const projectId = () =>
+  Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+
+/** Real phones with an EAS project only: simulators and web can't get a token. */
+const canPush = () => Platform.OS !== 'web' && Device.isDevice && !!projectId();
+
+async function register() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('chat', {
+      name: 'Group chats',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+    await Notifications.setNotificationChannelAsync('reminders', {
+      name: 'Reminders and changes',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+  }
+  const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: projectId() });
+  await unwrap(api.me['push-tokens'].$post({ json: { token } }));
+  registeredToken = token;
+}
 
 /**
- * Asks for notification permission and registers this device's Expo push
- * token with the API. Quietly does nothing on simulators, on web, when
- * permission is denied, or before the app has an EAS project ID.
+ * Registers this device's push token if notifications are already allowed.
+ * Never prompts: run on every launch so the server has the current token.
  */
-export async function registerForPush() {
+export async function syncPushToken() {
   try {
-    if (Platform.OS === 'web' || !Device.isDevice) return;
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-    if (!projectId) return;
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('chat', {
-        name: 'Group chats',
-        importance: Notifications.AndroidImportance.HIGH,
-      });
-      await Notifications.setNotificationChannelAsync('reminders', {
-        name: 'Reminders and changes',
-        importance: Notifications.AndroidImportance.HIGH,
-      });
-    }
-    const current = await Notifications.getPermissionsAsync();
-    const granted = current.granted || (await Notifications.requestPermissionsAsync()).granted;
-    if (!granted) return;
-
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    await unwrap(api.me['push-tokens'].$post({ json: { token } }));
-    registeredToken = token;
+    if (!canPush() || !(await Notifications.getPermissionsAsync()).granted) return;
+    await register();
   } catch {
-    // Notifications are a nice-to-have; never block sign-in on them.
+    // Notifications are a nice-to-have; never block the app on them.
+  }
+}
+
+/**
+ * Asks for notification permission at a moment it makes sense (just joined,
+ * hosted or messaged, so reminders and replies are wanted), not at launch.
+ * Asks at most once per session, and never again once someone said no.
+ */
+export async function askForPush() {
+  if (askedThisSession || registeredToken) return;
+  askedThisSession = true;
+  try {
+    if (!canPush()) return;
+    const current = await Notifications.getPermissionsAsync();
+    if (!current.granted && !current.canAskAgain) return;
+    const granted = current.granted || (await Notifications.requestPermissionsAsync()).granted;
+    if (granted) await register();
+  } catch {
+    // As above.
   }
 }
 

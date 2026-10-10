@@ -51,3 +51,19 @@ describe('share pages', () => {
     }
   });
 });
+
+describe('privacy policy and terms', () => {
+  it('are public pages with the contact address', async () => {
+    for (const [path, heading] of [
+      ['/privacy', 'Privacy policy'],
+      ['/terms', 'Terms of use'],
+    ] as const) {
+      const res = await t.app.request(path);
+      expect(res.status).toBe(200);
+      const html = await res.text();
+      expect(html).toContain(`<h1>${heading}</h1>`);
+      expect(html).toContain('mailto:hello@example.com');
+      expect(res.headers.get('content-security-policy')).toContain("default-src 'none'");
+    }
+  });
+});

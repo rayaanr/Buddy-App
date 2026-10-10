@@ -1,7 +1,7 @@
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 
-import { registerForPush, useOpenFromNotifications } from '@/api/push';
+import { syncPushToken, useOpenFromNotifications } from '@/api/push';
 import { useMe, usePicks } from '@/api/queries';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
@@ -49,8 +49,10 @@ export default function AppLayout() {
     });
   }, [picks.data]);
 
+  // Only refreshes the token if allowed; the permission prompt waits for a
+  // first join, hosted activity or message (see askForPush).
   useEffect(() => {
-    void registerForPush();
+    void syncPushToken();
   }, []);
   useOpenFromNotifications();
 

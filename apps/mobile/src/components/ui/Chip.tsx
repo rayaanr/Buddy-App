@@ -3,6 +3,7 @@ import { Text } from 'react-native';
 
 import { cn } from '@/lib/cn';
 import { PressableScale } from './Motion';
+import { CONTROL_FONT_SCALE } from '@/theme';
 
 interface ChipProps {
   label: string;
@@ -46,6 +47,8 @@ export function Chip({
       testID={testID}
       haptic="selection"
       scale="strong"
+      // Compact chips are 38 px tall; reach the 44 pt minimum touch area.
+      hitSlop={shape === 'compact' ? 4 : undefined}
       className={cn(
         'flex-row items-center justify-center gap-1.5 border',
         SHAPE[shape],
@@ -56,6 +59,7 @@ export function Chip({
       {icon}
       {label ? (
         <Text
+          maxFontSizeMultiplier={CONTROL_FONT_SCALE}
           className={cn(
             mono ? 'font-mono-medium text-[14.5px]' : 'font-sans-medium text-[15px]',
             selected ? 'text-bg' : 'text-ink',
@@ -72,8 +76,10 @@ export function Chip({
 export function Tag({ label, active = true }: { label: string; active?: boolean }) {
   return (
     <Text
+      maxFontSizeMultiplier={CONTROL_FONT_SCALE}
       className={cn(
-        'h-[34px] overflow-hidden rounded-[17px] px-[15px] font-sans-medium text-[14px] leading-[34px]',
+        // Grows with larger text instead of clipping inside a fixed height.
+        'min-h-[34px] overflow-hidden rounded-[17px] px-[15px] py-2 font-sans-medium text-[14px] leading-[18px]',
         active ? 'bg-lime-deep text-lime' : 'bg-surface-raised text-ink-dim',
       )}
     >

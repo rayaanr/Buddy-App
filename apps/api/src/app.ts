@@ -13,6 +13,7 @@ import { clientIp } from './lib/rate-limit';
 import { activityRoutes } from './modules/activities/routes';
 import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
+import { legalRoutes } from './modules/legal/routes';
 import { meRoutes } from './modules/me/routes';
 import { placeRoutes, venueRoutes } from './modules/places/routes';
 import { reportRoutes } from './modules/safety/routes';
@@ -84,8 +85,9 @@ export function createApp(deps: Deps) {
     return c.json({ status: 'ok' });
   });
 
-  // Public pages behind shared links.
+  // Public pages: shared links, privacy policy and terms.
   app.route('/', shareRoutes(deps));
+  app.route('/', legalRoutes(deps));
 
   // Better Auth owns everything under /api/auth (send code, sign in, sign out, session).
   // Its rate limits key on X-Forwarded-For, which clients can forge. Replace

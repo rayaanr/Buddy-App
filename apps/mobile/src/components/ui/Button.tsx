@@ -3,6 +3,7 @@ import { Text, type PressableProps, type StyleProp, type ViewStyle } from 'react
 
 import { cn } from '@/lib/cn';
 import { PressableScale } from './Motion';
+import { CONTROL_FONT_SCALE } from '@/theme';
 
 type Variant = 'primary' | 'outline' | 'ghost' | 'danger' | 'danger-outline' | 'muted';
 type Size = 'lg' | 'md' | 'sm';
@@ -74,6 +75,7 @@ export function Button({
     >
       {icon}
       <Text
+        maxFontSizeMultiplier={CONTROL_FONT_SCALE}
         className={cn(
           weight === 'medium' ? 'font-sans-medium' : 'font-sans-semibold',
           weight === 'medium' && size === 'md' ? 'text-[15px]' : SIZE[size].text,

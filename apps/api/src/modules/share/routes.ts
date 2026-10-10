@@ -1,33 +1,15 @@
 import type { ActivitySummary } from '@buddy/shared';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
-import { secureHeaders } from 'hono/secure-headers';
 
 import { activities } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
+import { escapeHtml as escape, page, pageHeaders } from '../../lib/html';
 import { findActivitySummaries, upcoming } from '../activities/queries';
 import { whenText } from '../activities/service';
 import { firstName } from '../chat/system-messages';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** No scripts at all; inline styles and https images only. */
-export const pageHeaders = secureHeaders({
-  contentSecurityPolicy: {
-    defaultSrc: ["'none'"],
-    styleSrc: ["'unsafe-inline'"],
-    imgSrc: ['https:'],
-    baseUri: ["'none'"],
-    formAction: ["'none'"],
-    frameAncestors: ["'none'"],
-  },
-});
-
-const escape = (s: string) =>
-  s.replace(
-    /[&<>"']/g,
-    (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!,
-  );
 
 /**
  * Public page behind shared links (`/a/:id`). Chat apps read its Open Graph
@@ -84,44 +66,3 @@ const notFoundBody = () => `
       <h1>This activity isn’t available</h1>
       <p class="where">It may have been cancelled or already happened.</p>
     </main>`;
-
-function page(
-  body: string,
-  m: { title?: string; description?: string; image?: string; url?: string },
-) {
-  const tags = [
-    m.title && `<meta property="og:title" content="${escape(m.title)}">`,
-    m.description && `<meta property="og:description" content="${escape(m.description)}">`,
-    m.description && `<meta name="description" content="${escape(m.description)}">`,
-    m.image && `<meta property="og:image" content="${escape(m.image)}">`,
-    m.url && `<meta property="og:url" content="${escape(m.url)}">`,
-    `<meta property="og:type" content="website">`,
-    `<meta property="og:site_name" content="Buddy">`,
-    `<meta name="twitter:card" content="${m.image ? 'summary_large_image' : 'summary'}">`,
-  ]
-    .filter(Boolean)
-    .join('\n    ');
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${escape(m.title ? `${m.title} · Buddy` : 'Buddy')}</title>
-    ${tags}
-    <style>
-      body { margin: 0; background: #0b0c0b; color: #f1f2ee; font: 16px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-      .cover { display: block; background: #161816; width: 100%; max-width: 560px; margin: 0 auto; aspect-ratio: 16 / 10; object-fit: cover; }
-      main { max-width: 560px; margin: 0 auto; padding: 22px; }
-      .eyebrow { margin: 0; color: #c9f53f; font: 600 12px/1 ui-monospace, monospace; letter-spacing: .12em; }
-      h1 { margin: 10px 0 14px; font-size: 30px; line-height: 1.1; letter-spacing: -.02em; }
-      p { margin: 4px 0; }
-      .when { font-weight: 600; }
-      .where, .going, .host, .hint { color: #8b8e88; }
-      .button { display: block; margin: 26px 0 12px; padding: 17px; border-radius: 18px; background: #c9f53f; color: #0b0c0b; text-align: center; font-weight: 600; text-decoration: none; }
-      .hint { font-size: 14px; }
-    </style>
-  </head>
-  <body>${body}
-  </body>
-</html>`;
-}

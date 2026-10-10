@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, CONTROL_FONT_SCALE } from '@/theme';
 import { spring } from '@/theme/motion';
 import { AnimatedView, selectionHaptic } from './Motion';
 
@@ -76,6 +76,7 @@ export function SegmentedControl<T extends string>({
             className="h-[42px] flex-1 items-center justify-center rounded-xl"
           >
             <Text
+              maxFontSizeMultiplier={CONTROL_FONT_SCALE}
               className={cn('font-sans-semibold text-[14.5px]', active ? 'text-ink' : 'text-muted')}
             >
               {s.label}

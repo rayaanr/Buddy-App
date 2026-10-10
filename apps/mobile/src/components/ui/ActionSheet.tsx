@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { cn } from '@/lib/cn';
 import { Button } from './Button';
 import { Sheet } from './Sheet';
+import { CONTROL_FONT_SCALE } from '@/theme';
 
 export interface SheetAction {
   label: string;
@@ -76,6 +77,7 @@ export function ActionSheet({
               )}
             >
               <Text
+                maxFontSizeMultiplier={CONTROL_FONT_SCALE}
                 className={cn(
                   'font-sans-medium text-[16.5px]',
                   action.destructive ? 'text-danger' : 'text-ink',

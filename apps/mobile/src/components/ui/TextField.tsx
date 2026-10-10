@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { TextInput, type TextInputProps } from 'react-native';
 
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, CONTROL_FONT_SCALE } from '@/theme';
 
 interface TextFieldProps extends TextInputProps {
   className?: string;
@@ -22,6 +22,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       ref={ref}
       placeholderTextColor={colors.subtle}
       selectionColor={colors.lime}
+      maxFontSizeMultiplier={CONTROL_FONT_SCALE}
       multiline={multiline}
       className={cn(
         'rounded-2xl border border-field px-4 text-ink',

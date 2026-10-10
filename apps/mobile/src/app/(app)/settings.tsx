@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
+import { openBrowserAsync } from 'expo-web-browser';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
 import { BackButton, ChevronRightIcon, Heading, SectionLabel } from '@/components/ui';
+import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
@@ -47,6 +49,8 @@ export default function SettingsScreen() {
 
         <SectionLabel className="mb-1 mt-7">Privacy</SectionLabel>
         <Row label="Blocked people" onPress={() => router.push('/blocked')} />
+        <Row label="Privacy policy" onPress={() => void openBrowserAsync(PRIVACY_URL)} />
+        <Row label="Terms of use" onPress={() => void openBrowserAsync(TERMS_URL)} />
 
         <View className="mt-10">
           <Row label="Delete account" danger onPress={() => router.push('/delete-account')} />

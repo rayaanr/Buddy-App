@@ -7,6 +7,7 @@ import { AppState } from 'react-native';
 import { API_URL } from '@/config';
 import { sessionCookie } from './auth-client';
 import { api, unwrap } from './client';
+import { askForPush } from './push';
 import { keys } from './queries';
 
 export type MessageStatus = 'sending' | 'failed' | 'sent' | 'seen';
@@ -207,6 +208,8 @@ export function useChat(activityId: string, myId: string | undefined) {
           next.delete(id);
           return next;
         });
+        // Replies arrive as notifications: a good moment to ask.
+        void askForPush();
       } catch {
         setPending((prev) => {
           const item = prev.get(id);

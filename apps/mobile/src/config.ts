@@ -13,6 +13,9 @@ const API_PORT = 7400;
 function resolveApiUrl() {
   const explicit = process.env.EXPO_PUBLIC_API_URL;
   if (explicit) return explicit.replace(/\/$/, '');
+  // A release build guessing "the dev machine" would ship pointing at localhost.
+  if (!__DEV__)
+    throw new Error('EXPO_PUBLIC_API_URL must be set for release builds (see eas.json).');
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:${API_PORT}`;
@@ -30,3 +33,7 @@ export const APP_SCHEME = 'buddy';
  * EXPO_PUBLIC_SHARE_URL if links should use a different domain, e.g. buddy.lk.
  */
 export const SHARE_URL = (process.env.EXPO_PUBLIC_SHARE_URL ?? API_URL).replace(/\/$/, '');
+
+/** Public pages the stores require the app to link to (served by the API). */
+export const PRIVACY_URL = `${API_URL}/privacy`;
+export const TERMS_URL = `${API_URL}/terms`;
