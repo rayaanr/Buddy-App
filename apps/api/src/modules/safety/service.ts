@@ -55,20 +55,22 @@ export async function listBlocked(db: Db, urls: Urls, blockerId: string): Promis
  * the reporter can see are reportable; anything else reads as not found.
  */
 export async function createReport(db: Db, reporterId: string, input: CreateReportInput) {
-  let targetUserId: string;
+  /** Null only for an activity whose host has since deleted their account. */
+  let targetUserId: string | null;
   let activityId: string | null = null;
   let messageId: string | null = null;
 
   if (input.messageId) {
     const [msg] = await db
-      .select({ activityId: messages.activityId, senderId: messages.senderId })
+      .select({ activityId: messages.activityId, senderId: messages.senderId, kind: messages.kind })
       .from(messages)
       .where(eq(messages.id, input.messageId));
     if (!msg) throw notFound('Message');
     await requireMember(db, msg.activityId, reporterId).catch(() => {
       throw notFound('Message');
     });
-    if (!msg.senderId) throw badRequest('System messages can’t be reported');
+    if (msg.kind === 'system') throw badRequest('System messages can’t be reported');
+    if (!msg.senderId) throw badRequest('This person deleted their account');
     targetUserId = msg.senderId;
     activityId = msg.activityId;
     messageId = input.messageId;
@@ -89,17 +91,19 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
 
   // Reporting the same person again within a day is saved but doesn't email
   // the moderators again (no inbox flooding).
-  const [recent] = await db
-    .select({ id: reports.id })
-    .from(reports)
-    .where(
-      and(
-        eq(reports.reporterId, reporterId),
-        eq(reports.targetUserId, targetUserId),
-        sql`${reports.createdAt} > now() - interval '1 day'`,
-      ),
-    )
-    .limit(1);
+  const [recent] = targetUserId
+    ? await db
+        .select({ id: reports.id })
+        .from(reports)
+        .where(
+          and(
+            eq(reports.reporterId, reporterId),
+            eq(reports.targetUserId, targetUserId),
+            sql`${reports.createdAt} > now() - interval '1 day'`,
+          ),
+        )
+        .limit(1)
+    : [];
 
   const [row] = await db
     .insert(reports)
@@ -131,10 +135,12 @@ export async function notifyModerators(
   if (!env.MODERATION_EMAIL) return;
 
   try {
-    const [target] = await db
-      .select({ name: user.name, email: user.email })
-      .from(user)
-      .where(eq(user.id, report.targetUserId!));
+    const [target] = report.targetUserId
+      ? await db
+          .select({ name: user.name, email: user.email })
+          .from(user)
+          .where(eq(user.id, report.targetUserId))
+      : [];
     const [message] = report.messageId
       ? await db
           .select({ body: messages.body })
@@ -143,7 +149,9 @@ export async function notifyModerators(
       : [];
     const lines = [
       `Reason: ${REPORT_REASONS[report.reason as keyof typeof REPORT_REASONS] ?? report.reason}`,
-      `Reported: ${target?.name ?? 'unknown'} <${target?.email ?? '?'}> (${report.targetUserId})`,
+      report.targetUserId
+        ? `Reported: ${target?.name ?? 'unknown'} <${target?.email ?? '?'}> (${report.targetUserId})`
+        : 'Reported: an activity whose host deleted their account',
       report.activityId ? `Activity: ${report.activityId}` : null,
       message ? `Message: “${message.body}”` : null,
       report.details ? `Reporter’s note: ${report.details}` : null,

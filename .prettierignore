@@ -4,3 +4,6 @@ design/
 # Generated
 **/drizzle/meta/
 package-lock.json
+
+# Local tool settings
+.claude/

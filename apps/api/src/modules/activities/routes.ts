@@ -17,8 +17,9 @@ import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { HOUR, limits, MINUTE } from '../../lib/rate-limit';
 import { idParam, validate } from '../../lib/validate';
-import { toChatMessage, type MessageRow } from '../chat/service';
+import { toChatMessage } from '../chat/service';
 import { originFor } from '../profiles/service';
+import { createAnnouncer } from './announce';
 import { picksFor } from './picks';
 import {
   filterCondition,
@@ -50,53 +51,12 @@ const WIDER_KM = [50, 100, 200, 450];
 const ENOUGH = 3;
 
 export function activityRoutes(deps: Deps) {
-  const { db, urls, hub, push, limiter, storage } = deps;
+  const { db, urls, hub, push, storage } = deps;
   const limit = limits(deps);
   const joins = limit({ name: 'joins', limit: 30, windowMs: 10 * MINUTE, by: 'user' });
   const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
 
-  /**
-   * After a change: posts its chat lines, tells everyone going about a host
-   * change (`notice`, except `actorId`), tells people moved off the waitlist
-   * they're in, and tells people still waiting about a cancellation.
-   */
-  const announce = async (
-    id: string,
-    actorId: string,
-    result: {
-      messages: MessageRow[];
-      promoted: string[];
-      notice?: { title: string; body: string } | null;
-      waiting?: string[];
-    },
-  ) => {
-    for (const row of result.messages) {
-      hub.publish(id, { type: 'message', message: await toChatMessage(db, urls, row) });
-    }
-    // Host notices push to everyone going: at most 3 an hour per activity, so
-    // repeated edits can't spam phones (the chat lines still go up).
-    if (result.notice && limiter.hit(`notice:${id}`, 3, HOUR).ok) {
-      const message = {
-        ...result.notice,
-        data: { activityId: id },
-        channelId: 'reminders' as const,
-      };
-      void push.notifyActivity(id, message, [actorId, ...result.promoted]);
-      if (result.waiting?.length) void push.notifyUsers(result.waiting, message);
-    }
-    if (result.promoted.length) {
-      const [activity] = await db
-        .select({ title: activities.title })
-        .from(activities)
-        .where(eq(activities.id, id));
-      void push.notifyUsers(result.promoted, {
-        title: `You’re in: ${activity?.title ?? 'your activity'}`,
-        body: 'A spot opened up. Say hi in the group chat.',
-        data: { activityId: id, screen: 'chat' },
-        channelId: 'reminders',
-      });
-    }
-  };
+  const announce = createAnnouncer(deps);
   return (
     new Hono<AppEnv>()
       .use(requireUser)

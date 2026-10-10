@@ -32,7 +32,7 @@ Changes from the original plan, decided while building:
 - **Reports are emailed** to `MODERATION_EMAIL` (and always logged). There's no admin screen: review them in the `reports` table and update `status`. App Review expects reports handled within 24 hours.
 - **The swipe deck only opens when the app launches on Discover**, so links into a chat or activity aren't covered by it.
 
-Known gaps carried forward: tapping a push notification opens the app but not the chat; no photo picker in the UI yet (API ready); deleting an account leaves its photos in R2; activity locations use area centres until a map picker exists; orphaned R2 uploads aren't cleaned up; the WebSocket heartbeat has no automated test.
+Known gaps carried forward: tapping a push notification opens the app but not the chat; no photo picker in the UI yet (API ready); activity locations use area centres until a map picker exists; orphaned R2 uploads aren't cleaned up; the WebSocket heartbeat has no automated test.
 
 ## Phases
 

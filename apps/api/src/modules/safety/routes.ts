@@ -21,7 +21,8 @@ export function reportRoutes(deps: Deps) {
         async (c) => {
           const { report, repeat } = await createReport(db, currentUser(c).id, c.req.valid('json'));
           if (!repeat) void notifyModerators(deps, report);
-          return c.json({ id: report.id }, 201);
+          // The app blocks whoever this turned out to be about (not what its link claimed).
+          return c.json({ id: report.id, targetUserId: report.targetUserId }, 201);
         },
       )
   );

@@ -1,4 +1,4 @@
-import type { ActivitySummary, DiscoverFilter } from '@buddy/shared';
+import { DELETED_ACCOUNT, type ActivitySummary, type DiscoverFilter } from '@buddy/shared';
 import { and, asc, eq, gte, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
@@ -120,7 +120,8 @@ export async function findActivitySummaries(
         : sql<null>`null`,
     })
     .from(activities)
-    .innerJoin(user, eq(user.id, activities.hostId))
+    // Left joins: an activity outlives a host who deleted their account.
+    .leftJoin(user, eq(user.id, activities.hostId))
     .leftJoin(profiles, eq(profiles.userId, activities.hostId))
     .leftJoin(communities, eq(communities.id, activities.communityId))
     .where(and(...where, visibleTo(viewerId)))
@@ -143,11 +144,14 @@ export async function findActivitySummaries(
     goingCount: r.goingCount,
     waitingCount: r.waitingCount,
     coverUrl: r.coverUrl,
-    host: {
-      id: r.hostId,
-      name: r.hostName,
-      avatarUrl: urls.avatar(r.hostAvatarKey, r.hostAvatarUrl),
-    },
+    host:
+      r.hostId && r.hostName
+        ? {
+            id: r.hostId,
+            name: r.hostName,
+            avatarUrl: urls.avatar(r.hostAvatarKey, r.hostAvatarUrl),
+          }
+        : DELETED_ACCOUNT,
     community:
       r.communityId && r.communityName ? { id: r.communityId, name: r.communityName } : null,
     viewer: {

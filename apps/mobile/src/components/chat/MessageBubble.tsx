@@ -1,4 +1,4 @@
-import { clockLabel } from '@buddy/shared';
+import { clockLabel, isDeletedAccount } from '@buddy/shared';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -53,30 +53,36 @@ export function MessageBubble({ row, onRetry, onReport }: MessageBubbleProps) {
 
   if (!mine) {
     const sender = m.sender;
+    // Someone who deleted their account has no profile to open or report.
+    const person = sender && !isDeletedAccount(sender) ? sender : null;
     return (
       <View className="max-w-[84%] flex-row items-end gap-2 self-start" style={{ marginTop: gap }}>
         <Avatar
           uri={sender?.avatarUrl ?? undefined}
           size={30}
           hidden={!startsRun}
-          onPress={sender ? () => openUser(sender.id) : undefined}
-          accessibilityLabel={sender ? `View ${sender.name}’s profile` : undefined}
+          onPress={person ? () => openUser(person.id) : undefined}
+          accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
         />
         <View className="min-w-0 shrink gap-[5px]">
           {startsRun && sender ? (
             <Pressable
-              onPress={() => openUser(sender.id)}
-              hitSlop={6}
+              disabled={!person}
+              onPress={person ? () => openUser(person.id) : undefined}
+              hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+              accessibilityRole={person ? 'button' : undefined}
+              accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
               className="ml-1.5 self-start"
             >
               <Text className="font-sans-medium text-[13px] text-muted">{sender.name}</Text>
             </Pressable>
           ) : null}
           <Pressable
+            disabled={!person}
             onLongPress={() => onReport(m)}
             delayLongPress={350}
-            accessibilityHint="Long press to report this message"
-            accessibilityActions={[{ name: 'longpress', label: 'Report message' }]}
+            accessibilityHint={person ? 'Long press to report this message' : undefined}
+            accessibilityActions={person ? [{ name: 'longpress', label: 'Report message' }] : []}
             onAccessibilityAction={() => onReport(m)}
             className="rounded-[18px] rounded-bl-md bg-surface px-4 py-3 active:opacity-80"
           >

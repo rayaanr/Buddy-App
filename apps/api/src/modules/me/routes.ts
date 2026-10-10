@@ -6,10 +6,13 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import { pushTokens } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { validate } from '../../lib/validate';
+import { createAnnouncer } from '../activities/announce';
 import { listBlocked } from '../safety/service';
 import { deleteAccount, getMe, updateMe } from './service';
 
-export function meRoutes({ db, urls, hub, storage }: Deps) {
+export function meRoutes(deps: Deps) {
+  const { db, urls, hub, storage, logger } = deps;
+  const announce = createAnnouncer(deps);
   return (
     new Hono<AppEnv>()
       .use(requireUser)
@@ -24,8 +27,16 @@ export function meRoutes({ db, urls, hub, storage }: Deps) {
 
       .delete('/', async (c) => {
         const me = currentUser(c);
-        await deleteAccount(db, me.id);
+        const { cancelled, photoKeys } = await deleteAccount(db, me.id, {
+          publicUrl: deps.env.R2_PUBLIC_URL,
+        });
         hub.disconnectEverywhere(me.id);
+        for (const { id, result } of cancelled) await announce(id, me.id, result);
+        if (storage && photoKeys.length) {
+          storage.remove(photoKeys).catch((err: unknown) => {
+            logger.error({ err, keys: photoKeys }, 'Could not delete photos of a deleted account');
+          });
+        }
         return c.body(null, 204);
       })
 

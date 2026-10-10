@@ -17,6 +17,14 @@ export const userSummary = z.object({
 });
 export type UserSummary = z.infer<typeof userSummary>;
 
+/**
+ * Stands in for someone who deleted their account: the host of an activity
+ * they left behind, the sender of their old messages. The empty id never
+ * matches a real person, so the app can check for it.
+ */
+export const DELETED_ACCOUNT: UserSummary = { id: '', name: 'Deleted account', avatarUrl: null };
+export const isDeletedAccount = (person: Pick<UserSummary, 'id'>) => person.id === '';
+
 /** Every error response has this shape. */
 export const apiError = z.object({
   error: z.object({

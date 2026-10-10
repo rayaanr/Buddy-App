@@ -1,4 +1,4 @@
-import { ERROR_CODES, LIMITS, type ActivityDetail } from '@buddy/shared';
+import { ERROR_CODES, isDeletedAccount, LIMITS, type ActivityDetail } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -269,10 +269,10 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           <Attendance activity={a} canRemove={canManage} />
 
           <PressableScale
-            disabled={a.viewer.hosting}
+            disabled={a.viewer.hosting || isDeletedAccount(a.host)}
             onPress={() => router.push(`/user/${a.host.id}`)}
             className="mt-[18px] flex-row items-center gap-3.5"
-            accessibilityRole={a.viewer.hosting ? undefined : 'button'}
+            accessibilityRole={a.viewer.hosting || isDeletedAccount(a.host) ? undefined : 'button'}
             scale="dim"
           >
             <Avatar uri={a.host.avatarUrl ?? undefined} size={46} />

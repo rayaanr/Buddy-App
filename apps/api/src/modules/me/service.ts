@@ -1,5 +1,6 @@
 import {
   MIN_INTERESTS,
+  type ActivityGroup,
   placeLabel,
   type Availability,
   type Interest,
@@ -19,7 +20,10 @@ import {
 } from '../../db/schema';
 import { notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
-import { requireUpload } from '../../lib/upload-keys';
+import { keyFromUrl, requireUpload } from '../../lib/upload-keys';
+import type { ChangeResult } from '../activities/announce';
+import { cancelLocked, stockCover } from '../activities/service';
+import { firstName } from '../chat/system-messages';
 import type { Urls } from '../../lib/urls';
 import { requirePlace, toPlace } from '../profiles/service';
 
@@ -93,10 +97,60 @@ export async function updateMe(
 }
 
 /**
- * Deletes the account and everything that belongs to it (sessions, profile,
- * memberships, hosted activities, messages) via ON DELETE CASCADE.
- * Required by Apple and Google for apps with sign-up.
+ * Deletes the account (required by Apple and Google for apps with sign-up).
+ * Sessions, profile, memberships and blocks go with it (ON DELETE CASCADE).
+ * What other people still need stays, without them: upcoming activities they
+ * host are cancelled with a chat line for their guests, past ones keep a
+ * "Deleted account" host, their messages stay as "Deleted account", and
+ * reports about them are kept for moderation. Their uploaded photos are
+ * returned for the caller to delete from storage once this commits.
  */
-export async function deleteAccount(db: Db, userId: string) {
-  await db.delete(user).where(eq(user.id, userId));
+export async function deleteAccount(
+  db: Db,
+  userId: string,
+  { publicUrl }: { publicUrl: string | undefined },
+) {
+  return db.transaction(async (tx) => {
+    const [me] = await tx
+      .select({ name: user.name, avatarKey: profiles.avatarKey })
+      .from(user)
+      .leftJoin(profiles, eq(profiles.userId, user.id))
+      .where(eq(user.id, userId));
+    if (!me) throw notFound('Profile');
+    const who = firstName(me.name);
+
+    const hosted = await tx
+      .select()
+      .from(activities)
+      .where(eq(activities.hostId, userId))
+      .for('update');
+    const cancelled: { id: string; result: ChangeResult }[] = [];
+    const photoKeys = me.avatarKey ? [me.avatarKey] : [];
+    for (const row of hosted) {
+      if (!row.cancelledAt && row.startsAt.getTime() > Date.now()) {
+        cancelled.push({
+          id: row.id,
+          result: await cancelLocked(tx, row, {
+            stopRepeating: true,
+            line: `${who} deleted their account, so this activity is off`,
+            notice: { title: `Cancelled: ${row.title}`, body: `${who} is no longer on Buddy.` },
+          }),
+        });
+      }
+      // Their own photo leaves with them; the activity goes back to a stock one.
+      const coverKey = keyFromUrl(row.coverUrl, publicUrl);
+      if (coverKey) {
+        photoKeys.push(coverKey);
+        await tx
+          .update(activities)
+          .set({ coverUrl: stockCover(row.group as ActivityGroup) })
+          .where(eq(activities.id, row.id));
+      }
+    }
+    // Nobody is left to post next week's.
+    await tx.update(activities).set({ repeatsWeekly: false }).where(eq(activities.hostId, userId));
+
+    await tx.delete(user).where(eq(user.id, userId));
+    return { cancelled, photoKeys };
+  });
 }

@@ -39,6 +39,9 @@ export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
 
   let posted = 0;
   for (const latest of due) {
+    // The host deleted their account: nobody left to run next week's.
+    const hostId = latest.hostId;
+    if (!hostId) continue;
     const weeks = Math.max(1, Math.ceil((Date.now() - latest.startsAt.getTime()) / WEEK_MS));
     const startsAt = new Date(latest.startsAt.getTime() + weeks * WEEK_MS);
 
@@ -46,7 +49,7 @@ export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
       const [row] = await tx
         .insert(activities)
         .values({
-          hostId: latest.hostId,
+          hostId,
           communityId: latest.communityId,
           title: latest.title,
           category: latest.category,
@@ -69,17 +72,14 @@ export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
 
       await tx.insert(activityMembers).values({
         activityId: row.id,
-        userId: latest.hostId,
+        userId: hostId,
         role: 'host',
       });
       await tx.execute(sql`
         insert into ${activityRemovals} (activity_id, user_id, reason)
         select ${row.id}, user_id, reason from ${activityRemovals}
         where activity_id = ${latest.id}`);
-      const [host] = await tx
-        .select({ name: user.name })
-        .from(user)
-        .where(eq(user.id, latest.hostId));
+      const [host] = await tx.select({ name: user.name }).from(user).where(eq(user.id, hostId));
       await insertSystemMessage(
         tx,
         row.id,
@@ -98,7 +98,7 @@ export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
         data: { activityId: created },
         channelId: 'reminders',
       },
-      [latest.hostId],
+      [hostId],
     );
   }
   return { posted };

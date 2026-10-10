@@ -112,9 +112,8 @@ export const activities = pgTable(
   'activities',
   {
     id: uuid().primaryKey().defaultRandom(),
-    hostId: uuid()
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    /** Null once the host deleted their account (the activity stays for its guests). */
+    hostId: uuid().references(() => user.id, { onDelete: 'set null' }),
     communityId: uuid().references(() => communities.id, { onDelete: 'set null' }),
     title: text().notNull(),
     category: text().notNull(),
@@ -237,8 +236,8 @@ export const messages = pgTable(
     activityId: uuid()
       .notNull()
       .references(() => activities.id, { onDelete: 'cascade' }),
-    /** Null for system lines ("Kavindu joined"). */
-    senderId: uuid().references(() => user.id, { onDelete: 'cascade' }),
+    /** Null for system lines ("Kavindu joined"), and once the sender deleted their account. */
+    senderId: uuid().references(() => user.id, { onDelete: 'set null' }),
     kind: text().notNull().default('user'),
     body: text().notNull(),
     ...timestamps,
@@ -291,7 +290,8 @@ export const reports = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     reporterId: uuid().references(() => user.id, { onDelete: 'set null' }),
-    targetUserId: uuid().references(() => user.id, { onDelete: 'cascade' }),
+    /** Kept (as null) after the reported person deletes their account, for moderation records. */
+    targetUserId: uuid().references(() => user.id, { onDelete: 'set null' }),
     messageId: uuid().references(() => messages.id, { onDelete: 'set null' }),
     activityId: uuid().references(() => activities.id, { onDelete: 'set null' }),
     reason: text().notNull(),

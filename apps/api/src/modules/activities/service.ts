@@ -1,5 +1,7 @@
 import {
+  DELETED_ACCOUNT,
   ERROR_CODES,
+  isDeletedAccount,
   LIMITS,
   placeLabel,
   type ActivityDetail,
@@ -29,6 +31,7 @@ import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
 import { homePlace, nearestPlace, originFor } from '../profiles/service';
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
+import type { ChangeResult } from './announce';
 import { countHosted, findActivitySummaries, findAttendees, upcoming } from './queries';
 
 const GROUP_CATEGORY: Record<ActivityGroup, string> = {
@@ -71,7 +74,10 @@ export async function getActivityDetail(
     ...summary,
     description: extra?.description ?? '',
     attendees: await findAttendees(db, urls, id, viewerId),
-    host: { ...summary.host, hostedCount: await countHosted(db, summary.host.id) },
+    host: {
+      ...summary.host,
+      hostedCount: isDeletedAccount(summary.host) ? 0 : await countHosted(db, summary.host.id),
+    },
   };
 }
 
@@ -492,32 +498,38 @@ export async function cancelActivity(
 ) {
   return db.transaction(async (tx) => {
     const row = await lockForHost(tx, host.id, activityId);
+    const who = firstName(host.name);
+    return cancelLocked(tx, row, {
+      stopRepeating,
+      line: `${who} cancelled this activity`,
+      notice: { title: `Cancelled: ${row.title}`, body: `${who} called it off.` },
+    });
+  });
+}
+
+/** Cancels an activity whose row the caller has locked, and clears its waitlist. */
+export async function cancelLocked(
+  tx: Tx,
+  row: typeof activities.$inferSelect,
+  {
+    stopRepeating,
+    line,
+    notice,
+  }: { stopRepeating: boolean; line: string; notice: { title: string; body: string } },
+): Promise<ChangeResult> {
+  await tx.update(activities).set({ cancelledAt: new Date() }).where(eq(activities.id, row.id));
+  if (stopRepeating && row.seriesId) {
     await tx
       .update(activities)
-      .set({ cancelledAt: new Date() })
-      .where(eq(activities.id, activityId));
-    if (stopRepeating && row.seriesId) {
-      await tx
-        .update(activities)
-        .set({ repeatsWeekly: false })
-        .where(eq(activities.seriesId, row.seriesId));
-    }
-    const message = await insertSystemMessage(
-      tx,
-      activityId,
-      `${firstName(host.name)} cancelled this activity`,
-    );
-    const waiting = await tx
-      .delete(activityWaitlist)
-      .where(eq(activityWaitlist.activityId, activityId))
-      .returning({ userId: activityWaitlist.userId });
-    return {
-      messages: [message],
-      promoted: [],
-      waiting: waiting.map((w) => w.userId),
-      notice: { title: `Cancelled: ${row.title}`, body: `${firstName(host.name)} called it off.` },
-    };
-  });
+      .set({ repeatsWeekly: false })
+      .where(eq(activities.seriesId, row.seriesId));
+  }
+  const message = await insertSystemMessage(tx, row.id, line);
+  const waiting = await tx
+    .delete(activityWaitlist)
+    .where(eq(activityWaitlist.activityId, row.id))
+    .returning({ userId: activityWaitlist.userId });
+  return { messages: [message], promoted: [], waiting: waiting.map((w) => w.userId), notice };
 }
 
 /** Leaves an activity. Hosts can't leave their own activity. Leaving twice is a no-op. */
@@ -606,7 +618,7 @@ export async function myActivities(
       lastMessage: m
         ? {
             kind: m.kind as 'user' | 'system',
-            senderName: m.senderName,
+            senderName: m.senderName ?? DELETED_ACCOUNT.name,
             body: m.body,
             mine: m.senderId === userId,
           }

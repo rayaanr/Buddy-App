@@ -1,4 +1,9 @@
-import type { ChatMessage, MessagesPage, SendMessageInput } from '@buddy/shared';
+import {
+  DELETED_ACCOUNT,
+  type ChatMessage,
+  type MessagesPage,
+  type SendMessageInput,
+} from '@buddy/shared';
 import { and, asc, desc, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
@@ -49,7 +54,12 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
     id: r.id,
     activityId: r.activityId,
     kind: r.kind as ChatMessage['kind'],
-    sender: r.senderId ? (byId.get(r.senderId) ?? null) : null,
+    // A person's own message whose sender is gone: they deleted their account.
+    sender: r.senderId
+      ? (byId.get(r.senderId) ?? DELETED_ACCOUNT)
+      : r.kind === 'user'
+        ? DELETED_ACCOUNT
+        : null,
     body: r.body,
     createdAt: r.createdAt.toISOString(),
   }));

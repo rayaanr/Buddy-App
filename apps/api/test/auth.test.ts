@@ -1,8 +1,16 @@
-import type { ActivitySummary, Me } from '@buddy/shared';
-import { eq } from 'drizzle-orm';
+import type { ActivityDetail, ActivitySummary, Me, MessagesPage } from '@buddy/shared';
+import { randomUUID } from 'node:crypto';
+import { and, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { activities, activityMembers, profiles, user, verification } from '../src/db/schema';
+import {
+  activities,
+  activityMembers,
+  profiles,
+  reports,
+  user,
+  verification,
+} from '../src/db/schema';
 import { useTestApp } from './harness';
 
 const t = useTestApp();
@@ -110,34 +118,95 @@ describe('PATCH /v1/me', () => {
 });
 
 describe('DELETE /v1/me', () => {
-  it("removes the account, its data and its spots in others' activities", async () => {
-    // Nethmi hosts two activities and is a guest in others.
-    const { headers, userId } = await t.signIn('nethmi@buddy.test');
-    const before = await t.deps.db
+  /** Nethmi hosts the Sunset 5K and the Saturday 10K, and has chatted in both. */
+  async function nethmisRun() {
+    const db = t.deps.db;
+    const [run] = await db
       .select({ id: activities.id })
       .from(activities)
-      .where(eq(activities.hostId, userId));
-    expect(before).toHaveLength(2);
+      .where(eq(activities.title, 'Sunset 5K at Galle Face'));
+    const [guest] = await db
+      .select({ email: user.email })
+      .from(activityMembers)
+      .innerJoin(user, eq(user.id, activityMembers.userId))
+      .where(and(eq(activityMembers.activityId, run!.id), eq(activityMembers.role, 'guest')))
+      .limit(1);
+    return { id: run!.id, guestEmail: guest!.email };
+  }
 
+  it('removes the account and its private data; the old session stops working', async () => {
+    const { headers, userId } = await t.signIn('nethmi@buddy.test');
     const res = await t.call('/v1/me', { method: 'DELETE', headers });
     expect(res.status).toBe(204);
 
     const db = t.deps.db;
     expect(await db.select().from(user).where(eq(user.id, userId))).toHaveLength(0);
     expect(await db.select().from(profiles).where(eq(profiles.userId, userId))).toHaveLength(0);
-    expect(await db.select().from(activities).where(eq(activities.hostId, userId))).toHaveLength(0);
     expect(
       await db.select().from(activityMembers).where(eq(activityMembers.userId, userId)),
     ).toHaveLength(0);
-
-    // The old session no longer works.
     expect((await t.call('/v1/me', { headers })).status).toBe(401);
+  });
 
-    // Someone else's feed no longer shows her runs.
+  it('cancels upcoming activities they host, so guests are told instead of losing them', async () => {
+    const run = await nethmisRun();
+    const { headers } = await t.signIn('nethmi@buddy.test');
+    await t.call('/v1/me', { method: 'DELETE', headers });
+
+    const guest = await t.signIn(run.guestEmail);
+    const detail = await t.call<ActivityDetail>(`/v1/activities/${run.id}`, {
+      headers: guest.headers,
+    });
+    expect(detail.status).toBe(200);
+    expect(detail.body).toMatchObject({
+      cancelled: true,
+      host: { id: '', name: 'Deleted account' },
+    });
+
+    const chat = await t.call<MessagesPage>(`/v1/activities/${run.id}/chat/messages`, {
+      headers: guest.headers,
+    });
+    const bodies = chat.body.messages.map((m) => m.body);
+    expect(bodies.at(-1)).toBe('Nethmi deleted their account, so this activity is off');
+    // Her own message stays, attributed to a deleted account.
+    const hers = chat.body.messages.find((m) => m.body.startsWith('Hi all, meeting by'));
+    expect(hers?.sender).toMatchObject({ id: '', name: 'Deleted account' });
+
+    // Other people's Discover no longer shows it.
     const other = await t.signIn('kavindu@buddy.test');
     const feed = await t.call<{ activities: ActivitySummary[] }>('/v1/activities', {
       headers: other.headers,
     });
-    expect(feed.body.activities.some((a) => a.host.name === 'Nethmi')).toBe(false);
+    expect(feed.body.activities.some((a) => a.id === run.id)).toBe(false);
+  });
+
+  it('keeps reports about them for moderation', async () => {
+    const reporter = await t.signIn();
+    const nethmi = await t.signIn('nethmi@buddy.test');
+    const filed = await t.call<{ id: string; targetUserId: string }>('/v1/reports', {
+      method: 'POST',
+      headers: reporter.headers,
+      body: { userId: nethmi.userId, reason: 'spam' },
+    });
+    expect(filed.body.targetUserId).toBe(nethmi.userId);
+
+    await t.call('/v1/me', { method: 'DELETE', headers: nethmi.headers });
+    const [row] = await t.deps.db.select().from(reports).where(eq(reports.id, filed.body.id));
+    expect(row).toMatchObject({ reason: 'spam', targetUserId: null });
+  });
+
+  it('stops their weekly series', async () => {
+    const run = await nethmisRun();
+    await t.deps.db
+      .update(activities)
+      .set({ repeatsWeekly: true, seriesId: randomUUID() })
+      .where(eq(activities.id, run.id));
+    const { headers } = await t.signIn('nethmi@buddy.test');
+    await t.call('/v1/me', { method: 'DELETE', headers });
+    const [row] = await t.deps.db
+      .select({ repeatsWeekly: activities.repeatsWeekly })
+      .from(activities)
+      .where(eq(activities.id, run.id));
+    expect(row?.repeatsWeekly).toBe(false);
   });
 });

@@ -7,10 +7,10 @@ import { BackButton, Button, Footer, Heading } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 
 const WHAT_GOES = [
-  'Your profile, photo and interests',
-  'Your messages in every group chat',
-  'Activities you host, for everyone going',
+  'Your profile, photos, interests and email address',
   'Your place in activities and communities you joined',
+  'Upcoming activities you host are cancelled, and everyone going is told',
+  'Messages you sent stay in their chats, shown as from “Deleted account”',
 ];
 
 /**

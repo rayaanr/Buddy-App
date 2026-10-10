@@ -101,6 +101,16 @@ describe('POST /v1/uploads with storage', () => {
     expect(me.status).toBe(400);
   });
 
+  it('deletes their photo from storage when the account is deleted', async () => {
+    const { headers } = await t.signIn();
+    const res = await ticket(headers);
+    r2.upload(res.body.key, 'image/png');
+    await t.call('/v1/me', { method: 'PATCH', headers, body: { avatarKey: res.body.key } });
+    await t.call('/v1/me', { method: 'DELETE', headers });
+    await new Promise((r) => setTimeout(r, 10)); // Removal runs after the response.
+    expect(r2.removed).toContain(res.body.key);
+  });
+
   it('rejects oversized files and non-image types', async () => {
     const { headers } = await t.signIn();
     const big = await t.call('/v1/uploads', {
