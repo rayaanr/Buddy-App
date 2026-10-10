@@ -80,3 +80,23 @@ export const publicProfile = z.object({
   blockedByYou: z.boolean(),
 });
 export type PublicProfile = z.infer<typeof publicProfile>;
+
+/** One entry in the in-app notifications list (the bell). */
+export const appNotification = z.object({
+  id: z.uuid(),
+  /** reminders (activities you're in) or communities (new activities in yours). */
+  kind: z.string(),
+  title: z.string(),
+  body: z.string(),
+  /** Where tapping it goes: activityId, optionally screen: 'chat'. */
+  data: z.record(z.string(), z.string()),
+  read: z.boolean(),
+  createdAt: isoDateTime,
+});
+export type AppNotification = z.infer<typeof appNotification>;
+
+export const notificationsQuery = z.object({
+  /** Older than this (the last one shown), for the next page. */
+  before: isoDateTime.optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(30),
+});

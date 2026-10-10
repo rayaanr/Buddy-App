@@ -2,6 +2,7 @@ import type { LucideIcon, LucideProps } from 'lucide-react-native';
 // One import per icon keeps the rest of Lucide out of the bundle.
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
+import Bell from 'lucide-react-native/icons/bell';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
@@ -111,6 +112,7 @@ export const ShareIcon = icon(
   { size: 19, color: colors.ink, strokeWidth: 1.9 },
   'ShareIcon',
 );
+export const BellIcon = icon(Bell, { size: 20, color: colors.ink, strokeWidth: 1.8 }, 'BellIcon');
 export const SearchIcon = icon(
   Search,
   { size: 18, color: colors.muted, strokeWidth: 2 },

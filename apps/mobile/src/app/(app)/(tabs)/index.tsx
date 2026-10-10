@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { useFeed, useFromCommunities, useMe } from '@/api/queries';
+import { useFeed, useFromCommunities, useMe, useUnreadNotifications } from '@/api/queries';
 import {
   ActivityHeroCard,
   ActivityHeroSkeleton,
@@ -13,11 +13,12 @@ import {
 } from '@/components/activity/ActivityCards';
 import {
   AnimatedView,
-  Avatar,
+  BellIcon,
   ChevronDownIcon,
   Chip,
   EmptyState,
   Heading,
+  IconButton,
   LoadError,
   LocateIcon,
   MapPinIcon,
@@ -29,7 +30,6 @@ import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { LocationSheet } from '@/components/discover/LocationSheet';
 import { currentPointIfAllowed } from '@/lib/location';
 import { useDiscoverStore } from '@/store/discover';
-import { colors } from '@/theme';
 import { fadeIn } from '@/theme/motion';
 
 export default function DiscoverScreen() {
@@ -39,6 +39,7 @@ export default function DiscoverScreen() {
   const searching = useDebounced(search.trim(), 300);
   const isSearch = searching.length >= 2;
   const me = useMe();
+  const unread = useUnreadNotifications().data ?? 0;
   const feed = useFeed(filter, isSearch ? searching : '');
   const fromCommunities = useFromCommunities();
 
@@ -102,13 +103,19 @@ export default function DiscoverScreen() {
           </Text>
           <ChevronDownIcon size={15} />
         </Pressable>
-        <Avatar
-          uri={me.data?.avatarUrl ?? undefined}
-          size={42}
-          fallback={colors.me}
-          onPress={() => router.navigate('/profile')}
-          accessibilityLabel="Your profile"
-        />
+        <View>
+          <IconButton
+            icon={<BellIcon />}
+            label={unread ? `Notifications, ${unread} new` : 'Notifications'}
+            onPress={() => router.push('/notifications')}
+          />
+          {unread ? (
+            <View
+              pointerEvents="none"
+              className="absolute right-0.5 top-0.5 h-3 w-3 rounded-full border-2 border-bg bg-lime"
+            />
+          ) : null}
+        </View>
       </View>
       <Heading className="mt-0.5 px-[22px]">What’s happening</Heading>
       <View className="mt-3.5 px-[22px]">

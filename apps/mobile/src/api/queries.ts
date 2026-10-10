@@ -53,6 +53,8 @@ export const keys = {
   community: (id: string) => ['communities', id] as const,
   communityMembers: (id: string) => ['communities', id, 'members'] as const,
   reports: (status: 'open' | 'resolved') => ['admin', 'reports', status] as const,
+  notifications: ['notifications'] as const,
+  unread: ['notifications', 'unread'] as const,
   user: (id: string) => ['users', id] as const,
   messages: (activityId: string) => ['chat', activityId] as const,
   blocked: ['blocked'] as const,
@@ -438,5 +440,30 @@ export function useLiftSuspension() {
     mutationFn: (userId: string) =>
       unwrap(api.admin.suspensions[':id'].$delete({ param: { id: userId } })),
     onSuccess: () => refreshAfterModeration(qc),
+  });
+}
+
+// ── Notifications (the bell on Discover) ─────────────────────────────────
+
+/** How many are unread; checked every minute and whenever the app comes back. */
+export const useUnreadNotifications = () =>
+  useQuery({
+    queryKey: keys.unread,
+    queryFn: async () => (await unwrap(api.notifications.unread.$get())).unread,
+    refetchInterval: 60_000,
+  });
+
+export const useNotifications = () =>
+  useQuery({
+    queryKey: keys.notifications,
+    queryFn: () => unwrap(api.notifications.$get({ query: { limit: '50' } })),
+  });
+
+/** Opening the list marks everything read (the list keeps showing what was new). */
+export function useMarkNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => unwrap(api.notifications.read.$post()),
+    onSuccess: () => qc.setQueryData(keys.unread, 0),
   });
 }

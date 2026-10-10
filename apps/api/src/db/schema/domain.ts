@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -366,4 +367,27 @@ export const pushTokens = pgTable(
     updatedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [index('push_tokens_user_idx').on(t.userId)],
+);
+
+/**
+ * In-app notifications (the bell on Discover). Everything pushed except chat
+ * messages is kept here too, whether or not that push was switched off.
+ */
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** The push channel it went out on: reminders or communities. */
+    kind: text().notNull(),
+    title: text().notNull(),
+    body: text().notNull(),
+    /** Where tapping it goes, e.g. { activityId, screen: 'chat' }. */
+    data: jsonb().$type<Record<string, string>>().notNull().default({}),
+    readAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [index('notifications_user_created_idx').on(t.userId, t.createdAt)],
 );

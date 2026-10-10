@@ -17,6 +17,7 @@ import { communityRoutes } from './modules/communities/routes';
 import { legalRoutes } from './modules/legal/routes';
 import { meRoutes } from './modules/me/routes';
 import { moderationRoutes } from './modules/moderation/routes';
+import { notificationRoutes } from './modules/notifications/routes';
 import { placeRoutes, venueRoutes } from './modules/places/routes';
 import { reportRoutes } from './modules/safety/routes';
 import { shareRoutes } from './modules/share/routes';
@@ -118,7 +119,8 @@ export function createApp(deps: Deps) {
     .route('/places', placeRoutes(deps))
     .route('/venues', venueRoutes(deps))
     .route('/reports', reportRoutes(deps))
-    .route('/admin', moderationRoutes(deps));
+    .route('/admin', moderationRoutes(deps))
+    .route('/notifications', notificationRoutes(deps));
 
   return app.route('/v1', v1);
 }

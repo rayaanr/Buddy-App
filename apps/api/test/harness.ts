@@ -90,6 +90,8 @@ export function useTestApp(
   const app = createApp(deps);
 
   beforeEach(async () => {
+    // Notifications from the last test may still be saving: let them land first.
+    await (deps.push as { settled?: () => Promise<void> }).settled?.();
     mail.sent.length = 0;
     deps.limiter.reset();
     await seed(deps.db);
