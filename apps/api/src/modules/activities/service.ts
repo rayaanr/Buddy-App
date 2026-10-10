@@ -98,9 +98,8 @@ function checkStartsAt(startsAt: string) {
  * nearest town; without one, the centre of the host's home town.
  */
 async function meetingPoint(db: Db | Tx, hostId: string, at?: { lat: number; lng: number }) {
-  if (at) return { location: at, area: placeLabel(await nearestPlace(db, at)) };
-  const home = await homePlace(db, hostId);
-  return { location: home.location, area: placeLabel(home) };
+  const town = at ? await nearestPlace(db, at) : await homePlace(db, hostId);
+  return { location: at ?? town.location, placeId: town.id, area: placeLabel(town) };
 }
 
 export async function createActivity(
@@ -127,6 +126,7 @@ export async function createActivity(
         startsAt: new Date(input.startsAt),
         place: input.place,
         area: where.area,
+        placeId: where.placeId,
         location: where.location,
         capacity: input.capacity,
         description: input.description,
@@ -401,7 +401,7 @@ export async function updateActivity(
       description: input.description,
       capacity: input.capacity,
       place: input.place,
-      ...(where && { location: where.location, area: where.area }),
+      ...(where && { location: where.location, placeId: where.placeId, area: where.area }),
       startsAt,
       // A new time gets its own reminders.
       ...(timeChanged && { reminderSentAt: null, followUpSentAt: null }),

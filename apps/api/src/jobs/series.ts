@@ -44,6 +44,7 @@ export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
           startsAt,
           place: latest.place,
           area: latest.area,
+          placeId: latest.placeId,
           location: latest.location,
           capacity: latest.capacity,
           description: latest.description,

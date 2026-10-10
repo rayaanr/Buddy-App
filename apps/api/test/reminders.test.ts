@@ -33,6 +33,7 @@ async function activity(title: string, startsIn: string, guests = 1) {
       startsAt: sql`now() + ${sql.raw(`interval '${startsIn}'`)}`,
       place: 'Barefoot Café',
       area: 'Colombo 3',
+      placeId: 1838, // Colombo 3
       location: { lat: 6.8985, lng: 79.8555 },
       capacity: 6,
       createdAt: sql`now() - interval '1 hour'`,

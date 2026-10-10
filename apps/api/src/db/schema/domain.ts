@@ -122,7 +122,12 @@ export const activities = pgTable(
     interest: text(),
     startsAt: timestamp({ withTimezone: true }).notNull(),
     place: text().notNull(),
+    /** The town's name as shown ("Colombo 3"); kept alongside placeId for display. */
     area: text().notNull(),
+    /** The town it's in: the nearest to `location` (see nearestPlace). */
+    placeId: integer()
+      .notNull()
+      .references(() => places.id),
     location: geographyPoint().notNull(),
     capacity: integer().notNull(),
     description: text().notNull().default(''),
@@ -141,6 +146,7 @@ export const activities = pgTable(
     index('activities_starts_at_idx').on(t.startsAt),
     index('activities_host_idx').on(t.hostId),
     index('activities_community_idx').on(t.communityId),
+    index('activities_place_idx').on(t.placeId),
     index('activities_location_gix').using('gist', t.location),
     // One occurrence per series per start time, so the job can't double-post.
     uniqueIndex('activities_series_starts_at_idx').on(t.seriesId, t.startsAt),

@@ -141,6 +141,7 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
         startsAt: start,
         place: a.place,
         area: placeLabel(await town(a.area)),
+        placeId: (await town(a.area)).id,
         location: a.at ?? (await town(a.area)).location,
         capacity: a.capacity,
         description: a.description,

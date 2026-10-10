@@ -209,6 +209,7 @@ describe('history', () => {
           startsAt: new Date(Date.now() - daysAgo * 86_400_000),
           place: 'Galle Face Green',
           area: 'Colombo 3',
+          placeId: 1838, // Colombo 3
           location: { lat: 6.9271, lng: 79.845 },
           capacity: 10,
         })

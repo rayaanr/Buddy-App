@@ -110,7 +110,7 @@ Buddy covers all of Sri Lanka. The `places` table holds ~2,100 towns (postal tow
 | `GET /v1/activities?lat&lng` / `?placeId` | Discover from where you are / a town you're browsing (else home); widens to 50–450 km when it's quiet |
 
 - **Profiles** store a home town (`place_id`), never an address. Distances use the town's centre.
-- **Activities** store the meeting point; `area` is the nearest town's name, worked out by the API.
+- **Activities** store the meeting point and the town it's in (`place_id`, a foreign key to `places`, the town nearest the point); `area` keeps that town's name for display.
 - **Venue search** is pluggable (`src/lib/venues.ts`): `VENUE_PROVIDER=osm` (default; OpenStreetMap via [Photon](https://photon.komoot.io), built for search-as-you-type), `google` (Places API (New) Text Search, needs `GOOGLE_PLACES_API_KEY`; billed per request beyond Google's free tier) or `towns` (no outside service). Results are cached for 10 minutes, and if the provider is down it falls back to towns. Adding a provider means one more `search(query, near)` returning `Venue[]`. For production traffic, run your own Photon (`PHOTON_URL`) rather than the public server.
 - **Data quality.** The source gives some villages a nearby town's coordinates; places sharing a point with two or more others are marked `approximate` and never used to name a location. Towns with a main post office are marked `main` and preferred when naming one.
 - **Updating the towns.** `npx tsx scripts/places/build.ts` prints the SQL; put it in a new migration (rows upsert by id).

@@ -78,6 +78,13 @@
       "when": 1791614111993,
       "tag": "0010_drop_profile_area",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791616466592,
+      "tag": "0011_activity_place",
+      "breakpoints": true
     }
   ]
 }
