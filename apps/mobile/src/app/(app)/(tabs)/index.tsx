@@ -1,6 +1,6 @@
 import { DISCOVER_FILTERS, type DiscoverFilter } from '@buddy/shared';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useFeed, useFromCommunities, useMe } from '@/api/queries';
@@ -14,14 +14,19 @@ import {
 import {
   AnimatedView,
   Avatar,
+  ChevronDownIcon,
   Chip,
   EmptyState,
   Heading,
   LoadError,
+  LocateIcon,
+  MapPinIcon,
   Refresh,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { locationLabel } from '@/lib/activity';
+import { LocationSheet } from '@/components/discover/LocationSheet';
+import { currentPointIfAllowed } from '@/lib/location';
+import { useDiscoverStore } from '@/store/discover';
 import { colors } from '@/theme';
 import { fadeIn } from '@/theme/motion';
 
@@ -32,7 +37,26 @@ export default function DiscoverScreen() {
   const feed = useFeed(filter);
   const fromCommunities = useFromCommunities();
 
-  const [hero, ...rows] = feed.data ?? [];
+  const [hero, ...rows] = feed.data?.activities ?? [];
+  const origin = useDiscoverStore((s) => s.origin);
+  const radiusKm = useDiscoverStore((s) => s.radiusKm);
+  const [where, setWhere] = useState({ open: false, key: 0 });
+  const homeLabel = me.data?.area ?? '';
+  const originLabel =
+    origin.kind === 'here' ? 'Near me' : origin.kind === 'town' ? origin.label : homeLabel;
+  const widenedTo = feed.data && feed.data.radiusKm > radiusKm ? feed.data.radiusKm : null;
+
+  // "Near me" from last time: find the phone again, without asking. If
+  // permission was taken away since, go back to home.
+  const here = useDiscoverStore((s) => s.here);
+  useEffect(() => {
+    if (origin.kind !== 'here' || here) return;
+    void currentPointIfAllowed().then((point) => {
+      const store = useDiscoverStore.getState();
+      if (point) store.setHere(point);
+      else store.setOrigin({ kind: 'home' });
+    });
+  }, [origin.kind, here]);
   const communityItems = fromCommunities.data ?? [];
   const showCommunityRow = filter === 'All' && communityItems.length > 0;
 
@@ -48,9 +72,19 @@ export default function DiscoverScreen() {
       }
     >
       <View className="flex-row items-center justify-between px-[22px]">
-        <Text className="font-sans text-[14px] text-muted">
-          {me.data ? locationLabel(me.data.area) : ''}
-        </Text>
+        <Pressable
+          onPress={() => setWhere((w) => ({ open: true, key: w.key + 1 }))}
+          accessibilityRole="button"
+          accessibilityLabel={`Showing activities ${origin.kind === 'here' ? 'near you' : `near ${originLabel}`}. Change`}
+          hitSlop={8}
+          className="min-w-0 flex-1 flex-row items-center gap-1.5 pr-3 active:opacity-70"
+        >
+          {origin.kind === 'here' ? <LocateIcon size={15} /> : <MapPinIcon size={15} />}
+          <Text className="shrink font-sans-medium text-[14px] text-muted" numberOfLines={1}>
+            {originLabel}
+          </Text>
+          <ChevronDownIcon size={15} />
+        </Pressable>
         <Avatar
           uri={me.data?.avatarUrl ?? undefined}
           size={42}
@@ -97,6 +131,12 @@ export default function DiscoverScreen() {
         </>
       ) : null}
 
+      {widenedTo ? (
+        <Text className="px-[22px] pb-3 font-sans text-[13.5px] leading-[19px] text-muted">
+          Nothing within {radiusKm} km, so this shows up to {widenedTo} km away.
+        </Text>
+      ) : null}
+
       <View className="gap-3 px-[22px]">
         {feed.isLoading ? (
           <>
@@ -123,6 +163,12 @@ export default function DiscoverScreen() {
           />
         ) : null}
       </View>
+      <LocationSheet
+        key={where.key}
+        open={where.open}
+        onClose={() => setWhere((w) => ({ ...w, open: false }))}
+        home={homeLabel}
+      />
     </ScrollView>
   );
 }

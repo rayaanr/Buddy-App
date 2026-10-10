@@ -36,6 +36,7 @@ import {
 } from '@/data/constants';
 import { useNow } from '@/hooks/useNow';
 import { usePickedImage } from '@/hooks/usePickedImage';
+import { VenueField, type Pin } from './VenueField';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { presetDay, shortDay, weekday } from '@/lib/activity';
 import { colors } from '@/theme';
@@ -48,6 +49,8 @@ export interface Draft {
   customDay: string | null;
   time: string;
   where: string;
+  /** The exact meeting point, from venue search or the phone's location. */
+  pin: Pin | null;
   spots: number;
   notes: string;
   /** Post a new one each week. */
@@ -61,6 +64,7 @@ export const newDraft = (): Draft => ({
   customDay: null,
   time: '18:30',
   where: '',
+  pin: null,
   spots: 6,
   notes: '',
   repeat: false,
@@ -76,6 +80,8 @@ export function draftFrom(
     capacity: number;
     description: string;
     repeatsWeekly: boolean;
+    location: { lat: number; lng: number };
+    area: string;
   },
   now = new Date(),
 ): Draft {
@@ -89,6 +95,7 @@ export function draftFrom(
     customDay: preset ? null : day,
     time: clockLabel(at),
     where: a.place,
+    pin: { ...a.location, label: a.area },
     spots: a.capacity,
     notes: a.description,
     repeat: a.repeatsWeekly,
@@ -102,6 +109,8 @@ export interface ActivityValues {
   group: ActivityGroup;
   startsAt: Date;
   place: string;
+  /** Only when a meeting point is pinned. */
+  location?: { lat: number; lng: number };
   capacity: number;
   description: string;
   repeatsWeekly: boolean;
@@ -117,6 +126,8 @@ interface ActivityFormProps {
   minSpots?: number;
   /** The current cover, when editing. */
   initialCover?: string | null;
+  /** Where it goes without a pin, e.g. "Colombo 7" (the host's home town). */
+  fallbackPlace?: string;
   autoFocus?: boolean;
   onSubmit: (values: ActivityValues) => void;
 }
@@ -130,6 +141,7 @@ export function ActivityForm({
   pending,
   minSpots = LIMITS.capacityMin,
   initialCover = null,
+  fallbackPlace = 'your home town',
   autoFocus,
   onSubmit,
 }: ActivityFormProps) {
@@ -164,6 +176,7 @@ export function ActivityForm({
       group,
       startsAt,
       place: draft.where.trim(),
+      location: draft.pin ? { lat: draft.pin.lat, lng: draft.pin.lng } : undefined,
       capacity: draft.spots,
       description: draft.notes.trim(),
       repeatsWeekly: draft.repeat,
@@ -259,11 +272,11 @@ export function ActivityForm({
         </ScrollView>
 
         <SectionLabel className="mb-2.5 mt-[22px]">Where</SectionLabel>
-        <TextField
-          value={draft.where}
-          onChangeText={(where) => set({ where })}
-          placeholder="Venue, park or address"
-          size="md"
+        <VenueField
+          where={draft.where}
+          pin={draft.pin}
+          onChange={(where, pin) => set({ where, pin })}
+          fallback={fallbackPlace}
         />
 
         <View className="mt-3 flex-row items-center justify-between rounded-2xl bg-surface py-3 pl-4 pr-3">

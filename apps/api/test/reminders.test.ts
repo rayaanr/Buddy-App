@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { activities, activityMembers, user } from '../src/db/schema';
 import { sendReminders } from '../src/jobs/reminders';
 import type { PushMessage } from '../src/lib/push';
-import { areaCentre } from '../src/modules/profiles/service';
 import { useTestApp } from './harness';
 
 const sent: { activityId: string; message: PushMessage }[] = [];
@@ -33,8 +32,8 @@ async function activity(title: string, startsIn: string, guests = 1) {
       group: 'Social',
       startsAt: sql`now() + ${sql.raw(`interval '${startsIn}'`)}`,
       place: 'Barefoot Café',
-      area: 'Colombo 03',
-      location: areaCentre('Colombo 03'),
+      area: 'Colombo 3',
+      location: { lat: 6.8985, lng: 79.8555 },
       capacity: 6,
       createdAt: sql`now() - interval '1 hour'`,
     })

@@ -17,7 +17,7 @@ const t = useTestApp();
 describe('demo seed', () => {
   it('gives the demo user something on every screen', async () => {
     const counts = await seed(t.deps.db, { demo: true });
-    expect(counts).toEqual({ users: 16, communities: 6, activities: 21 });
+    expect(counts).toEqual({ users: 16, communities: 6, activities: 24 });
 
     const { headers } = await t.signIn();
     const get = async <T>(path: string) => (await t.call<T>(path, { headers })).body;

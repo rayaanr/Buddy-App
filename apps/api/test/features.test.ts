@@ -32,7 +32,7 @@ const newActivity = {
   group: 'Social',
   startsAt: atLocalTime(1, '18:30').toISOString(),
   place: 'Barefoot Café',
-  area: 'Colombo 03',
+  location: { lat: 6.8985, lng: 79.8555 }, // Barefoot Café, Colombo 3
   capacity: 6,
   description: 'Bring a board if you have one.',
 };
@@ -52,8 +52,9 @@ describe('creating activities', () => {
       goingCount: 1,
       viewer: { hosting: true, joined: false },
       host: { id: userId, hostedCount: 1 },
-      // Area centre stands in for the exact spot.
-      location: { lat: 6.911, lng: 79.851 },
+      // The town is the one nearest the meeting point.
+      location: { lat: 6.8985, lng: 79.8555 },
+      area: 'Colombo 3',
     });
     expect(res.body.coverUrl).toContain('unsplash');
 
@@ -207,7 +208,7 @@ describe('history', () => {
           group: 'Running',
           startsAt: new Date(Date.now() - daysAgo * 86_400_000),
           place: 'Galle Face Green',
-          area: 'Colombo 03',
+          area: 'Colombo 3',
           location: { lat: 6.9271, lng: 79.845 },
           capacity: 10,
         })
@@ -279,7 +280,7 @@ describe('profiles', () => {
     const res = await t.call<PublicProfile>(`/v1/users/${run.host.id}`, { headers });
     expect(res.body).toMatchObject({
       name: 'Nethmi',
-      area: 'Colombo 03',
+      area: 'Colombo 3',
       hostedCount: 2,
       commonInterests: ['Running'],
     });

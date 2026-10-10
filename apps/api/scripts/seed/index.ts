@@ -7,14 +7,13 @@
  *
  * Seeding wipes all data first.
  */
-import { atLocalTime, daysUntilWeekday } from '@buddy/shared';
+import { atLocalTime, daysUntilWeekday, placeLabel } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../../src/db/client';
 import * as s from '../../src/db/schema';
 import { stockCover } from '../../src/modules/activities/service';
-import { areaCentre } from '../../src/modules/profiles/service';
 import { ACTIVITIES, DEMO_ACTIVITIES, type SeedActivity, type When } from './activities';
 import { COMMUNITIES, DEMO_COMMUNITIES, DEMO_MEMBERSHIPS } from './communities';
 import { DEMO_NAME, PEOPLE, emailOf } from './people';
@@ -54,6 +53,17 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
       activities, community_members, communities, profiles, verification, account, session, "user"
     restart identity cascade`);
 
+  // Towns are loaded by a migration; seed data names them.
+  const towns = new Map<string, typeof s.places.$inferSelect>();
+  const town = async (name: string) => {
+    if (!towns.has(name)) {
+      const [row] = await db.select().from(s.places).where(eq(s.places.name, name));
+      if (!row) throw new Error(`Seed names an unknown town: ${name}`);
+      towns.set(name, row);
+    }
+    return towns.get(name)!;
+  };
+
   // People
   const ids = new Map<string, string>();
   for (const p of PEOPLE) {
@@ -69,7 +79,7 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
     });
     await db.insert(s.profiles).values({
       userId: id,
-      area: p.area,
+      placeId: (await town(p.area)).id,
       bio: p.bio,
       interests: p.interests,
       availability: p.availability ?? ['Weekday evenings'],
@@ -130,8 +140,8 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
         interest: a.interest ?? null,
         startsAt: start,
         place: a.place,
-        area: a.area,
-        location: a.at ?? areaCentre(a.area),
+        area: placeLabel(await town(a.area)),
+        location: a.at ?? (await town(a.area)).location,
         capacity: a.capacity,
         description: a.description,
         coverUrl: a.cover ? unsplash(a.cover) : stockCover(a.group),

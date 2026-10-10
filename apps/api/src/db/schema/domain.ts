@@ -19,12 +19,47 @@ const timestamps = {
   createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 };
 
+/**
+ * Towns across Sri Lanka (postal towns, ~2,100), for home towns, browsing and
+ * labelling where activities are. Loaded by a migration from
+ * scripts/places/build.ts; searched by name with pg_trgm.
+ */
+export const places = pgTable(
+  'places',
+  {
+    id: integer().primaryKey(),
+    name: text().notNull(),
+    /** Another name it goes by, e.g. Colombo 7 is Cinnamon Gardens. */
+    aka: text(),
+    nameSi: text(),
+    nameTa: text(),
+    district: text().notNull(),
+    province: text().notNull(),
+    location: geographyPoint().notNull(),
+    /**
+     * The source gives some small places a nearby town's coordinates. Those
+     * are fine for distances but never picked as "the nearest town".
+     */
+    approximate: boolean().notNull().default(false),
+    /** Has a main post office: a town people know, preferred when naming where someone is. */
+    main: boolean().notNull().default(false),
+  },
+  (t) => [index('places_location_gix').using('gist', t.location)],
+);
+
+/** Colombo 7: new profiles start here until the person picks their town. */
+export const DEFAULT_PLACE_ID = 1841;
+
 /** App-specific profile data; one row per auth user, created on first sign-in. */
 export const profiles = pgTable('profiles', {
   userId: uuid()
     .primaryKey()
     .references(() => user.id, { onDelete: 'cascade' }),
-  area: text().notNull().default('Colombo 07'),
+  /** Home town. Distances are measured from its centre, so no exact address is kept. */
+  placeId: integer()
+    .notNull()
+    .default(DEFAULT_PLACE_ID)
+    .references(() => places.id),
   bio: text().notNull().default(''),
   interests: text()
     .array()

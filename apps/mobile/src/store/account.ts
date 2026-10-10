@@ -1,4 +1,3 @@
-import type { Area } from '@buddy/shared';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
@@ -13,7 +12,8 @@ export interface PicksPreview {
 export interface RememberedAccount {
   email: string;
   name: string;
-  area: Area;
+  /** Home town as shown, e.g. "Peradeniya, Kandy". */
+  area: string;
   picks?: PicksPreview;
 }
 
@@ -21,7 +21,7 @@ interface AccountState {
   /** The last account used on this device, for "Continue as Kavindu". */
   remembered: RememberedAccount | null;
   /** Details typed on Sign up, applied once the emailed code is confirmed. */
-  pendingSignUp: { name: string; email: string; area: Area } | null;
+  pendingSignUp: { name: string; email: string; placeId: number; area: string } | null;
 
   remember: (account: Omit<RememberedAccount, 'picks'>) => void;
   rememberPicks: (picks: PicksPreview) => void;

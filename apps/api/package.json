@@ -8,6 +8,8 @@
     "@types/ws": "^8.18.1",
     "auth": "1.7.7",
     "drizzle-kit": "^0.31.11",
+    "lankapost": "^1.0.1",
+    "sri-lanka-postal-locations": "^1.0.0",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",

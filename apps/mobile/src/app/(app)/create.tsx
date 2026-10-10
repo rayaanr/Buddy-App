@@ -16,6 +16,7 @@ export default function CreateActivityScreen() {
       submitLabel="Publish activity"
       pendingLabel="Publishing…"
       pending={create.isPending}
+      fallbackPlace={me.data?.area ?? 'your home town'}
       autoFocus
       onSubmit={(v) => {
         if (!me.data) return;
@@ -24,7 +25,6 @@ export default function CreateActivityScreen() {
             ...v,
             coverKey: v.coverKey ?? undefined,
             startsAt: v.startsAt.toISOString(),
-            area: me.data.area,
           },
           {
             onSuccess: () => {

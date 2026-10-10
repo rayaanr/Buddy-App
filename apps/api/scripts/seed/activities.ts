@@ -1,4 +1,4 @@
-import type { ActivityGroup, Area, Interest } from '@buddy/shared';
+import type { ActivityGroup, Interest } from '@buddy/shared';
 
 /**
  * When an activity starts, in Colombo time. Day labels resolve to their next
@@ -19,8 +19,9 @@ export interface SeedActivity {
   interest?: Interest;
   when: When;
   place: string;
-  area: Area;
-  /** Exact spot; defaults to the area centre. */
+  /** Town, as named in the places table. */
+  area: string;
+  /** Exact spot; defaults to the town centre. */
   at?: { lat: number; lng: number };
   capacity: number;
   /** Everyone going, host included. */
@@ -46,7 +47,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Running',
     when: { day: 'Tonight', time: '18:00' },
     place: 'Galle Face Green',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.9271, lng: 79.845 },
     capacity: 15,
     going: 9,
@@ -64,7 +65,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Board games',
     when: { day: 'Tonight', time: '19:30' },
     place: 'The Commons',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.91, lng: 79.852 },
     capacity: 8,
     going: 6,
@@ -81,7 +82,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Padel',
     when: { day: 'Tomorrow', time: '06:30' },
     place: 'Padel Lanka',
-    area: 'Colombo 05',
+    area: 'Colombo 5',
     at: { lat: 6.885, lng: 79.866 },
     capacity: 4,
     going: 4,
@@ -103,7 +104,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Life drawing',
     when: { day: 'Sat', time: '10:00' },
     place: 'Lionel Wendt Art Centre',
-    area: 'Colombo 07',
+    area: 'Colombo 7',
     at: { lat: 6.9045, lng: 79.862 },
     capacity: 12,
     going: 5,
@@ -138,7 +139,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Food markets',
     when: { day: 'Sun', time: '08:30' },
     place: 'Pettah Floating Market',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.9335, lng: 79.853 },
     capacity: 8,
     going: 4,
@@ -171,7 +172,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Running',
     when: { day: 'Sat', time: '06:00' },
     place: 'Viharamahadevi Park',
-    area: 'Colombo 07',
+    area: 'Colombo 7',
     at: { lat: 6.913, lng: 79.861 },
     capacity: 20,
     going: 11,
@@ -188,7 +189,7 @@ export const ACTIVITIES: SeedActivity[] = [
     interest: 'Life drawing',
     when: { day: 'Sun', time: '15:00' },
     place: 'Gangaramaya Temple',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.9165, lng: 79.8565 },
     capacity: 10,
     going: 4,
@@ -206,6 +207,50 @@ export const ACTIVITIES: SeedActivity[] = [
  * filter, and past activities for Profile → Recent.
  */
 export const DEMO_ACTIVITIES: SeedActivity[] = [
+  // Outside Colombo, so Discover has something when browsing other towns.
+  {
+    title: 'Kandy Lake evening walk',
+    category: 'SOCIAL',
+    group: 'Social',
+    when: { day: 'Tomorrow', time: '17:30' },
+    place: 'Kandy Lake, by the Queen’s Hotel',
+    area: 'Kandy',
+    at: { lat: 7.2925, lng: 80.6413 },
+    capacity: 10,
+    going: 4,
+    host: 'Chamod',
+    description: 'A slow lap of the lake, about 3.5 km, then tea at the Empire Café.',
+    messages: [['Chamod', 'Meet at the Queen’s Hotel corner, not the temple side.']],
+  },
+  {
+    title: 'Galle Fort photo walk',
+    category: 'PHOTOGRAPHY',
+    group: 'Creative',
+    interest: 'Photography',
+    when: { day: 'Sat', time: '16:30' },
+    place: 'Galle Fort Lighthouse',
+    area: 'Galle',
+    at: { lat: 6.0248, lng: 80.2193 },
+    capacity: 8,
+    going: 3,
+    host: 'Dinithi',
+    description: 'Golden hour on the ramparts. Any camera, phones welcome.',
+    messages: [['Dinithi', 'Sunset is around 18:10, so we’ll have plenty of light.']],
+  },
+  {
+    title: 'Little Adam’s Peak sunrise',
+    category: 'HIKING',
+    group: 'Sports',
+    when: { day: 'Sun', time: '05:15' },
+    place: 'Little Adam’s Peak trailhead',
+    area: 'Ella',
+    at: { lat: 6.8667, lng: 81.0594 },
+    capacity: 12,
+    going: 5,
+    host: 'Pasindu',
+    description: 'Easy 45-minute climb in the dark for sunrise over Ella Gap. Bring a torch.',
+    messages: [['Pasindu', 'Head torches if you have them; the steps are uneven.']],
+  },
   // Hosted by the demo user, with guests chatting (Chats → Hosting).
   {
     title: 'Wingspan and coffee',
@@ -214,7 +259,7 @@ export const DEMO_ACTIVITIES: SeedActivity[] = [
     interest: 'Board games',
     when: { day: 'Tomorrow', time: '19:00' },
     place: 'Barefoot Café',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.8985, lng: 79.8555 },
     capacity: 5,
     going: 4,
@@ -270,7 +315,7 @@ export const DEMO_ACTIVITIES: SeedActivity[] = [
     interest: 'Yoga',
     when: { day: 'Tomorrow', time: '06:00' },
     place: 'Independence Memorial Hall',
-    area: 'Colombo 07',
+    area: 'Colombo 7',
     at: { lat: 6.9036, lng: 79.8676 },
     capacity: 6,
     going: 6,
@@ -378,7 +423,7 @@ export const DEMO_ACTIVITIES: SeedActivity[] = [
     interest: 'Board games',
     when: { daysAgo: 6, time: '19:30' },
     place: 'Barefoot Café',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.8985, lng: 79.8555 },
     capacity: 6,
     going: 5,
@@ -398,7 +443,7 @@ export const DEMO_ACTIVITIES: SeedActivity[] = [
     interest: 'Running',
     when: { daysAgo: 3, time: '18:00' },
     place: 'Galle Face Green',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     at: { lat: 6.9271, lng: 79.845 },
     capacity: 15,
     going: 10,

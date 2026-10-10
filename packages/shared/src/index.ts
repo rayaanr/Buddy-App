@@ -3,6 +3,7 @@ export * from './time';
 export * from './schemas/common';
 export * from './schemas/activity';
 export * from './schemas/user';
+export * from './schemas/place';
 export * from './schemas/community';
 export * from './schemas/chat';
 export * from './schemas/upload';

@@ -11,6 +11,7 @@ import { activityRoutes } from './modules/activities/routes';
 import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { meRoutes } from './modules/me/routes';
+import { placeRoutes, venueRoutes } from './modules/places/routes';
 import { reportRoutes } from './modules/safety/routes';
 import { shareRoutes } from './modules/share/routes';
 import { uploadRoutes } from './modules/uploads/routes';
@@ -78,6 +79,8 @@ export function createApp(deps: Deps) {
     .route('/communities', communityRoutes(deps))
     .route('/users', userRoutes(deps))
     .route('/uploads', uploadRoutes(deps))
+    .route('/places', placeRoutes(deps))
+    .route('/venues', venueRoutes(deps))
     .route('/reports', reportRoutes(deps));
 
   return app.route('/v1', v1);

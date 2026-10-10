@@ -42,6 +42,9 @@ import {
 } from './service';
 
 const HISTORY_LIMIT = 10;
+/** Discover widens to these (km) while it has fewer than ENOUGH to show; 450 covers the island. */
+const WIDER_KM = [50, 100, 200, 450];
+const ENOUGH = 3;
 
 export function activityRoutes(deps: Deps) {
   const { db, urls, hub, push } = deps;
@@ -95,18 +98,27 @@ export function activityRoutes(deps: Deps) {
         const me = currentUser(c);
         const q = c.req.valid('query');
         const near = await originFor(db, me.id, q);
-        const items = await findActivitySummaries(db, urls, {
-          viewerId: me.id,
-          near,
-          where: [
-            upcoming(),
-            notCancelled(),
-            filterCondition(q.filter),
-            sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${q.radiusKm * 1000})`,
-          ],
-          limit: q.limit,
-        });
-        return c.json({ activities: items });
+        const within = (km: number) =>
+          findActivitySummaries(db, urls, {
+            viewerId: me.id,
+            near,
+            where: [
+              upcoming(),
+              notCancelled(),
+              filterCondition(q.filter),
+              sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${km * 1000})`,
+            ],
+            limit: q.limit,
+          });
+        // Outside the cities there may be nothing close: widen until there's something.
+        let radiusKm = q.radiusKm;
+        let items = await within(radiusKm);
+        for (const wider of WIDER_KM) {
+          if (items.length >= ENOUGH || wider <= radiusKm) continue;
+          radiusKm = wider;
+          items = await within(wider);
+        }
+        return c.json({ activities: items, radiusKm });
       })
 
       // "From your communities": upcoming activities in communities you joined, not yet joined.

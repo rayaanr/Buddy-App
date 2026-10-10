@@ -34,7 +34,7 @@ npm run format        # prettier + tailwind class sorting
 
 | Flow           | How to see it                                                                                                                                     |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| New user       | Sign up (name, email, area) → 6-digit code from email → pick 3+ interests → Discover (no swipe deck on the first visit)                           |
+| New user       | Sign up (name, email, town) → 6-digit code from email → pick 3+ interests → Discover (no swipe deck on the first visit)                           |
 | Returning user | Reopen the app while signed in, or Log out → **Continue as …** → code. The "Picked for you" deck opens.                                           |
 | Swipe deck     | Drag right or tap ✓ to open that activity's details. Drag left or tap ✕ to skip. After the last skip: "You're all caught up."                     |
 | Core loop      | Discover → activity → **Join** → **Open group chat** → messages go Sending… → Sent ✓ → Seen ✓✓ when another member reads them, live over a socket |
@@ -90,8 +90,11 @@ src/
 ## Notes
 
 - Signed out, the server can't personalise anything, so the "Good to see you" screen shows a picks preview saved on the device at the last session.
-- Edit profile is one page (photo, name, bio, area, interests, when you're free) saved together. Area is a chip choice, not free text: distances are measured from a known area.
-- Activities are placed at their area's centre until the Create screen gets a map picker.
+- Edit profile is one page (photo, name, bio, home town, interests, when you're free) saved together. The home town is picked from a search of ~2,100 Sri Lankan towns (or "Use my current location"); only the town is stored, and distances are measured from its centre.
+- **Location is only asked for when someone taps** "Use my current location", "Near me" or "Use where I am" (`src/lib/location.ts`), never at launch. On later launches "Near me" refreshes without asking, and falls back to home if permission was taken away.
+- **Discover's location pill** (top left) switches between Near me, Home and any town (`src/store/discover.ts`, remembered on the device), with a 5/10/25/50 km distance. When nothing's that close the API widens the search and the screen says so.
+- **Where (New/Edit activity)** suggests venues as you type (OpenStreetMap or Google, set on the API) or pins where you are; the town label comes from the pin. With no pin, the activity shows in the host's home town. The provider's credit line ("© OpenStreetMap contributors") is shown under suggestions, as its licence requires.
+- A map to drag the pin isn't built yet: it needs a native map library (MapLibre for OpenStreetMap tiles, or Google Maps with an API key).
 - Profile photos upload straight to Cloudflare R2 (`src/api/upload.ts`). Without the API's `R2_*` settings, uploads are off and picking a photo shows “Photo uploads are not available yet”. `expo-image-picker` is a native module, so a development build is needed after installing (Expo Go has it built in).
 - Settings → Notifications switches group chat messages and reminders/changes off per account; members can mute a single group chat from the activity's ⋯ menu (reminders and changes still arrive). The API applies both when sending.
 - Tapping a notification opens the activity's chat (messages, reminders) or its page (time changes, cancellations). Android gets two channels: Group chats, and Reminders and changes.

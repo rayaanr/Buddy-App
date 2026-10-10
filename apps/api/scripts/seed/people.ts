@@ -1,10 +1,11 @@
-import type { Area, Availability, Interest } from '@buddy/shared';
+import type { Availability, Interest } from '@buddy/shared';
 
 export interface SeedPerson {
   name: string;
   /** randomuser.me portrait path, e.g. "men/32". */
   face: string;
-  area: Area;
+  /** Home town, as named in the places table. */
+  area: string;
   /** "Member since", as "Mon YYYY". */
   since: string;
   bio: string;
@@ -22,7 +23,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: DEMO_NAME,
     face: 'men/32',
-    area: 'Colombo 07',
+    area: 'Colombo 7',
     since: 'Mar 2025',
     bio: '',
     interests: ['Running', 'Climbing', 'Board games'],
@@ -30,7 +31,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Nethmi',
     face: 'women/44',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     since: 'Jan 2025',
     bio: 'Sunset runs on the Green most evenings. Happy to pace beginners.',
     interests: ['Running', 'Yoga', 'Food markets'],
@@ -38,7 +39,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Dilan',
     face: 'men/22',
-    area: 'Colombo 03',
+    area: 'Colombo 3',
     since: 'Mar 2025',
     bio: 'Board game collector. If you haven’t played Wingspan yet, I’ll teach you.',
     interests: ['Board games', 'Live music', 'Cooking'],
@@ -46,7 +47,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Shehani',
     face: 'women/65',
-    area: 'Colombo 05',
+    area: 'Colombo 5',
     since: 'Jun 2025',
     bio: 'Early padel, late brunch.',
     interests: ['Padel', 'Running', 'Food markets'],
@@ -54,7 +55,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Amaya',
     face: 'women/68',
-    area: 'Colombo 07',
+    area: 'Colombo 7',
     since: 'Nov 2024',
     bio: 'Illustrator. Running untutored life drawing at the Lionel Wendt.',
     interests: ['Life drawing', 'Photography', 'Live music'],
@@ -110,7 +111,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Ashan',
     face: 'men/52',
-    area: 'Colombo 05',
+    area: 'Colombo 5',
     since: 'Dec 2024',
     bio: 'Padel and plain tea.',
     interests: ['Padel', 'Cricket', 'Food markets'],
@@ -126,7 +127,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Chamod',
     face: 'men/64',
-    area: 'Rajagiriya',
+    area: 'Peradeniya',
     since: 'Aug 2025',
     bio: '',
     interests: ['Cricket', 'Cycling', 'Climbing'],
@@ -134,7 +135,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Dinithi',
     face: 'women/79',
-    area: 'Colombo 07',
+    area: 'Galle',
     since: 'May 2025',
     bio: '',
     interests: ['Life drawing', 'Photography', 'Yoga'],
@@ -142,7 +143,7 @@ export const PEOPLE: SeedPerson[] = [
   {
     name: 'Pasindu',
     face: 'men/85',
-    area: 'Battaramulla',
+    area: 'Ella',
     since: 'Jun 2025',
     bio: '',
     interests: ['Board games', 'Running', 'Padel'],

@@ -1,6 +1,7 @@
 import {
   ERROR_CODES,
   LIMITS,
+  placeLabel,
   type ActivityDetail,
   type ActivityGroup,
   type CreateActivityInput,
@@ -24,7 +25,7 @@ import {
 import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
-import { areaCentre, originFor } from '../profiles/service';
+import { homePlace, nearestPlace, originFor } from '../profiles/service';
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 import { countHosted, findActivitySummaries, findAttendees, upcoming } from './queries';
 
@@ -92,6 +93,16 @@ function checkStartsAt(startsAt: string) {
   }
 }
 
+/**
+ * Where an activity is: the meeting point the host picked, labelled with the
+ * nearest town; without one, the centre of the host's home town.
+ */
+async function meetingPoint(db: Db | Tx, hostId: string, at?: { lat: number; lng: number }) {
+  if (at) return { location: at, area: placeLabel(await nearestPlace(db, at)) };
+  const home = await homePlace(db, hostId);
+  return { location: home.location, area: placeLabel(home) };
+}
+
 export async function createActivity(
   db: Db,
   urls: Urls,
@@ -103,6 +114,7 @@ export async function createActivity(
     throw forbidden('That image was not uploaded by you');
   }
 
+  const where = await meetingPoint(db, host.id, input.location);
   const id = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(activities)
@@ -114,8 +126,8 @@ export async function createActivity(
         interest: input.interest ?? null,
         startsAt: new Date(input.startsAt),
         place: input.place,
-        area: input.area,
-        location: input.location ?? areaCentre(input.area),
+        area: where.area,
+        location: where.location,
         capacity: input.capacity,
         description: input.description,
         coverUrl: urls.fromKey(input.coverKey) ?? stockCover(input.group),
@@ -376,7 +388,11 @@ export async function updateActivity(
 
     const startsAt = input.startsAt === undefined ? undefined : new Date(input.startsAt);
     const timeChanged = !!startsAt && startsAt.getTime() !== row.startsAt.getTime();
-    const placeChanged = input.place !== undefined && input.place !== row.place;
+    const relocated =
+      !!input.location &&
+      (input.location.lat !== row.location.lat || input.location.lng !== row.location.lng);
+    const placeChanged = (input.place !== undefined && input.place !== row.place) || relocated;
+    const where = relocated ? await meetingPoint(tx, host.id, input.location) : null;
     const group = input.group ?? (row.group as ActivityGroup);
     const groupChanged = group !== row.group;
 
@@ -385,6 +401,7 @@ export async function updateActivity(
       description: input.description,
       capacity: input.capacity,
       place: input.place,
+      ...(where && { location: where.location, area: where.area }),
       startsAt,
       // A new time gets its own reminders.
       ...(timeChanged && { reminderSentAt: null, followUpSentAt: null }),
@@ -433,7 +450,7 @@ export async function updateActivity(
 
     const changes = [
       timeChanged && `the time to ${whenText(startsAt!)}`,
-      placeChanged && `the place to ${input.place}`,
+      placeChanged && `the place to ${input.place ?? row.place}`,
     ].filter(Boolean);
     if (!changes.length) return { ...moved, notice: null };
 
@@ -444,7 +461,7 @@ export async function updateActivity(
     );
     const notice = {
       title: input.title ?? row.title,
-      body: `Now ${[timeChanged && whenText(startsAt!), placeChanged && `at ${input.place}`].filter(Boolean).join(', ')}`,
+      body: `Now ${[timeChanged && whenText(startsAt!), placeChanged && `at ${input.place ?? row.place}`].filter(Boolean).join(', ')}`,
     };
     return { messages: [message, ...moved.messages], promoted: moved.promoted, notice };
   });

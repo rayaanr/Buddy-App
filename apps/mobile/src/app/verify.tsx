@@ -45,8 +45,8 @@ export default function VerifyScreen() {
       const user = await verifySignInCode(email, otp, pending?.name);
       const store = useAccountStore.getState();
       if (pending) {
-        // New account: save the area picked on Sign up before onboarding.
-        const me = await unwrap(api.me.$patch({ json: { area: pending.area } }));
+        // New account: save the town picked on Sign up before onboarding.
+        const me = await unwrap(api.me.$patch({ json: { placeId: pending.placeId } }));
         qc.setQueryData(keys.me, me);
         store.setPendingSignUp(null);
       } else {
@@ -56,7 +56,7 @@ export default function VerifyScreen() {
       store.remember({
         email,
         name: user.name,
-        area: pending?.area ?? store.remembered?.area ?? 'Colombo 07',
+        area: pending?.area ?? store.remembered?.area ?? 'Sri Lanka',
       });
       // The root navigator switches screens when the session updates.
     } catch (err) {

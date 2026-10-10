@@ -9,6 +9,7 @@ import { findActivitySummaries, pointSql, upcoming } from './queries';
 
 const DECK_SIZE = 5;
 const RADIUS_KM = 25;
+const WIDER_KM = [100, 450];
 
 /**
  * "Picked for you": open activities nearby that you're not part of, ranked by
@@ -34,18 +35,25 @@ export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick
     ? sql`case when ${activities.communityId} in ${communityIds} then 2 else 0 end`
     : sql`0`;
 
-  const candidates = await findActivitySummaries(db, urls, {
-    viewerId: userId,
-    near,
-    where: [
-      upcoming(),
-      sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${RADIUS_KM * 1000})`,
-      sql`not exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${userId})`,
-      sql`(select count(*) from activity_members m where m.activity_id = ${activities.id}) < ${activities.capacity}`,
-    ],
-    orderBy: [sql`(${communityScore}) + (${interestScore}) desc`, sql`${activities.startsAt} asc`],
-    limit: DECK_SIZE,
-  });
+  const within = (km: number) =>
+    findActivitySummaries(db, urls, {
+      viewerId: userId,
+      near,
+      where: [
+        upcoming(),
+        sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${km * 1000})`,
+        sql`not exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${userId})`,
+        sql`(select count(*) from activity_members m where m.activity_id = ${activities.id}) < ${activities.capacity}`,
+      ],
+      orderBy: [
+        sql`(${communityScore}) + (${interestScore}) desc`,
+        sql`${activities.startsAt} asc`,
+      ],
+      limit: DECK_SIZE,
+    });
+  // Few people nearby (outside the cities): look further before giving up.
+  let candidates = await within(RADIUS_KM);
+  for (const km of WIDER_KM) if (candidates.length < DECK_SIZE) candidates = await within(km);
 
   const joined = new Set(communityIds);
   return candidates.map((activity) => ({

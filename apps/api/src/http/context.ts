@@ -5,6 +5,7 @@ import type { Mailer } from '../lib/mailer';
 import type { PushSender } from '../lib/push';
 import type { Storage } from '../lib/storage';
 import type { Urls } from '../lib/urls';
+import type { VenueSearch } from '../lib/venues';
 import type { Logger } from '../logger';
 import type { ChatHub } from '../realtime/hub';
 
@@ -20,6 +21,7 @@ export interface Deps {
   urls: Urls;
   hub: ChatHub;
   push: PushSender;
+  venues: VenueSearch;
 }
 
 export interface SessionUser {

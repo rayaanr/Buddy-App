@@ -15,7 +15,9 @@ describe('email code sign-in', () => {
     expect(me.body).toMatchObject({
       email: 'new.person@buddy.test',
       name: 'Ruwani Silva',
-      area: 'Colombo 07',
+      // New profiles start in Colombo 7 until the person picks their town.
+      area: 'Colombo 7',
+      place: { id: 1841, name: 'Colombo 7', aka: 'Cinnamon Gardens', district: 'Colombo' },
       interests: [],
       onboarded: false,
       stats: { joined: 0, hosted: 0, communities: 0 },
@@ -69,13 +71,14 @@ describe('PATCH /v1/me', () => {
       body: {
         interests: ['Running', 'Yoga', 'Cricket'],
         availability: ['Weekend mornings'],
-        area: 'Dehiwala',
+        placeId: 863, // Peradeniya
       },
     });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       onboarded: true,
-      area: 'Dehiwala',
+      area: 'Peradeniya, Kandy',
+      place: { name: 'Peradeniya', district: 'Kandy', province: 'Central' },
       interests: ['Running', 'Yoga', 'Cricket'],
     });
   });
@@ -87,12 +90,12 @@ describe('PATCH /v1/me', () => {
     expect(row?.name).toBe('Kavindu S. Perera');
   });
 
-  it('rejects fewer than three interests and unknown areas', async () => {
+  it('rejects fewer than three interests and unknown towns', async () => {
     const { headers } = await t.signIn();
     const few = await t.call('/v1/me', { method: 'PATCH', headers, body: { interests: ['Yoga'] } });
     expect(few.status).toBe(400);
-    const area = await t.call('/v1/me', { method: 'PATCH', headers, body: { area: 'Kandy' } });
-    expect(area.status).toBe(400);
+    const town = await t.call('/v1/me', { method: 'PATCH', headers, body: { placeId: 999999 } });
+    expect(town.status).toBe(400);
   });
 
   it("refuses an avatar key that belongs to someone else's upload", async () => {

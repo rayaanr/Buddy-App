@@ -19,6 +19,7 @@ import {
 
 import { authClient } from './auth-client';
 import { useAccountStore } from '@/store/account';
+import { useDiscoverStore } from '@/store/discover';
 import { ApiRequestError, api, unwrap } from './client';
 
 export const queryClient = new QueryClient({
@@ -35,7 +36,8 @@ export const queryClient = new QueryClient({
 /** Query keys in one place, so mutations invalidate exactly what they affect. */
 export const keys = {
   me: ['me'] as const,
-  feed: (filter: DiscoverFilter) => ['activities', 'feed', filter] as const,
+  feed: (filter: DiscoverFilter, where: Record<string, string>) =>
+    ['activities', 'feed', filter, where] as const,
   fromCommunities: ['activities', 'from-communities'] as const,
   picks: ['activities', 'picks'] as const,
   mine: (role: 'joined' | 'hosting') => ['activities', 'mine', role] as const,
@@ -54,10 +56,56 @@ export const keys = {
 export const useMe = (enabled = true) =>
   useQuery({ queryKey: keys.me, queryFn: () => unwrap(api.me.$get()), enabled });
 
-export const useFeed = (filter: DiscoverFilter) =>
+/** Discover, measured from where the Discover store says (home, near me, or a town). */
+export function useFeed(filter: DiscoverFilter) {
+  const origin = useDiscoverStore((s) => s.origin);
+  const radiusKm = useDiscoverStore((s) => s.radiusKm);
+  const here = useDiscoverStore((s) => s.here);
+  const where: Record<string, string> = { radiusKm: String(radiusKm) };
+  if (origin.kind === 'here' && here) {
+    // ~100 m is plenty, and keeps small movements from refetching.
+    where.lat = here.lat.toFixed(3);
+    where.lng = here.lng.toFixed(3);
+  }
+  if (origin.kind === 'town') where.placeId = String(origin.id);
+  return useQuery({
+    queryKey: keys.feed(filter, where),
+    queryFn: () => unwrap(api.activities.$get({ query: { filter, ...where } })),
+    // Near me, before the phone has said where it is: wait rather than show home.
+    enabled: origin.kind !== 'here' || !!here,
+  });
+}
+
+/** Towns matching what's typed (public: also used on Sign up). */
+export const usePlaceSearch = (q: string) =>
   useQuery({
-    queryKey: keys.feed(filter),
-    queryFn: async () => (await unwrap(api.activities.$get({ query: { filter } }))).activities,
+    queryKey: ['places', q.trim().toLowerCase()],
+    queryFn: async () => (await unwrap(api.places.search.$get({ query: { q: q.trim() } }))).places,
+    enabled: q.trim().length >= 1,
+    staleTime: Infinity,
+    placeholderData: (previous) => previous,
+  });
+
+/** The town nearest a point ("Use my current location"). */
+export const nearestPlace = (point: { lat: number; lng: number }) =>
+  unwrap(api.places.nearest.$get({ query: { lat: String(point.lat), lng: String(point.lng) } }));
+
+/** Meeting points matching what's typed, near `near` (or your home town). */
+export const useVenueSearch = (q: string, near: { lat: number; lng: number } | null) =>
+  useQuery({
+    queryKey: ['venues', q.trim().toLowerCase(), near?.lat.toFixed(2), near?.lng.toFixed(2)],
+    queryFn: () =>
+      unwrap(
+        api.venues.search.$get({
+          query: {
+            q: q.trim(),
+            ...(near && { lat: String(near.lat), lng: String(near.lng) }),
+          },
+        }),
+      ),
+    enabled: q.trim().length >= 2,
+    staleTime: 10 * 60 * 1000,
+    placeholderData: (previous) => previous,
   });
 
 export const useFromCommunities = () =>

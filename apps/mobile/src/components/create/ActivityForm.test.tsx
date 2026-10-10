@@ -15,6 +15,8 @@ const activity = {
   capacity: 8,
   description: 'Bring water.',
   repeatsWeekly: true,
+  location: { lat: 6.8985, lng: 79.8555 },
+  area: 'Colombo 3',
 };
 
 describe('draftFrom (editing an activity)', () => {
@@ -31,6 +33,8 @@ describe('draftFrom (editing an activity)', () => {
       spots: 8,
       notes: 'Bring water.',
       repeat: true,
+      // Editing keeps the meeting point, described by its town.
+      pin: { lat: 6.8985, lng: 79.8555, label: 'Colombo 3' },
     });
   });
 

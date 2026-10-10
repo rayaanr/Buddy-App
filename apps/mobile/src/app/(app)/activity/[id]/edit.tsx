@@ -28,6 +28,10 @@ export default function EditActivityScreen() {
         const startsAt = v.startsAt.toISOString();
         const patch: UpdateActivityInput = {
           ...(v.coverKey !== undefined && { coverKey: v.coverKey }),
+          ...(v.location &&
+            (v.location.lat !== a.location.lat || v.location.lng !== a.location.lng) && {
+              location: v.location,
+            }),
           ...(v.title !== a.title && { title: v.title }),
           ...(v.group !== a.group && { group: v.group }),
           ...(startsAt !== a.startsAt && { startsAt }),

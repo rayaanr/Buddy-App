@@ -64,6 +64,20 @@
       "when": 1791585806321,
       "tag": "0008_weekly_series",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791614110910,
+      "tag": "0009_places",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791614111993,
+      "tag": "0010_drop_profile_area",
+      "breakpoints": true
     }
   ]
 }

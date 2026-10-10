@@ -41,23 +41,9 @@ export const DISCOVER_FILTERS = [
 ] as const;
 export type DiscoverFilter = (typeof DISCOVER_FILTERS)[number];
 
-/**
- * Areas users pick at sign-up. Coordinates are approximate area centres and
- * stand in for an activity's location until the Create screen gets a map picker.
- */
-export const AREAS = {
-  'Colombo 03': { lat: 6.911, lng: 79.851 },
-  'Colombo 05': { lat: 6.889, lng: 79.865 },
-  'Colombo 07': { lat: 6.906, lng: 79.864 },
-  Dehiwala: { lat: 6.851, lng: 79.865 },
-  Nugegoda: { lat: 6.872, lng: 79.889 },
-  Rajagiriya: { lat: 6.909, lng: 79.894 },
-  'Mount Lavinia': { lat: 6.839, lng: 79.863 },
-  Battaramulla: { lat: 6.899, lng: 79.918 },
-} as const;
-export type Area = keyof typeof AREAS;
-export const AREA_NAMES = Object.keys(AREAS) as [Area, ...Area[]];
-export const DEFAULT_AREA: Area = 'Colombo 07';
+/** Distances Discover can show, in km. It widens past these when nothing's near. */
+export const DISCOVER_RADII = [5, 10, 25, 50] as const;
+export const DEFAULT_RADIUS_KM = 25;
 
 export const LIMITS = {
   /** People who can wait for a spot on a full activity. */

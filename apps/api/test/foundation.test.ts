@@ -56,14 +56,38 @@ describe('activities feed', () => {
     expect([...groups].sort()).toEqual(['Running', 'Sports']);
   });
 
-  it('keeps results within the radius around an explicit point', async () => {
+  it('measures from an explicit point and keeps the radius when there’s enough', async () => {
     const { headers } = await t.signIn();
-    // Mount Lavinia beach; only the cricket game is within 2 km.
-    const res = await t.call<{ activities: ActivitySummary[] }>(
+    // Mount Lavinia beach: the cricket game is a few hundred metres away.
+    const res = await t.call<{ activities: ActivitySummary[]; radiusKm: number }>(
+      '/v1/activities?lat=6.838&lng=79.862&radiusKm=25',
+      { headers },
+    );
+    expect(res.body.radiusKm).toBe(25);
+    const cricket = res.body.activities.find((a) => a.title === 'Beach cricket, softball')!;
+    expect(cricket.distanceKm).toBeLessThan(1);
+  });
+
+  it('looks further when too little is close, and says how far', async () => {
+    const { headers } = await t.signIn();
+    // At 2 km only the cricket game is close, so it widens to 50 km.
+    const near = await t.call<{ activities: ActivitySummary[]; radiusKm: number }>(
       '/v1/activities?lat=6.838&lng=79.862&radiusKm=2',
       { headers },
     );
-    expect(res.body.activities.map((a) => a.title)).toEqual(['Beach cricket, softball']);
+    expect(near.body.radiusKm).toBe(50);
+    expect(near.body.activities.length).toBeGreaterThan(1);
+
+    // Browsing Jaffna (~300 km away) widens until it reaches Colombo's activities.
+    const jaffna = await t.call<{ activities: ActivitySummary[]; radiusKm: number }>(
+      '/v1/activities?placeId=654&radiusKm=10',
+      { headers },
+    );
+    expect(jaffna.body.radiusKm).toBe(450);
+    expect(jaffna.body.activities[0]!.distanceKm).toBeGreaterThan(250);
+
+    const unknown = await t.call('/v1/activities?placeId=999999', { headers });
+    expect(unknown.status).toBe(400);
   });
 
   it('rejects invalid query values with field details', async () => {

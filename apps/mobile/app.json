@@ -45,6 +45,14 @@
           "microphonePermission": false
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Buddy uses your location to show activities near you and to pin meeting points. It's only used when you ask.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false
+        }
+      ],
       "expo-secure-store",
       "expo-web-browser"
     ],

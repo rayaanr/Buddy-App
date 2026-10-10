@@ -1,4 +1,4 @@
-import type { Interest, PublicProfile } from '@buddy/shared';
+import { placeLabel, type Interest, type PublicProfile } from '@buddy/shared';
 import { and, eq, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 
@@ -8,7 +8,7 @@ import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { idParam } from '../../lib/validate';
 import { countHosted, findActivitySummaries, notCancelled, upcoming } from '../activities/queries';
-import { originFor } from '../profiles/service';
+import { homePlace, originFor } from '../profiles/service';
 import { blockUser, unblockUser } from '../safety/service';
 
 export function userRoutes({ db, urls }: Deps) {
@@ -53,7 +53,7 @@ export function userRoutes({ db, urls }: Deps) {
       const profile: PublicProfile = {
         id,
         name: row.user.name,
-        area: row.profile.area,
+        area: placeLabel(await homePlace(db, id)),
         bio: row.profile.bio,
         avatarUrl: urls.avatar(row.profile.avatarKey, row.profile.avatarUrl),
         interests,

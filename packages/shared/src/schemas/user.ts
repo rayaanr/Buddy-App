@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-import { AREA_NAMES, AVAILABILITY, INTERESTS, LIMITS, MIN_INTERESTS } from '../constants';
+import { AVAILABILITY, INTERESTS, LIMITS, MIN_INTERESTS } from '../constants';
 import { activitySummary } from './activity';
+import { place } from './place';
 import { isoDateTime } from './common';
 
 export const interest = z.enum(INTERESTS);
@@ -12,7 +13,9 @@ export const me = z.object({
   id: z.string(),
   email: z.email(),
   name: z.string(),
-  area: z.enum(AREA_NAMES),
+  /** Home town as shown, e.g. "Peradeniya, Kandy". */
+  area: z.string(),
+  place,
   bio: z.string(),
   interests: z.array(interest),
   availability: z.array(availability),
@@ -36,7 +39,8 @@ const uniqueList = <T extends z.ZodType>(item: T) =>
 export const updateMeInput = z
   .object({
     name: z.string().trim().min(1).max(LIMITS.nameMax),
-    area: z.enum(AREA_NAMES),
+    /** Home town (a place id from /v1/places). */
+    placeId: z.number().int().positive(),
     bio: z.string().trim().max(LIMITS.bioMax),
     interests: uniqueList(interest).min(MIN_INTERESTS),
     availability: uniqueList(availability),

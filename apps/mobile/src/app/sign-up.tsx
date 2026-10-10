@@ -1,4 +1,4 @@
-import { AREA_NAMES, DEFAULT_AREA, type Area } from '@buddy/shared';
+import { placeLabel, type Place } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -8,7 +8,6 @@ import { errorMessage } from '@/api/client';
 import {
   BrandMark,
   Button,
-  Chip,
   Footer,
   Heading,
   KeyboardAwareScrollView,
@@ -16,6 +15,7 @@ import {
   SectionLabel,
   TextField,
 } from '@/components/ui';
+import { TownField } from '@/components/places/TownField';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useAccountStore } from '@/store/account';
 
@@ -25,16 +25,16 @@ export default function SignUpScreen() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [area, setArea] = useState<Area>(DEFAULT_AREA);
+  const [town, setTown] = useState<Place | null>(null);
   const [tried, setTried] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const emailValid = isEmail(email);
-  const canSubmit = !!name.trim() && emailValid;
+  const canSubmit = !!name.trim() && emailValid && !!town;
 
   const submit = async () => {
-    if (!canSubmit) {
+    if (!canSubmit || !town) {
       setTried(true);
       return;
     }
@@ -42,7 +42,12 @@ export default function SignUpScreen() {
     setError(null);
     try {
       await sendSignInCode(email);
-      setPendingSignUp({ name: name.trim(), email: email.trim().toLowerCase(), area });
+      setPendingSignUp({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        placeId: town.id,
+        area: placeLabel(town),
+      });
       router.push({ pathname: '/verify', params: { email: email.trim().toLowerCase() } });
     } catch (err) {
       setError(errorMessage(err));
@@ -97,12 +102,11 @@ export default function SignUpScreen() {
           We’ll email you a 6-digit code. No password needed.
         </Text>
 
-        <SectionLabel className="mb-2.5 mt-[18px]">Your area</SectionLabel>
-        <View className="flex-row flex-wrap gap-2">
-          {AREA_NAMES.map((a) => (
-            <Chip key={a} label={a} selected={a === area} onPress={() => setArea(a)} />
-          ))}
-        </View>
+        <SectionLabel className="mb-2 mt-[18px]">Where you live</SectionLabel>
+        <TownField value={town} onChange={setTown} invalid={tried && !town} />
+        <Text className="mt-2 font-sans text-[13.5px] leading-[19px] text-muted">
+          Anywhere in Sri Lanka. We show activities near here; only your town is shown to others.
+        </Text>
         {error ? <Text className="mt-4 font-sans text-[13.5px] text-danger">{error}</Text> : null}
       </KeyboardAwareScrollView>
 

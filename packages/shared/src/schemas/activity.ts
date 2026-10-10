@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import { ACTIVITY_GROUPS, AREA_NAMES, DISCOVER_FILTERS, INTERESTS, LIMITS } from '../constants';
+import {
+  ACTIVITY_GROUPS,
+  DEFAULT_RADIUS_KM,
+  DISCOVER_FILTERS,
+  INTERESTS,
+  LIMITS,
+} from '../constants';
 import { isoDateTime, location, userSummary } from './common';
 
 export const activityGroup = z.enum(ACTIVITY_GROUPS);
@@ -17,6 +23,7 @@ export const activitySummary = z.object({
   interest: z.enum(INTERESTS).nullable(),
   startsAt: isoDateTime,
   place: z.string(),
+  /** The town it's in, e.g. "Colombo 3" (nearest to its location). */
   area: z.string(),
   location,
   /** Distance from the viewer's position, when the request supplied one. */
@@ -61,14 +68,25 @@ export const activityMembers = z.object({
 });
 
 /** Query for the Discover feed. Query-string values arrive as strings, hence coerce. */
+/**
+ * Query for the Discover feed. Distances are from (in order) lat/lng (where
+ * you are now), placeId (a town you're browsing), or your home town.
+ */
 export const feedQuery = z.object({
   filter: discoverFilter.default('All'),
   lat: z.coerce.number().min(-90).max(90).optional(),
   lng: z.coerce.number().min(-180).max(180).optional(),
-  radiusKm: z.coerce.number().positive().max(100).default(25),
+  placeId: z.coerce.number().int().positive().optional(),
+  radiusKm: z.coerce.number().positive().max(100).default(DEFAULT_RADIUS_KM),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export type FeedQuery = z.infer<typeof feedQuery>;
+
+/** Discover results; `radiusKm` is wider than asked when nothing was closer. */
+export const feed = z.object({
+  activities: z.array(activitySummary),
+  radiusKm: z.number(),
+});
 
 export const createActivityInput = z.object({
   title: z.string().trim().min(LIMITS.titleMin).max(LIMITS.titleMax),
@@ -76,8 +94,7 @@ export const createActivityInput = z.object({
   interest: z.enum(INTERESTS).optional(),
   startsAt: isoDateTime,
   place: z.string().trim().min(2).max(LIMITS.placeMax),
-  area: z.enum(AREA_NAMES),
-  /** Exact spot; defaults to the area's centre until the app has a map picker. */
+  /** The meeting point (from venue search or the host's location); defaults to the host's home town. */
   location: location.optional(),
   capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
   description: z.string().trim().max(LIMITS.descriptionMax).default(''),
@@ -94,6 +111,8 @@ export const updateActivityInput = z
     group: activityGroup,
     startsAt: isoDateTime,
     place: z.string().trim().min(2).max(LIMITS.placeMax),
+    /** A new meeting point; the town label follows it. */
+    location,
     capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
     description: z.string().trim().max(LIMITS.descriptionMax),
     /** A new uploaded cover; null goes back to the stock photo for the type. */

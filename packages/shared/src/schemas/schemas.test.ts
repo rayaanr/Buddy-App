@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createActivityInput } from './activity';
 import { sendMessageInput } from './chat';
+import { placeLabel } from './place';
 import { updateMeInput } from './user';
 
 const validActivity = {
@@ -9,7 +10,6 @@ const validActivity = {
   group: 'Running',
   startsAt: '2026-10-09T12:30:00.000Z',
   place: 'Galle Face Green',
-  area: 'Colombo 03',
   capacity: 15,
 };
 
@@ -20,10 +20,22 @@ describe('createActivityInput', () => {
     expect(parsed.description).toBe('');
   });
 
-  it('rejects capacities outside 2–30 and unknown areas', () => {
+  it('rejects capacities outside 2–30', () => {
     expect(createActivityInput.safeParse({ ...validActivity, capacity: 1 }).success).toBe(false);
     expect(createActivityInput.safeParse({ ...validActivity, capacity: 31 }).success).toBe(false);
-    expect(createActivityInput.safeParse({ ...validActivity, area: 'Kandy' }).success).toBe(false);
+  });
+
+  it('takes a meeting point anywhere, and leaves the town to the server', () => {
+    const at = { lat: 7.2797, lng: 80.6202 };
+    expect(createActivityInput.safeParse({ ...validActivity, location: at }).success).toBe(true);
+  });
+});
+
+describe('placeLabel', () => {
+  it('adds the district unless the name already says it', () => {
+    expect(placeLabel({ name: 'Peradeniya', district: 'Kandy' })).toBe('Peradeniya, Kandy');
+    expect(placeLabel({ name: 'Kandy', district: 'Kandy' })).toBe('Kandy');
+    expect(placeLabel({ name: 'Colombo 7', district: 'Colombo' })).toBe('Colombo 7');
   });
 });
 

@@ -1,7 +1,6 @@
 import {
-  AREA_NAMES,
   MIN_INTERESTS,
-  type Area,
+  placeLabel,
   type Availability,
   type Interest,
   type Me,
@@ -13,6 +12,7 @@ import type { Db } from '../../db/client';
 import { activities, activityMembers, communityMembers, profiles, user } from '../../db/schema';
 import { forbidden, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
+import { homePlace, requirePlace } from '../profiles/service';
 
 const count = sql<number>`count(*)::int`;
 
@@ -34,14 +34,13 @@ export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
   ]);
 
   const { profile } = row;
-  const area = (AREA_NAMES as readonly string[]).includes(profile.area)
-    ? (profile.area as Area)
-    : AREA_NAMES[0];
+  const place = await homePlace(db, userId);
   return {
     id: row.user.id,
     email: row.user.email,
     name: row.user.name,
-    area,
+    area: placeLabel(place),
+    place,
     bio: profile.bio,
     interests: profile.interests as Interest[],
     availability: profile.availability as Availability[],
@@ -60,12 +59,13 @@ export async function updateMe(db: Db, userId: string, input: UpdateMeInput) {
   if (input.avatarKey && !input.avatarKey.startsWith(avatarKeyPrefix(userId))) {
     throw forbidden('That image was not uploaded by you');
   }
+  if (input.placeId !== undefined) await requirePlace(db, input.placeId);
   await db.transaction(async (tx) => {
     if (input.name !== undefined) {
       await tx.update(user).set({ name: input.name }).where(eq(user.id, userId));
     }
     const profilePatch = {
-      ...(input.area !== undefined && { area: input.area }),
+      ...(input.placeId !== undefined && { placeId: input.placeId }),
       ...(input.bio !== undefined && { bio: input.bio }),
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),

@@ -6,10 +6,13 @@ import Calendar from 'lucide-react-native/icons/calendar';
 import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
 import CheckCheck from 'lucide-react-native/icons/check-check';
+import ChevronDown from 'lucide-react-native/icons/chevron-down';
 import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Clock from 'lucide-react-native/icons/clock';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
+import LocateFixed from 'lucide-react-native/icons/locate-fixed';
+import MapPin from 'lucide-react-native/icons/map-pin';
 import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Plus from 'lucide-react-native/icons/plus';
@@ -78,6 +81,21 @@ export const ImagePlusIcon = icon(
   ImagePlus,
   { size: 22, color: colors.muted, strokeWidth: 1.8 },
   'ImagePlusIcon',
+);
+export const LocateIcon = icon(
+  LocateFixed,
+  { size: 18, color: colors.lime, strokeWidth: 2 },
+  'LocateIcon',
+);
+export const MapPinIcon = icon(
+  MapPin,
+  { size: 16, color: colors.muted, strokeWidth: 2 },
+  'MapPinIcon',
+);
+export const ChevronDownIcon = icon(
+  ChevronDown,
+  { size: 16, color: colors.muted, strokeWidth: 2 },
+  'ChevronDownIcon',
 );
 export const ClockIcon = icon(
   Clock,

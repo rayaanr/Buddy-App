@@ -6,13 +6,19 @@ import { createMailer, type Mailer } from './lib/mailer';
 import { createPushSender, type PushSender } from './lib/push';
 import { createStorage, type Storage } from './lib/storage';
 import { createUrls } from './lib/urls';
+import { createVenueSearch, type VenueSearch } from './lib/venues';
 import { createLogger } from './logger';
 import { ChatHub } from './realtime/hub';
 
 /** Wires real dependencies from the environment. Tests override pieces (e.g. the mailer). */
 export function createDeps(
   env: Env,
-  overrides: { mailer?: Mailer; storage?: Storage | null; push?: PushSender } = {},
+  overrides: {
+    mailer?: Mailer;
+    storage?: Storage | null;
+    push?: PushSender;
+    venues?: VenueSearch;
+  } = {},
 ) {
   const logger = createLogger(env);
   const { db, close } = createDb(env.DATABASE_URL);
@@ -30,6 +36,7 @@ export function createDeps(
     urls: createUrls(env),
     hub: new ChatHub(),
     push,
+    venues: overrides.venues ?? createVenueSearch(env, db, logger),
   };
   return { deps, close };
 }

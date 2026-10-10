@@ -21,6 +21,7 @@
     "expo-image-picker": "~57.0.20",
     "expo-linear-gradient": "~57.0.2",
     "expo-linking": "~57.0.12",
+    "expo-location": "~57.0.0",
     "expo-network": "~57.0.2",
     "expo-notifications": "~57.0.22",
     "expo-router": "~57.0.25",
@@ -74,7 +75,8 @@
     "preset": "jest-expo/ios",
     "setupFiles": [
       "react-native-gesture-handler/jestSetup.js",
-      "react-native-css-interop/dist/test/setup.js"
+      "react-native-css-interop/dist/test/setup.js",
+      "<rootDir>/src/test/setup.ts"
     ],
     "setupFilesAfterEnv": [
       "react-native-css-interop/dist/test/setupAfterEnv.js"

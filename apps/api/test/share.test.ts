@@ -16,7 +16,7 @@ async function host(title: string) {
       group: 'Social',
       startsAt: atLocalTime(1, '18:30').toISOString(),
       place: 'Barefoot Café',
-      area: 'Colombo 03',
+      location: { lat: 6.8985, lng: 79.8555 },
       capacity: 6,
     },
   });
@@ -33,7 +33,7 @@ describe('share pages', () => {
       '<meta property="og:title" content="Chess &amp; &lt;b&gt;chai&lt;/b&gt;">',
     );
     expect(html).toMatch(
-      /og:description" content="\w{3} \d+ \w{3}, 18:30 · Barefoot Café, Colombo 03\. 1 of 6 going/,
+      /og:description" content="\w{3} \d+ \w{3}, 18:30 · Barefoot Café, Colombo 3\. 1 of 6 going/,
     );
     expect(html).toContain('og:image');
     expect(html).toContain(`href="buddy://activity/${id}"`);

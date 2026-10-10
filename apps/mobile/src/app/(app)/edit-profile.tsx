@@ -1,10 +1,9 @@
 import {
-  AREA_NAMES,
   AVAILABILITY,
   INTERESTS,
   LIMITS,
   MIN_INTERESTS,
-  type Area,
+  type Place,
   type Availability,
   type Interest,
 } from '@buddy/shared';
@@ -31,12 +30,13 @@ import {
   SectionLabel,
   TextField,
 } from '@/components/ui';
+import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
-/** Profile → Edit profile: photo, name, bio, area, interests and when you're free, saved together. */
+/** Profile → Edit profile: photo, name, bio, home town, interests and when you're free, saved together. */
 export default function EditProfileScreen() {
   const me = useMe();
   if (!me.data) return <Loading className="flex-1 bg-bg" />;
@@ -47,7 +47,7 @@ interface Saved {
   name: string;
   bio: string;
   avatarUrl: string | null;
-  area: Area;
+  place: Place;
   interests: Interest[];
   availability: Availability[];
 }
@@ -60,7 +60,7 @@ function EditProfileForm({ me }: { me: Saved }) {
   const photo = usePickedImage('avatar', me.avatarUrl);
   const uploading = photo.uploading;
   const [photoMenu, setPhotoMenu] = useState(false);
-  const [area, setArea] = useState<Area>(me.area);
+  const [town, setTown] = useState(me.place);
   const [interests, setInterests] = useState(me.interests);
   const [availability, setAvailability] = useState(me.availability);
   const need = MIN_INTERESTS - interests.length;
@@ -71,7 +71,7 @@ function EditProfileForm({ me }: { me: Saved }) {
       {
         name: name.trim() || me.name,
         bio: bio.trim(),
-        area,
+        placeId: town.id,
         interests,
         availability,
         ...(photo.key !== undefined && { avatarKey: photo.key }),
@@ -147,13 +147,9 @@ function EditProfileForm({ me }: { me: Saved }) {
           className="h-24 py-3.5 leading-[22px]"
         />
 
-        {/* Distances are measured from a known area, so this is a choice, not free text. */}
-        <SectionLabel className="mb-2 mt-6">Area</SectionLabel>
-        <View className="flex-row flex-wrap gap-2">
-          {AREA_NAMES.map((a) => (
-            <Chip key={a} label={a} selected={a === area} onPress={() => setArea(a)} />
-          ))}
-        </View>
+        {/* Distances are measured from a known town, so this is a choice, not free text. */}
+        <SectionLabel className="mb-2 mt-6">Where you live</SectionLabel>
+        <TownField value={town} onChange={setTown} tone="inset" />
 
         <SectionLabel className="mb-1 mt-6">Into</SectionLabel>
         <Text className="mb-3 font-sans text-[14px] text-muted">Pick at least three.</Text>

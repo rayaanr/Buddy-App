@@ -8,6 +8,7 @@ import { createDeps } from '../src/deps';
 import { loadEnv } from '../src/env';
 import type { Mail, Mailer } from '../src/lib/mailer';
 import type { PushSender } from '../src/lib/push';
+import type { VenueSearch } from '../src/lib/venues';
 import type { Storage } from '../src/lib/storage';
 import { seed } from '../scripts/seed/index';
 import { TEST_DATABASE_URL } from './global-setup';
@@ -34,7 +35,12 @@ export function captureMailer() {
  * `signIn` goes through the actual email-code flow and returns request headers.
  */
 export function useTestApp(
-  options: { env?: Record<string, string>; storage?: Storage | null; push?: PushSender } = {},
+  options: {
+    env?: Record<string, string>;
+    storage?: Storage | null;
+    push?: PushSender;
+    venues?: VenueSearch;
+  } = {},
 ) {
   const env = loadEnv({
     NODE_ENV: 'test',
@@ -48,6 +54,8 @@ export function useTestApp(
     mailer: mail.mailer,
     storage: options.storage === undefined ? null : options.storage,
     push: options.push ?? { notifyActivity: async () => {}, notifyUsers: async () => {} },
+    // Tests never reach out to OpenStreetMap or Google.
+    venues: options.venues ?? { search: async () => ({ venues: [], attribution: null }) },
   });
   const app = createApp(deps);
 

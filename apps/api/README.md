@@ -98,6 +98,24 @@ Connections live in this process's memory (`src/realtime/hub.ts`). That's right 
 
 People waiting live in `activity_waitlist`, apart from `activity_members`, so they never count as going (chat, counts, reminders). When someone leaves or the host adds spots, the first in line moves in automatically (with the activity row locked, so a racing join can't take the spot), gets a "You're in" push, and the chat shows "… joined from the waitlist". Cancelling clears the waitlist and tells those people too. A new time or place, or a cancellation, is posted in the group chat and pushed to everyone going. Weekly activities (`repeatsWeekly`) share a `series_id`: once the latest occurrence starts, `src/jobs/series.ts` posts the next week's as a copy of it (so host edits carry forward, and people the host removed stay removed) and tells last week's group it's on again. A unique (series, start) index keeps it to one per week across instances; turning repeating off on any occurrence stops the series. A job in the API process (`src/jobs/reminders.ts`, every minute) pushes "Coming up" two hours before an activity and "How was it?" three hours after (if anyone joined). Each is claimed with a single `UPDATE … RETURNING`, so running several API instances never double-sends, and moving an activity's time re-arms both.
 
+## Towns and meeting points
+
+Buddy covers all of Sri Lanka. The `places` table holds ~2,100 towns (postal towns with coordinates, districts, provinces, and Sinhala and Tamil names), loaded by migration `0009_places`.
+
+| Endpoint                                  | Purpose                                                                                               |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `GET /v1/places/search?q=` (public)       | Towns by name, prefixes first; close spellings ("nugegda") and other names ("Cinnamon Gardens") match |
+| `GET /v1/places/nearest?lat&lng` (public) | The town to call a point: a main town within 5 km, else the nearest reliable place                    |
+| `GET /v1/venues/search?q&lat&lng`         | Meeting points from the configured provider, biased towards `lat/lng` or your home town               |
+| `GET /v1/activities?lat&lng` / `?placeId` | Discover from where you are / a town you're browsing (else home); widens to 50–450 km when it's quiet |
+
+- **Profiles** store a home town (`place_id`), never an address. Distances use the town's centre.
+- **Activities** store the meeting point; `area` is the nearest town's name, worked out by the API.
+- **Venue search** is pluggable (`src/lib/venues.ts`): `VENUE_PROVIDER=osm` (default; OpenStreetMap via [Photon](https://photon.komoot.io), built for search-as-you-type), `google` (Places API (New) Text Search, needs `GOOGLE_PLACES_API_KEY`; billed per request beyond Google's free tier) or `towns` (no outside service). Results are cached for 10 minutes, and if the provider is down it falls back to towns. Adding a provider means one more `search(query, near)` returning `Venue[]`. For production traffic, run your own Photon (`PHOTON_URL`) rather than the public server.
+- **Data quality.** The source gives some villages a nearby town's coordinates; places sharing a point with two or more others are marked `approximate` and never used to name a location. Towns with a main post office are marked `main` and preferred when naming one.
+- **Updating the towns.** `npx tsx scripts/places/build.ts` prints the SQL; put it in a new migration (rows upsert by id).
+- **Data sources and licences.** Towns from [`sri-lanka-postal-locations`](https://github.com/hareeshkar/sri-lanka-postal-locations) (MIT), derived from [madurapa/sri-lanka-provinces-districts-cities](https://github.com/madurapa/sri-lanka-provinces-districts-cities) (MIT, © 2016 Maduka Jayalath) and [SKIDDOW/SriLankaCitiesDatabase](https://github.com/SKIDDOW/SriLankaCitiesDatabase) (MIT, © 2024 SKIDDOW); main post offices from [`lankapost`](https://github.com/AbQaadir/lankapost) (MIT). Venue results from Photon are © OpenStreetMap contributors (ODbL), so show "© OpenStreetMap" where venue results appear in a public release.
+
 ## Photo uploads (Cloudflare R2)
 
 Uploads stay disabled (`POST /v1/uploads` answers 503) until all `R2_*` variables are set:
