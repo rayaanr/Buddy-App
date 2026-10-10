@@ -220,6 +220,8 @@ export const activityRemovals = pgTable(
   },
   (t) => [
     primaryKey({ columns: [t.activityId, t.userId] }),
+    // Deleting an account removes its rows here.
+    index('activity_removals_user_idx').on(t.userId),
     check(
       'activity_removals_reason_check',
       sql`${t.reason} in ('not_a_fit', 'behaviour', 'other')`,
@@ -243,6 +245,8 @@ export const messages = pgTable(
   },
   (t) => [
     index('messages_activity_created_idx').on(t.activityId, t.createdAt, t.id),
+    // Deleting an account deletes its messages: without this, a scan of every message.
+    index('messages_sender_idx').on(t.senderId),
     check('messages_kind_check', sql`${t.kind} in ('user', 'system')`),
   ],
 );
@@ -259,7 +263,10 @@ export const chatReads = pgTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     lastReadAt: timestamp({ withTimezone: true }).notNull(),
   },
-  (t) => [primaryKey({ columns: [t.activityId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.activityId, t.userId] }),
+    index('chat_reads_user_idx').on(t.userId),
+  ],
 );
 
 export const blocks = pgTable(
@@ -295,6 +302,12 @@ export const reports = pgTable(
   },
   (t) => [
     index('reports_status_idx').on(t.status),
+    // "Reported this person in the last day?" (no repeat moderator emails).
+    index('reports_reporter_target_idx').on(t.reporterId, t.targetUserId, t.createdAt),
+    // Deletes of people, activities and messages update these.
+    index('reports_target_idx').on(t.targetUserId),
+    index('reports_activity_idx').on(t.activityId),
+    index('reports_message_idx').on(t.messageId),
     check(
       'reports_reason_check',
       sql`${t.reason} in ('spam', 'harassment', 'hate', 'sexual', 'violence', 'other')`,
