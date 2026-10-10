@@ -1,11 +1,9 @@
-import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { sendSignInCode, verifySignInCode } from '@/api/auth';
-import { api, errorMessage, unwrap } from '@/api/client';
-import { keys } from '@/api/queries';
+import { errorMessage } from '@/api/client';
 import { BackButton, Button, Heading, KeyboardScreen } from '@/components/ui';
 import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -21,7 +19,6 @@ const RESEND_AFTER_S = 30;
 export default function VerifyScreen() {
   const { top, bottom } = useScreenInsets();
   const { email = '' } = useLocalSearchParams<{ email: string }>();
-  const qc = useQueryClient();
   const pending = useAccountStore((s) =>
     s.pendingSignUp?.email === email ? s.pendingSignUp : null,
   );
@@ -41,7 +38,7 @@ export default function VerifyScreen() {
     setBusy(true);
     setError(null);
     try {
-      await verifySignInCode(email, otp, pending?.name);
+      await verifySignInCode(email, otp);
     } catch (err) {
       setError(errorMessage(err));
       setCode('');
@@ -49,18 +46,10 @@ export default function VerifyScreen() {
       setBusy(false);
       return;
     }
-    // Signed in: the root navigator switches screens when the session updates,
-    // so nothing below may report errors on this screen.
+    // Signed in: the root navigator switches screens when the session updates
+    // (a new account goes on to set up its profile).
     if (pending) {
-      // New account: save the town picked on Sign up. If this fails, the
-      // details stay pending and onboarding saves them with the interests.
-      try {
-        const me = await unwrap(api.me.$patch({ json: { placeId: pending.placeId } }));
-        qc.setQueryData(keys.me, me);
-        useAccountStore.getState().setPendingSignUp(null);
-      } catch {
-        // Retried from onboarding.
-      }
+      useAccountStore.getState().setPendingSignUp(null);
     } else {
       // Returning user: the "Picked for you" deck opens once they land in the app.
       useUiStore.getState().requestPicks();

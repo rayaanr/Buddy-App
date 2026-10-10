@@ -19,11 +19,10 @@ export async function sendSignInCode(email: string) {
 }
 
 /** Confirms the code; `name` is used only when this creates a new account. */
-export async function verifySignInCode(email: string, otp: string, name?: string) {
+export async function verifySignInCode(email: string, otp: string) {
   const { data, error } = await authClient.signIn.emailOtp({
     email: email.trim().toLowerCase(),
     otp,
-    ...(name ? { name } : {}),
   });
   if (error || !data) {
     throw new ApiRequestError(

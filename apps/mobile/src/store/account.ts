@@ -20,8 +20,8 @@ interface RememberedAccount {
 interface AccountState {
   /** The last account used on this device, for "Continue as Kavindu". */
   remembered: RememberedAccount | null;
-  /** Details typed on Sign up, applied once the emailed code is confirmed. */
-  pendingSignUp: { name: string; email: string; placeId: number; area: string } | null;
+  /** The email just entered on Sign up, so the code screen knows it's a new account. */
+  pendingSignUp: { email: string } | null;
 
   remember: (account: Omit<RememberedAccount, 'picks'>) => void;
   rememberPicks: (picks: PicksPreview) => void;
@@ -50,8 +50,7 @@ export const useAccountStore = create<AccountState>()(
       name: 'buddy-account',
       version: 2,
       storage: persistStorage,
-      // pendingSignUp too: an app restart between the code and onboarding
-      // must not lose the town picked on Sign up.
+      // pendingSignUp too: the app may restart while the person fetches their code.
       partialize: ({ remembered, pendingSignUp }) => ({ remembered, pendingSignUp }),
       // Version 1 stored the whole mock session; start fresh.
       migrate: () => ({ remembered: null, pendingSignUp: null }),

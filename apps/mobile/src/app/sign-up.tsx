@@ -1,4 +1,3 @@
-import { placeLabel, type Place } from '@buddy/shared';
 import { router } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
 import { useState } from 'react';
@@ -15,36 +14,25 @@ import {
   SectionLabel,
   TextField,
 } from '@/components/ui';
-import { TownField } from '@/components/places/TownField';
 import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useSendCode } from '@/hooks/useSendCode';
 import { useAccountStore } from '@/store/account';
 
+/** Just an email: name, town and interests come after the code, and can be skipped. */
 export default function SignUpScreen() {
   const { top } = useScreenInsets();
   const setPendingSignUp = useAccountStore((s) => s.setPendingSignUp);
 
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [town, setTown] = useState<Place | null>(null);
   const [tried, setTried] = useState(false);
-  const { send, sending, error } = useSendCode((normalised) => {
-    if (town) {
-      setPendingSignUp({
-        name: name.trim(),
-        email: normalised,
-        placeId: town.id,
-        area: placeLabel(town),
-      });
-    }
-  });
-
+  const { send, sending, error } = useSendCode((normalised) =>
+    setPendingSignUp({ email: normalised }),
+  );
   const emailValid = isEmail(email);
-  const canSubmit = !!name.trim() && emailValid && !!town;
 
   const submit = () => {
-    if (!canSubmit) {
+    if (!emailValid) {
       setTried(true);
       return;
     }
@@ -66,18 +54,7 @@ export default function SignUpScreen() {
           Runs, games, markets and more happening near you this week.
         </Text>
 
-        <SectionLabel className="mb-2 mt-7">Your name</SectionLabel>
-        <TextField
-          value={name}
-          onChangeText={setName}
-          placeholder="First and last name"
-          autoComplete="name"
-          textContentType="name"
-          autoCapitalize="words"
-          returnKeyType="next"
-        />
-
-        <SectionLabel className="mb-2 mt-[18px]">Email</SectionLabel>
+        <SectionLabel className="mb-2 mt-7">Email</SectionLabel>
         <TextField
           value={email}
           onChangeText={setEmail}
@@ -87,6 +64,8 @@ export default function SignUpScreen() {
           autoComplete="email"
           autoCapitalize="none"
           autoCorrect={false}
+          returnKeyType="send"
+          onSubmitEditing={submit}
         />
         {tried && !emailValid ? (
           <Text className="mt-2 font-sans text-[13.5px] text-danger">
@@ -97,11 +76,6 @@ export default function SignUpScreen() {
           We’ll email you a 6-digit code. No password needed.
         </Text>
 
-        <SectionLabel className="mb-2 mt-[18px]">Where you live</SectionLabel>
-        <TownField value={town} onChange={setTown} invalid={tried && !town} />
-        <Text className="mt-2 font-sans text-[13.5px] leading-[19px] text-muted">
-          Anywhere in Sri Lanka. We show activities near here; only your town is shown to others.
-        </Text>
         {error ? <Text className="mt-4 font-sans text-[13.5px] text-danger">{error}</Text> : null}
         <Text className="mt-6 font-sans text-[13px] leading-[19px] text-subtle">
           By creating an account you agree to the{' '}
@@ -127,7 +101,7 @@ export default function SignUpScreen() {
       <Footer>
         <Button
           label={sending ? 'Sending code…' : 'Create account'}
-          inactive={!canSubmit || sending}
+          inactive={!emailValid || sending}
           onPress={submit}
         />
         <View className="mt-3.5 flex-row justify-center gap-1.5">

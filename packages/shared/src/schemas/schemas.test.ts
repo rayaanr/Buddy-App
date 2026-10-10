@@ -40,14 +40,16 @@ describe('placeLabel', () => {
 });
 
 describe('updateMeInput', () => {
-  it('requires at least three distinct interests when interests are sent', () => {
-    expect(updateMeInput.safeParse({ interests: ['Running', 'Yoga'] }).success).toBe(false);
-    expect(updateMeInput.safeParse({ interests: ['Running', 'Running', 'Yoga'] }).success).toBe(
-      false,
-    );
-    expect(updateMeInput.safeParse({ interests: ['Running', 'Yoga', 'Cricket'] }).success).toBe(
-      true,
-    );
+  it('takes any number of distinct, known interests, including none', () => {
+    expect(updateMeInput.safeParse({ interests: [] }).success).toBe(true);
+    expect(updateMeInput.safeParse({ interests: ['Running'] }).success).toBe(true);
+    expect(updateMeInput.safeParse({ interests: ['Running', 'Running'] }).success).toBe(false);
+    expect(updateMeInput.safeParse({ interests: ['Juggling'] }).success).toBe(false);
+  });
+
+  it('can only finish setup, never undo it', () => {
+    expect(updateMeInput.safeParse({ onboarded: true }).success).toBe(true);
+    expect(updateMeInput.safeParse({ onboarded: false }).success).toBe(false);
   });
 
   it('allows partial updates', () => {

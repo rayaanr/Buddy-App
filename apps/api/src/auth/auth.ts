@@ -28,6 +28,13 @@ const CODES_PER_EMAIL_PER_HOUR = 5;
 const emailTag = (email: string) =>
   createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12);
 
+/** "nimal.perera42@…" → "Nimal": a starting name until the person sets their own. */
+function nameFromEmail(email: string) {
+  const local = email.split('@')[0]!.split('+')[0]!;
+  const word = local.split(/[^a-zA-Z]+/).find(Boolean) ?? local;
+  return (word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).slice(0, 40) || 'Buddy';
+}
+
 /**
  * Email one-time-code sign-in. The first successful sign-in creates the
  * account; a profile row is created alongside it so the app can route the
@@ -75,6 +82,10 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
     databaseHooks: {
       user: {
         create: {
+          // Sign-up asks only for an email; the name is an optional next step.
+          before: async (user) => ({
+            data: { ...user, name: user.name?.trim() || nameFromEmail(user.email) },
+          }),
           after: async (user) => {
             await db.insert(schema.profiles).values({ userId: user.id }).onConflictDoNothing();
           },

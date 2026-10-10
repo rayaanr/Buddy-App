@@ -4,7 +4,6 @@ import {
   firstName,
   type Interest,
   type Me,
-  MIN_INTERESTS,
   placeLabel,
   type UpdateMeInput,
 } from '@buddy/shared';
@@ -59,7 +58,7 @@ export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
     interests: profile.interests as Interest[],
     availability: profile.availability as Availability[],
     avatarUrl: urls.avatar(profile.avatarKey, profile.avatarUrl),
-    onboarded: profile.interests.length >= MIN_INTERESTS,
+    onboarded: profile.onboardedAt !== null,
     notifications: { chat: profile.notifyChat, reminders: profile.notifyReminders },
     stats: { joined: joined?.n ?? 0, hosted: hosted?.n ?? 0, communities: comms?.n ?? 0 },
     createdAt: row.user.createdAt.toISOString(),
@@ -85,6 +84,8 @@ export async function updateMe(
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),
       ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey }),
+      // Only ever set once, so finishing setup again keeps the first date.
+      ...(input.onboarded && { onboardedAt: sql`coalesce(${profiles.onboardedAt}, now())` }),
       ...(input.notifications?.chat !== undefined && { notifyChat: input.notifications.chat }),
       ...(input.notifications?.reminders !== undefined && {
         notifyReminders: input.notifications.reminders,

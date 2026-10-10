@@ -1,95 +1,58 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { AVAILABILITY, INTERESTS, type Availability, type Interest } from '@buddy/shared';
+import { Pressable, Text, View } from 'react-native';
 
-import { BrandMark, Button, Chip, Footer, Heading, SectionLabel } from '@/components/ui';
-import {
-  AVAILABILITY,
-  INTERESTS,
-  MIN_INTERESTS,
-  type Availability,
-  type Interest,
-} from '@buddy/shared';
-
-import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { Chip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
-interface InterestPickerProps {
-  initialInterests: Interest[];
-  initialAvailability: Availability[];
-  submitLabel: string;
-  /** Disables the button while saving. */
-  busy?: boolean;
-  onSubmit: (interests: Interest[], availability: Availability[]) => void;
-}
-
-export const toggle = <T extends string>(list: T[], item: T) =>
+const toggle = <T extends string>(list: T[], item: T) =>
   list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 
-/** "What are you into?" — first-run onboarding. Profile → Edit profile reuses its tiles. */
-export function InterestPicker({
-  initialInterests,
-  initialAvailability,
-  submitLabel,
-  busy,
-  onSubmit,
-}: InterestPickerProps) {
-  const { top } = useScreenInsets();
-  const [interests, setInterests] = useState(initialInterests);
-  const [availability, setAvailability] = useState(initialAvailability);
-  const need = MIN_INTERESTS - interests.length;
-
+/** Every interest as two columns of tiles. Onboarding and Edit profile. */
+export function InterestGrid({
+  value,
+  onChange,
+}: {
+  value: Interest[];
+  onChange: (next: Interest[]) => void;
+}) {
   return (
-    <View className="flex-1 bg-bg">
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingTop: top(64), paddingHorizontal: 22, paddingBottom: 20 }}
-      >
-        <BrandMark />
-        <Heading size="hero" className="mt-2.5">
-          What are you into?
-        </Heading>
-        <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
-          Pick at least three. We’ll show you things happening nearby.
-        </Text>
-
-        <View className="mt-[22px] flex-row flex-wrap justify-between gap-y-[9px]">
-          {INTERESTS.map((label) => (
-            <InterestTile
-              key={label}
-              label={label}
-              selected={interests.includes(label)}
-              onPress={() => setInterests((l) => toggle(l, label))}
-            />
-          ))}
-        </View>
-
-        <SectionLabel className="mb-3 mt-[26px]">Usually free</SectionLabel>
-        <View className="flex-row flex-wrap gap-2">
-          {AVAILABILITY.map((label) => (
-            <Chip
-              key={label}
-              label={label}
-              selected={availability.includes(label)}
-              onPress={() => setAvailability((l) => toggle(l, label))}
-            />
-          ))}
-        </View>
-      </ScrollView>
-
-      <Footer>
-        <Button
-          label={need > 0 ? `Pick ${need} more` : submitLabel}
-          inactive={need > 0}
-          disabled={busy}
-          onPress={() => need <= 0 && !busy && onSubmit(interests, availability)}
+    <View className="flex-row flex-wrap justify-between gap-y-[9px]">
+      {INTERESTS.map((label) => (
+        <InterestTile
+          key={label}
+          label={label}
+          selected={value.includes(label)}
+          onPress={() => onChange(toggle(value, label))}
         />
-      </Footer>
+      ))}
+    </View>
+  );
+}
+
+/** "Usually free" chips. Onboarding and Edit profile. */
+export function AvailabilityChips({
+  value,
+  onChange,
+}: {
+  value: Availability[];
+  onChange: (next: Availability[]) => void;
+}) {
+  return (
+    <View className="flex-row flex-wrap gap-2">
+      {AVAILABILITY.map((label) => (
+        <Chip
+          key={label}
+          label={label}
+          selected={value.includes(label)}
+          onPress={() => onChange(toggle(value, label))}
+        />
+      ))}
     </View>
   );
 }
 
 /** A half-width interest tile with a check circle. */
-export function InterestTile({
+function InterestTile({
   label,
   selected,
   onPress,

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { AVAILABILITY, INTERESTS, LIMITS, MIN_INTERESTS } from '../constants';
+import { AVAILABILITY, INTERESTS, LIMITS } from '../constants';
 import { activitySummary } from './activity';
 import { place } from './place';
 import { isoDateTime } from './common';
@@ -20,7 +20,7 @@ export const me = z.object({
   interests: z.array(interest),
   availability: z.array(availability),
   avatarUrl: z.url().nullable(),
-  /** False until interests are picked; the app routes to onboarding until then. */
+  /** False until first-run setup is finished or skipped; the app shows it until then. */
   onboarded: z.boolean(),
   /** Push notification switches. */
   notifications: z.object({ chat: z.boolean(), reminders: z.boolean() }),
@@ -42,11 +42,13 @@ export const updateMeInput = z
     /** Home town (a place id from /v1/places). */
     placeId: z.number().int().positive(),
     bio: z.string().trim().max(LIMITS.bioMax),
-    interests: uniqueList(interest).min(MIN_INTERESTS),
+    interests: uniqueList(interest),
     availability: uniqueList(availability),
     /** Key returned by the upload endpoint; null removes the photo. */
     avatarKey: z.string().nullable(),
     notifications: z.object({ chat: z.boolean(), reminders: z.boolean() }).partial(),
+    /** Finishes first-run setup (every step can be skipped). */
+    onboarded: z.literal(true),
   })
   .partial();
 export type UpdateMeInput = z.infer<typeof updateMeInput>;

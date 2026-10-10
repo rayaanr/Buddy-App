@@ -16,8 +16,6 @@ export const INTERESTS = [
 ] as const;
 export type Interest = (typeof INTERESTS)[number];
 
-export const MIN_INTERESTS = 3;
-
 export const AVAILABILITY = [
   'Weekday evenings',
   'Weekend mornings',

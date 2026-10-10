@@ -32,6 +32,12 @@ describe('email code sign-in', () => {
     });
   });
 
+  it('names a new account from its email until the person picks a name', async () => {
+    const { headers } = await t.signIn('nimal.perera42+buddy@buddy.test');
+    const me = await t.call<Me>('/v1/me', { headers });
+    expect(me.body).toMatchObject({ name: 'Nimal', onboarded: false });
+  });
+
   it('signs existing users into their own account', async () => {
     const { headers } = await t.signIn('kavindu@buddy.test');
     const me = await t.call<Me>('/v1/me', { headers });
@@ -71,24 +77,48 @@ describe('email code sign-in', () => {
 });
 
 describe('PATCH /v1/me', () => {
-  it('completes onboarding once three interests are saved', async () => {
+  it('saves setup step by step and finishes it when asked', async () => {
     const { headers } = await t.signIn('new.person@buddy.test', 'Ruwani');
-    const res = await t.call<Me>('/v1/me', {
-      method: 'PATCH',
-      headers,
-      body: {
-        interests: ['Running', 'Yoga', 'Cricket'],
-        availability: ['Weekend mornings'],
-        placeId: 863, // Peradeniya
-      },
+    const patch = (body: object) => t.call<Me>('/v1/me', { method: 'PATCH', headers, body });
+
+    // Each step saves on its own; setup isn't finished until the last one.
+    expect((await patch({ name: 'Ruwani Silva' })).body.onboarded).toBe(false);
+    expect((await patch({ placeId: 863 })).body.onboarded).toBe(false); // Peradeniya
+    const res = await patch({
+      interests: ['Running', 'Yoga', 'Cricket'],
+      availability: ['Weekend mornings'],
+      onboarded: true,
     });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
+      name: 'Ruwani Silva',
       onboarded: true,
       area: 'Peradeniya, Kandy',
       place: { name: 'Peradeniya', district: 'Kandy', province: 'Central' },
       interests: ['Running', 'Yoga', 'Cricket'],
     });
+  });
+
+  it('lets every setup step be skipped', async () => {
+    const { headers } = await t.signIn('skipper@buddy.test');
+    const res = await t.call<Me>('/v1/me', {
+      method: 'PATCH',
+      headers,
+      body: { onboarded: true },
+    });
+    expect(res.body).toMatchObject({
+      name: 'Skipper',
+      area: 'Colombo 7',
+      interests: [],
+      onboarded: true,
+    });
+    // No interests is a valid profile, not something to fix before saving.
+    const later = await t.call<Me>('/v1/me', {
+      method: 'PATCH',
+      headers,
+      body: { interests: [], bio: 'Just looking for now.' },
+    });
+    expect(later.status).toBe(200);
   });
 
   it('updates the name on the auth account', async () => {
@@ -98,10 +128,14 @@ describe('PATCH /v1/me', () => {
     expect(row?.name).toBe('Kavindu S. Perera');
   });
 
-  it('rejects fewer than three interests and unknown towns', async () => {
+  it('rejects unknown interests and unknown towns', async () => {
     const { headers } = await t.signIn();
-    const few = await t.call('/v1/me', { method: 'PATCH', headers, body: { interests: ['Yoga'] } });
-    expect(few.status).toBe(400);
+    const odd = await t.call('/v1/me', {
+      method: 'PATCH',
+      headers,
+      body: { interests: ['Yoga', 'Juggling'] },
+    });
+    expect(odd.status).toBe(400);
     const town = await t.call('/v1/me', { method: 'PATCH', headers, body: { placeId: 999999 } });
     expect(town.status).toBe(400);
   });

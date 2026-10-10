@@ -76,6 +76,8 @@ export const profiles = pgTable('profiles', {
   /** Push notification switches (Settings → Notifications). */
   notifyChat: boolean().notNull().default(true),
   notifyReminders: boolean().notNull().default(true),
+  /** When first-run setup was finished or skipped; until then the app shows it. */
+  onboardedAt: timestamp({ withTimezone: true }),
   ...timestamps,
 });
 

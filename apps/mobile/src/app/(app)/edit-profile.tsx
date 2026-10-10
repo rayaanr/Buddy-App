@@ -1,25 +1,16 @@
-import {
-  AVAILABILITY,
-  INTERESTS,
-  LIMITS,
-  MIN_INTERESTS,
-  type Place,
-  type Availability,
-  type Interest,
-} from '@buddy/shared';
+import { LIMITS, type Place, type Availability, type Interest } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
-import { InterestTile, toggle } from '@/components/onboarding/InterestPicker';
+import { AvailabilityChips, InterestGrid } from '@/components/onboarding/InterestPicker';
 import {
   ActionSheet,
   Avatar,
   Button,
   CameraIcon,
-  Chip,
   Footer,
   Heading,
   KeyboardAwareScrollView,
@@ -61,10 +52,9 @@ function EditProfileForm({ me }: { me: Saved }) {
   const [town, setTown] = useState(me.place);
   const [interests, setInterests] = useState(me.interests);
   const [availability, setAvailability] = useState(me.availability);
-  const need = MIN_INTERESTS - interests.length;
 
   const save = () => {
-    if (need > 0 || update.isPending || uploading) return;
+    if (update.isPending || uploading) return;
     update.mutate(
       {
         name: name.trim() || me.name,
@@ -147,36 +137,17 @@ function EditProfileForm({ me }: { me: Saved }) {
         <SectionLabel className="mb-2 mt-6">Where you live</SectionLabel>
         <TownField value={town} onChange={setTown} tone="inset" />
 
-        <SectionLabel className="mb-1 mt-6">Into</SectionLabel>
-        <Text className="mb-3 font-sans text-[14px] text-muted">Pick at least three.</Text>
-        <View className="flex-row flex-wrap justify-between gap-y-[9px]">
-          {INTERESTS.map((label) => (
-            <InterestTile
-              key={label}
-              label={label}
-              selected={interests.includes(label)}
-              onPress={() => setInterests((l) => toggle(l, label))}
-            />
-          ))}
-        </View>
+        <SectionLabel className="mb-3 mt-6">Into</SectionLabel>
+        <InterestGrid value={interests} onChange={setInterests} />
 
         <SectionLabel className="mb-3 mt-6">Usually free</SectionLabel>
-        <View className="flex-row flex-wrap gap-2">
-          {AVAILABILITY.map((label) => (
-            <Chip
-              key={label}
-              label={label}
-              selected={availability.includes(label)}
-              onPress={() => setAvailability((l) => toggle(l, label))}
-            />
-          ))}
-        </View>
+        <AvailabilityChips value={availability} onChange={setAvailability} />
       </KeyboardAwareScrollView>
 
       <Footer>
         <Button
-          label={need > 0 ? `Pick ${need} more` : update.isPending ? 'Saving…' : 'Save'}
-          inactive={need > 0 || update.isPending || uploading}
+          label={update.isPending ? 'Saving…' : 'Save'}
+          inactive={update.isPending || uploading}
           onPress={save}
         />
       </Footer>

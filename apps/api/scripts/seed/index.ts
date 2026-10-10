@@ -84,6 +84,7 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
       interests: p.interests,
       availability: p.availability ?? ['Weekday evenings'],
       avatarUrl: portrait(p.face),
+      onboardedAt: sinceToDate(p.since),
       createdAt: sinceToDate(p.since),
     });
   }
