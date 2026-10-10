@@ -134,13 +134,17 @@ function RootNavigator() {
   }, [loading]);
   if (loading) return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
 
-  // With a remembered account, signing in comes first; otherwise signing up.
-  const authScreens = remembered
-    ? [<Stack.Screen key="sign-in" name="sign-in" />, <Stack.Screen key="sign-up" name="sign-up" />]
-    : [
-        <Stack.Screen key="sign-up" name="sign-up" />,
-        <Stack.Screen key="sign-in" name="sign-in" />,
-      ];
+  // With a remembered account, "Good to see you" comes first; otherwise Get started.
+  const first = remembered ? 'sign-in' : 'welcome';
+  const authScreens = [first, ...['welcome', 'sign-up', 'sign-in'].filter((n) => n !== first)].map(
+    (name) => (
+      <Stack.Screen
+        key={name}
+        name={name}
+        options={name === first ? undefined : { animation: 'slide_from_right' }}
+      />
+    ),
+  );
 
   return (
     <Stack

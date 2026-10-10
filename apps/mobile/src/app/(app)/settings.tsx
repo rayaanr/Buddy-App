@@ -1,10 +1,18 @@
 import { router } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
+import { useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
-import { useMe, useUpdateMe } from '@/api/queries';
-import { ChevronRightIcon, Heading, ScreenHeader, SectionLabel } from '@/components/ui';
+import { unregisterPush } from '@/api/push';
+import { signOut, useMe, useUpdateMe } from '@/api/queries';
+import {
+  ActionSheet,
+  ChevronRightIcon,
+  Heading,
+  ScreenHeader,
+  SectionLabel,
+} from '@/components/ui';
 import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
@@ -13,6 +21,15 @@ import { colors } from '@/theme';
 /** Profile → Settings: account details and the less common account actions. */
 export default function SettingsScreen() {
   const me = useMe();
+  const [confirmLogOut, setConfirmLogOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const logOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await unregisterPush();
+    await signOut();
+  };
 
   return (
     <View className="flex-1 bg-bg">
@@ -49,9 +66,18 @@ export default function SettingsScreen() {
         <Row label="Terms of use" onPress={() => void openBrowserAsync(TERMS_URL)} />
 
         <View className="mt-10">
+          <Row label="Log out" onPress={() => setConfirmLogOut(true)} />
           <Row label="Delete account" danger onPress={() => router.push('/delete-account')} />
         </View>
       </ScrollView>
+
+      <ActionSheet
+        visible={confirmLogOut}
+        onClose={() => setConfirmLogOut(false)}
+        title="Log out of Buddy?"
+        message="You can sign back in with a code sent to your email."
+        actions={[{ label: 'Log out', destructive: true, onPress: logOut }]}
+      />
     </View>
   );
 }

@@ -57,6 +57,11 @@ export const LIMITS = {
   /** Furthest ahead an activity can be scheduled. */
   maxDaysAhead: 90,
   messageMax: 2000,
+  communityNameMin: 3,
+  communityNameMax: 40,
+  communityAboutMax: 500,
+  communityRulesMax: 5,
+  communityRuleMax: 120,
   reportDetailsMax: 1000,
   /** Largest image the app may upload, in bytes. */
   uploadMaxBytes: 5 * 1024 * 1024,

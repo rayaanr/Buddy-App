@@ -15,7 +15,7 @@ interface LogoProps {
 
 /** The Buddy logo, drawn from the shared source in packages/shared/src/brand.ts. */
 function Logo({ height = 24, variant = 'full', tone = 'dark', role = 'image' }: LogoProps) {
-  const xml = useMemo(() => logoSvg({ tone, variant, title: '' }), [tone, variant]);
+  const xml = useMemo(() => logoSvg({ tone, variant, title: null }), [tone, variant]);
   const box = logoBox(variant);
   return (
     <View accessible accessibilityRole={role} accessibilityLabel="Buddy" className="self-start">

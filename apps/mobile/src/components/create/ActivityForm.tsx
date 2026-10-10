@@ -8,16 +8,9 @@ import {
 } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
+import { CoverField } from '@/components/create/CoverField';
 import { DatePickerSheet } from '@/components/create/DatePickerSheet';
 import { TimePickerSheet } from '@/components/create/TimePickerSheet';
 import {
@@ -26,11 +19,8 @@ import {
   Chip,
   ClockIcon,
   Footer,
-  ImagePlusIcon,
   KeyboardAwareScrollView,
   KeyboardScreen,
-  Photo,
-  PressableScale,
   SectionLabel,
   TextField,
 } from '@/components/ui';
@@ -121,6 +111,8 @@ interface ActivityValues {
   capacity: number;
   description: string;
   repeatsWeekly: boolean;
+  /** Posted in this community (New activity only). */
+  communityId?: string;
 }
 
 interface ActivityFormProps {
@@ -136,6 +128,9 @@ interface ActivityFormProps {
   /** Where it goes without a pin, e.g. "Colombo 7" (the host's home town). */
   fallbackPlace?: string;
   autoFocus?: boolean;
+  /** Communities you can post in; the choice only shows when there are some. */
+  communities?: { id: string; name: string }[];
+  initialCommunityId?: string;
   onSubmit: (values: ActivityValues) => void;
 }
 
@@ -150,8 +145,13 @@ export function ActivityForm({
   initialCover = null,
   fallbackPlace = 'your home town',
   autoFocus,
+  communities = [],
+  initialCommunityId,
   onSubmit,
 }: ActivityFormProps) {
+  const [picked, setCommunityId] = useState(initialCommunityId);
+  // Only one you can post in (the list may still be loading, or you left it).
+  const communityId = communities.some((c) => c.id === picked) ? picked : undefined;
   const { top } = useScreenInsets();
   const [draft, setDraft] = useState(initial);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
@@ -187,6 +187,7 @@ export function ActivityForm({
       capacity: draft.spots,
       description: draft.notes.trim(),
       repeatsWeekly: draft.repeat,
+      communityId,
     });
   };
 
@@ -344,44 +345,37 @@ export function ActivityForm({
           />
         </View>
 
-        <SectionLabel className="mb-2.5 mt-[22px]">Cover photo</SectionLabel>
-        {cover.uri ? (
-          <View>
-            <Photo
-              uri={cover.uri}
-              hue={GROUP_HUES[group]}
-              style={{ aspectRatio: 16 / 10, borderRadius: 16 }}
-            >
-              {cover.uploading ? (
-                <View className="flex-1 items-center justify-center bg-black/50">
-                  <ActivityIndicator color={colors.ink} />
-                </View>
-              ) : null}
-            </Photo>
-            <View className="mt-2.5 flex-row gap-2">
-              <Chip label="Change photo" selected={false} onPress={() => void cover.pick()} />
-              <Chip
-                label={initialCover ? 'Use the default' : 'Remove'}
-                selected={false}
-                onPress={cover.remove}
-              />
-            </View>
-          </View>
-        ) : (
-          <PressableScale
-            scale="dim"
-            onPress={() => void cover.pick()}
-            accessibilityRole="button"
-            accessibilityLabel="Add a cover photo"
-            className="h-[118px] items-center justify-center gap-1.5 rounded-2xl border border-dashed border-outline px-6"
-          >
-            <ImagePlusIcon />
-            <Text className="font-sans-medium text-[15px] text-ink">Add a cover photo</Text>
-            <Text className="text-center font-sans text-[13px] text-muted">
-              Optional. Otherwise it gets a photo for its type.
+        {communities.length ? (
+          <>
+            <SectionLabel className="mb-1 mt-[22px]">Post in a community</SectionLabel>
+            <Text className="mb-2.5 font-sans text-[13px] leading-[18px] text-muted">
+              Optional. Its members see it on the community’s page.
             </Text>
-          </PressableScale>
-        )}
+            <View className="flex-row flex-wrap gap-2">
+              <Chip
+                label="No community"
+                selected={!communityId}
+                onPress={() => setCommunityId(undefined)}
+              />
+              {communities.map((c) => (
+                <Chip
+                  key={c.id}
+                  label={c.name}
+                  selected={communityId === c.id}
+                  onPress={() => setCommunityId(c.id)}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        <SectionLabel className="mb-2.5 mt-[22px]">Cover photo</SectionLabel>
+        <CoverField
+          cover={cover}
+          hue={GROUP_HUES[group]}
+          removeLabel={initialCover ? 'Use the default' : 'Remove'}
+          hint="Optional. Otherwise it gets a photo for its type."
+        />
       </KeyboardAwareScrollView>
 
       <DatePickerSheet

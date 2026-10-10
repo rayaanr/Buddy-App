@@ -1,13 +1,16 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { errorMessage } from '@/api/client';
-import { useCreateActivity, useMe } from '@/api/queries';
+import { useCommunities, useCreateActivity, useMe } from '@/api/queries';
 import { ActivityForm, newDraft } from '@/components/create/ActivityForm';
 import { toast } from '@/store/ui';
 
 export default function CreateActivityScreen() {
   const me = useMe();
   const create = useCreateActivity();
+  // From a community's "Host an activity": that community is picked already.
+  const { communityId } = useLocalSearchParams<{ communityId?: string }>();
+  const joined = useCommunities().data?.filter((c) => c.joined) ?? [];
 
   return (
     <ActivityForm
@@ -18,6 +21,8 @@ export default function CreateActivityScreen() {
       pending={create.isPending}
       fallbackPlace={me.data?.area ?? 'your home town'}
       autoFocus
+      communities={joined}
+      initialCommunityId={communityId}
       onSubmit={(v) => {
         create.mutate(
           {

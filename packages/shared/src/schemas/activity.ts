@@ -102,6 +102,8 @@ export const createActivityInput = z.object({
   /** Key returned by the upload endpoint, if a cover photo was uploaded. */
   coverKey: z.string().optional(),
   repeatsWeekly: z.boolean().default(false),
+  /** Post it in a community you belong to. */
+  communityId: z.uuid().optional(),
 });
 export type CreateActivityInput = z.input<typeof createActivityInput>;
 

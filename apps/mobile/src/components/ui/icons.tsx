@@ -15,6 +15,7 @@ import LocateFixed from 'lucide-react-native/icons/locate-fixed';
 import MapPin from 'lucide-react-native/icons/map-pin';
 import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
+import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
@@ -108,6 +109,11 @@ export const ShareIcon = icon(
   Share,
   { size: 19, color: colors.ink, strokeWidth: 1.9 },
   'ShareIcon',
+);
+export const PencilIcon = icon(
+  Pencil,
+  { size: 18, color: colors.ink, strokeWidth: 1.9 },
+  'PencilIcon',
 );
 export const SettingsIcon = icon(
   Settings,

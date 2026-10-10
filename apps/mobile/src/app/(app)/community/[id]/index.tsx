@@ -1,14 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { useCommunity } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
+  ActionSheet,
   Avatar,
   BackButton,
   Button,
   Heading,
+  MoreButton,
   Photo,
   QueryFallback,
   Scrim,
@@ -25,6 +28,7 @@ export default function CommunityScreen() {
   const community = useCommunity(id);
   const { toggle, pending } = useCommunityToggle();
   const { top } = useScreenInsets();
+  const [menu, setMenu] = useState(false);
 
   if (!community.data)
     return <QueryFallback query={community} notFound="This community no longer exists." />;
@@ -35,8 +39,9 @@ export default function CommunityScreen() {
     <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ paddingBottom: 30 }}>
       <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: 250 }}>
         <Scrim from={0.3} topOpacity={0.2} opacity={1} />
-        <View className="absolute left-[18px]" style={{ top: top(56) }}>
+        <View className="absolute inset-x-[18px] flex-row justify-between" style={{ top: top(56) }}>
           <BackButton tone="glass" />
+          <MoreButton tone="glass" onPress={() => setMenu(true)} />
         </View>
       </Photo>
 
@@ -45,10 +50,18 @@ export default function CommunityScreen() {
         <Text className="mt-2 font-sans text-[14.5px] text-muted">{communityMeta(c)}</Text>
 
         {c.joined ? (
-          <View className="mt-3.5 h-8 flex-row items-center gap-[7px] self-start rounded-2xl bg-lime-deep px-[13px]">
-            <TickIcon size={14} color={colors.lime} />
-            <Text className="font-sans-medium text-[13.5px] text-lime">You’re a member</Text>
-          </View>
+          <>
+            <View className="mt-3.5 h-8 flex-row items-center gap-[7px] self-start rounded-2xl bg-lime-deep px-[13px]">
+              <TickIcon size={14} color={colors.lime} />
+              <Text className="font-sans-medium text-[13.5px] text-lime">You’re a member</Text>
+            </View>
+            <Button
+              label="Host an activity"
+              size="md"
+              onPress={() => router.push({ pathname: '/create', params: { communityId: c.id } })}
+              className="mt-4"
+            />
+          </>
         ) : (
           <Button
             label={pending ? 'Joining…' : 'Join community'}
@@ -125,6 +138,23 @@ export default function CommunityScreen() {
           />
         ) : null}
       </View>
+
+      <ActionSheet
+        visible={menu}
+        onClose={() => setMenu(false)}
+        actions={
+          c.isCreator
+            ? [{ label: 'Edit community', onPress: () => router.push(`/community/${c.id}/edit`) }]
+            : [
+                {
+                  label: 'Report community',
+                  destructive: true,
+                  onPress: () =>
+                    router.push({ pathname: '/report', params: { type: 'community', id: c.id } }),
+                },
+              ]
+        }
+      />
     </ScrollView>
   );
 }

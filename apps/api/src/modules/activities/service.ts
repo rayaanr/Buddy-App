@@ -30,6 +30,7 @@ import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
 import { insertSystemMessage } from '../chat/system-messages';
+import { requireCommunityMember } from '../communities/service';
 import { homePlace, nearestPlace, originFor } from '../profiles/service';
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 import type { ChangeResult } from './announce';
@@ -117,6 +118,7 @@ export async function createActivity(
 ) {
   checkStartsAt(input.startsAt);
   if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', host.id);
+  if (input.communityId) await requireCommunityMember(db, input.communityId, host.id);
 
   const where = await meetingPoint(db, host.id, input.location);
   const id = await db.transaction(async (tx) => {
@@ -137,6 +139,7 @@ export async function createActivity(
         description: input.description,
         coverUrl: urls.fromKey(input.coverKey) ?? stockCover(input.group),
         ...(input.repeatsWeekly && { seriesId: randomUUID(), repeatsWeekly: true }),
+        communityId: input.communityId ?? null,
       })
       .returning({ id: activities.id });
     await tx.insert(activityMembers).values({ activityId: row!.id, userId: host.id, role: 'host' });

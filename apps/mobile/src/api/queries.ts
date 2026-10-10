@@ -1,6 +1,8 @@
 import type {
   ActivityDetail,
   CommunitySummary,
+  CreateCommunityInput,
+  UpdateCommunityInput,
   CreateActivityInput,
   UpdateActivityInput,
   CreateReportInput,
@@ -272,6 +274,33 @@ export function useCancelActivity() {
     mutationFn: ({ id, stopRepeating = false }: { id: string; stopRepeating?: boolean }) =>
       unwrap(api.activities[':id'].cancel.$post({ param: { id }, json: { stopRepeating } })),
     onSuccess: (detail) => refreshActivityLists(qc, detail),
+  });
+}
+
+export function useCreateCommunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateCommunityInput) => unwrap(api.communities.$post({ json: input })),
+    onSuccess: (detail) => {
+      qc.setQueryData(keys.community(detail.id), detail);
+      return qc.invalidateQueries({ queryKey: keys.communities });
+    },
+  });
+}
+
+export function useUpdateCommunity(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateCommunityInput) =>
+      unwrap(api.communities[':id'].$patch({ param: { id }, json: input })),
+    onSuccess: (detail) => {
+      qc.setQueryData(keys.community(id), detail);
+      // The name shows on activity cards too.
+      return Promise.all([
+        qc.invalidateQueries({ queryKey: keys.communities, exact: true }),
+        qc.invalidateQueries({ queryKey: keys.activities }),
+      ]);
+    },
   });
 }
 

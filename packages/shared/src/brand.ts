@@ -47,8 +47,11 @@ export interface LogoOptions {
   height?: number;
   /** Override single colours, e.g. for a tinted mark. */
   colours?: Partial<Colours & { text: string }>;
-  /** Accessible name; defaults to "Buddy". Pass "" for a decorative logo. */
-  title?: string;
+  /**
+   * Accessible name; defaults to "Buddy". "" marks it decorative; null leaves
+   * accessibility to whatever wraps it (React Native, where aria-* attributes aren't props).
+   */
+  title?: string | null;
   /** Unique per page when several logos with different colours share one HTML document. */
   id?: string;
 }
@@ -76,9 +79,12 @@ export function logoSvg({
     height === undefined
       ? ''
       : ` width="${round((height * box.width) / box.height)}" height="${height}"`;
-  const label = title
-    ? ` role="img" aria-label="${title}"><title>${title}</title>`
-    : ` aria-hidden="true">`;
+  const label =
+    title === null
+      ? '>'
+      : title
+        ? ` role="img" aria-label="${title}"><title>${title}</title>`
+        : ` aria-hidden="true">`;
   const wordmark =
     variant === 'full'
       ? `<path transform="translate(${MARK.width + GAP} 0)" d="${WORDMARK.d}" fill="${c.text}"/>`

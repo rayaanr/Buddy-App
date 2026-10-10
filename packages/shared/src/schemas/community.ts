@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { LIMITS } from '../constants';
 import { activitySummary } from './activity';
 import { userSummary } from './common';
 
@@ -20,5 +21,32 @@ export const communityDetail = communitySummary.extend({
   /** A handful of members for the face pile. */
   members: z.array(userSummary),
   upcoming: z.array(activitySummary),
+  /** You started it, so you can edit it. */
+  isCreator: z.boolean(),
 });
 export type CommunityDetail = z.infer<typeof communityDetail>;
+
+const communityFields = {
+  name: z.string().trim().min(LIMITS.communityNameMin).max(LIMITS.communityNameMax),
+  about: z.string().trim().max(LIMITS.communityAboutMax),
+  /** Short house rules, shown as a list. */
+  rules: z
+    .array(z.string().trim().min(1).max(LIMITS.communityRuleMax))
+    .max(LIMITS.communityRulesMax),
+};
+
+/** Anyone can start a community; they join it and can edit it later. */
+export const createCommunityInput = z.object({
+  ...communityFields,
+  about: communityFields.about.default(''),
+  rules: communityFields.rules.default([]),
+  /** Key returned by the upload endpoint, if a cover photo was uploaded. */
+  coverKey: z.string().optional(),
+});
+export type CreateCommunityInput = z.input<typeof createCommunityInput>;
+
+/** The creator's edits. A null cover removes the photo. */
+export const updateCommunityInput = z
+  .object({ ...communityFields, coverKey: z.string().nullable() })
+  .partial();
+export type UpdateCommunityInput = z.infer<typeof updateCommunityInput>;

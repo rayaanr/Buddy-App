@@ -1,15 +1,13 @@
 import { dayMonth, monthYear } from '@buddy/shared';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { unregisterPush } from '@/api/push';
-import { signOut, useHistory, useMe } from '@/api/queries';
+import { useHistory, useMe } from '@/api/queries';
 import {
   Avatar,
-  Button,
   Heading,
   IconButton,
+  PencilIcon,
   QueryFallback,
   Refresh,
   SectionLabel,
@@ -25,7 +23,6 @@ export default function ProfileScreen() {
   const { top } = useScreenInsets();
   const me = useMe();
   const history = useHistory();
-  const [signingOut, setSigningOut] = useState(false);
 
   if (!me.data) return <QueryFallback query={me} />;
   const { name, area, bio, createdAt, interests, avatarUrl, stats: s } = me.data;
@@ -35,12 +32,6 @@ export default function ProfileScreen() {
     { value: s.hosted, label: 'Hosted' },
     { value: s.communities, label: s.communities === 1 ? 'Community' : 'Communities' },
   ];
-
-  const logOut = async () => {
-    setSigningOut(true);
-    await unregisterPush();
-    await signOut();
-  };
 
   return (
     <ScrollView
@@ -55,12 +46,18 @@ export default function ProfileScreen() {
     >
       <View className="items-center">
         <Avatar uri={avatarUrl ?? undefined} size={86} fallback={colors.me} />
-        <IconButton
-          icon={<SettingsIcon />}
-          label="Settings"
-          onPress={() => router.push('/settings')}
-          className="absolute right-0 top-0"
-        />
+        <View className="absolute right-0 top-0 flex-row gap-2">
+          <IconButton
+            icon={<PencilIcon />}
+            label="Edit profile"
+            onPress={() => router.push('/edit-profile')}
+          />
+          <IconButton
+            icon={<SettingsIcon />}
+            label="Settings"
+            onPress={() => router.push('/settings')}
+          />
+        </View>
       </View>
       <Heading size="page" className="mt-4 text-center">
         {name}
@@ -108,23 +105,6 @@ export default function ProfileScreen() {
           <Text className="font-sans text-[14px] text-muted">{dayMonth(new Date(a.startsAt))}</Text>
         </Pressable>
       ))}
-
-      <Button
-        label="Edit profile"
-        variant="outline"
-        size="md"
-        onPress={() => router.push('/edit-profile')}
-        className="mt-[22px]"
-      />
-      <Button
-        label={signingOut ? 'Logging out…' : 'Log out'}
-        variant="danger"
-        size="md"
-        disabled={signingOut}
-        onPress={logOut}
-        className="mt-2.5"
-        weight="medium"
-      />
     </ScrollView>
   );
 }

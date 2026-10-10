@@ -81,17 +81,27 @@ export const profiles = pgTable('profiles', {
   ...timestamps,
 });
 
-export const communities = pgTable('communities', {
-  id: uuid().primaryKey().defaultRandom(),
-  name: text().notNull().unique(),
-  about: text().notNull().default(''),
-  rules: text()
-    .array()
-    .notNull()
-    .default(sql`'{}'::text[]`),
-  coverUrl: text(),
-  ...timestamps,
-});
+export const communities = pgTable(
+  'communities',
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull().unique(),
+    about: text().notNull().default(''),
+    rules: text()
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    coverUrl: text(),
+    /** Who started it (null for seeded ones, or after they delete their account); they can edit it. */
+    createdBy: uuid().references(() => user.id, { onDelete: 'set null' }),
+    ...timestamps,
+  },
+  (t) => [
+    index('communities_created_by_idx').on(t.createdBy),
+    // "Colombo Runners" and "colombo runners" are the same community.
+    uniqueIndex('communities_name_lower_idx').on(sql`lower(${t.name})`),
+  ],
+);
 
 export const communityMembers = pgTable(
   'community_members',
@@ -296,6 +306,7 @@ export const reports = pgTable(
     targetUserId: uuid().references(() => user.id, { onDelete: 'set null' }),
     messageId: uuid().references(() => messages.id, { onDelete: 'set null' }),
     activityId: uuid().references(() => activities.id, { onDelete: 'set null' }),
+    communityId: uuid().references(() => communities.id, { onDelete: 'set null' }),
     reason: text().notNull(),
     /** The reporter's own words, optional. */
     details: text(),
@@ -310,6 +321,7 @@ export const reports = pgTable(
     index('reports_target_idx').on(t.targetUserId),
     index('reports_activity_idx').on(t.activityId),
     index('reports_message_idx').on(t.messageId),
+    index('reports_community_idx').on(t.communityId),
     check(
       'reports_reason_check',
       sql`${t.reason} in ('spam', 'harassment', 'hate', 'sexual', 'violence', 'other')`,

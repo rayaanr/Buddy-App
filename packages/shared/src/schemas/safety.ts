@@ -17,7 +17,7 @@ export const reportReason = z.enum(
   Object.keys(REPORT_REASONS) as [ReportReason, ...ReportReason[]],
 );
 
-/** Report exactly one thing: a person, a chat message or an activity. */
+/** Report exactly one thing: a person, a chat message, an activity or a community. */
 export const createReportInput = z
   .object({
     reason: reportReason,
@@ -25,10 +25,11 @@ export const createReportInput = z
     userId: z.uuid().optional(),
     messageId: z.uuid().optional(),
     activityId: z.uuid().optional(),
+    communityId: z.uuid().optional(),
   })
   .refine(
-    (r) => [r.userId, r.messageId, r.activityId].filter(Boolean).length === 1,
-    'Report one person, message or activity',
+    (r) => [r.userId, r.messageId, r.activityId, r.communityId].filter(Boolean).length === 1,
+    'Report one person, message, activity or community',
   );
 export type CreateReportInput = z.infer<typeof createReportInput>;
 

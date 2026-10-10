@@ -30,10 +30,10 @@ import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
 
-type ReportTarget = 'user' | 'message' | 'activity';
+type ReportTarget = 'user' | 'message' | 'activity' | 'community';
 
 /**
- * Report a person, a chat message or an activity, optionally blocking the
+ * Report a person, a chat message, an activity or a community, optionally blocking the
  * person too. Params: `type` and `id` of what's reported, plus `activityId`
  * for a message. Names and the message text come from what the app already
  * loaded, never from the link, so a crafted link can't mislabel the report.
@@ -59,24 +59,30 @@ export default function ReportScreen() {
       ? message?.sender
       : p.type === 'activity'
         ? qc.getQueryData<ActivityDetail>(keys.activity(p.id))?.host
-        : qc.getQueryData<PublicProfile>(keys.user(p.id));
+        : p.type === 'community'
+          ? undefined
+          : qc.getQueryData<PublicProfile>(keys.user(p.id));
   const who = person && !isDeletedAccount(person) ? firstName(person.name) : null;
   const title =
     p.type === 'message'
       ? `Report ${who ? `${who}’s` : 'this'} message`
       : p.type === 'activity'
         ? 'Report this activity'
-        : `Report ${who ?? 'this person'}`;
+        : p.type === 'community'
+          ? 'Report this community'
+          : `Report ${who ?? 'this person'}`;
   const busy = report.isPending || setBlocked.isPending;
 
   const submit = async () => {
     if (!reason || busy) return;
-    const target: Pick<CreateReportInput, 'userId' | 'messageId' | 'activityId'> =
+    const target: Pick<CreateReportInput, 'userId' | 'messageId' | 'activityId' | 'communityId'> =
       p.type === 'message'
         ? { messageId: p.id }
         : p.type === 'activity'
           ? { activityId: p.id }
-          : { userId: p.id };
+          : p.type === 'community'
+            ? { communityId: p.id }
+            : { userId: p.id };
     try {
       const filed = await report.mutateAsync({
         reason,

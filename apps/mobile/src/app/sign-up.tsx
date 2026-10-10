@@ -5,7 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 
 import { isEmail } from '@/api/auth';
 import {
-  BrandMark,
+  BackButton,
   Button,
   Footer,
   Heading,
@@ -31,6 +31,8 @@ export default function SignUpScreen() {
   );
   const emailValid = isEmail(email);
 
+  const leave = () => (router.canGoBack() ? router.back() : router.replace('/welcome'));
+
   const submit = () => {
     if (!emailValid) {
       setTried(true);
@@ -43,15 +45,15 @@ export default function SignUpScreen() {
     <KeyboardScreen className="flex-1 bg-bg">
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: top(64), paddingHorizontal: 22, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingTop: top(56), paddingHorizontal: 22, paddingBottom: 20 }}
         keyboardShouldPersistTaps="handled"
       >
-        <BrandMark />
-        <Heading size="hero" className="mt-7">
-          Find people to do things with
+        <BackButton onPress={leave} />
+        <Heading size="hero" className="mt-6">
+          Create your account
         </Heading>
         <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
-          Runs, games, markets and more happening near you this week.
+          Just your email for now. You can add your name, town and interests next.
         </Text>
 
         <SectionLabel className="mb-2 mt-7">Email</SectionLabel>

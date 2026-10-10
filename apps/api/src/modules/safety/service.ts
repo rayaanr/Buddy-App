@@ -2,7 +2,15 @@ import { REPORT_REASONS, type CreateReportInput, type UserSummary } from '@buddy
 import { and, desc, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
-import { activities, blocks, messages, profiles, reports, user } from '../../db/schema';
+import {
+  activities,
+  blocks,
+  communities,
+  messages,
+  profiles,
+  reports,
+  user,
+} from '../../db/schema';
 import type { Env } from '../../env';
 import { badRequest, notFound } from '../../lib/errors';
 import { escapeHtml } from '../../lib/html';
@@ -60,6 +68,7 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
   let targetUserId: string | null;
   let activityId: string | null = null;
   let messageId: string | null = null;
+  let communityId: string | null = null;
 
   if (input.messageId) {
     const [msg] = await db
@@ -84,6 +93,15 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
     if (!activity) throw notFound('Activity');
     targetUserId = activity.hostId;
     activityId = input.activityId;
+  } else if (input.communityId) {
+    const [community] = await db
+      .select({ createdBy: communities.createdBy })
+      .from(communities)
+      .where(eq(communities.id, input.communityId));
+    if (!community) throw notFound('Community');
+    // Whoever started it answers for it (null for Buddy's own communities).
+    targetUserId = community.createdBy;
+    communityId = input.communityId;
   } else {
     if (!(await userExists(db, input.userId!))) throw notFound('Person');
     targetUserId = input.userId!;
@@ -113,6 +131,7 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
       targetUserId,
       activityId,
       messageId,
+      communityId,
       reason: input.reason,
       details: input.details || null,
     })
@@ -148,12 +167,23 @@ export async function notifyModerators(
           .from(messages)
           .where(eq(messages.id, report.messageId))
       : [];
+    const [community] = report.communityId
+      ? await db
+          .select({ name: communities.name, about: communities.about })
+          .from(communities)
+          .where(eq(communities.id, report.communityId))
+      : [];
     const lines = [
       `Reason: ${REPORT_REASONS[report.reason as keyof typeof REPORT_REASONS] ?? report.reason}`,
       report.targetUserId
         ? `Reported: ${target?.name ?? 'unknown'} <${target?.email ?? '?'}> (${report.targetUserId})`
-        : 'Reported: an activity whose host deleted their account',
+        : report.communityId
+          ? 'Reported: a community nobody owns'
+          : 'Reported: an activity whose host deleted their account',
       report.activityId ? `Activity: ${report.activityId}` : null,
+      community
+        ? `Community: ${community.name} (${report.communityId})\nAbout: ${community.about}`
+        : null,
       message ? `Message: “${message.body}”` : null,
       report.details ? `Reporter’s note: ${report.details}` : null,
       `Reporter: ${report.reporterId}`,
