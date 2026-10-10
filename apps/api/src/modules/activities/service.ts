@@ -1,13 +1,14 @@
 import {
-  DELETED_ACCOUNT,
-  ERROR_CODES,
-  isDeletedAccount,
-  LIMITS,
-  placeLabel,
   type ActivityDetail,
   type ActivityGroup,
   type CreateActivityInput,
+  DELETED_ACCOUNT,
+  ERROR_CODES,
+  firstName,
+  isDeletedAccount,
+  LIMITS,
   type MyActivity,
+  placeLabel,
   type RemovalReason,
   type UpdateActivityInput,
 } from '@buddy/shared';
@@ -28,7 +29,7 @@ import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
-import { firstName, insertSystemMessage } from '../chat/system-messages';
+import { insertSystemMessage } from '../chat/system-messages';
 import { homePlace, nearestPlace, originFor } from '../profiles/service';
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 import type { ChangeResult } from './announce';

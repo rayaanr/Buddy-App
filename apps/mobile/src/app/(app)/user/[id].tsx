@@ -1,3 +1,4 @@
+import { firstName, monthYear } from '@buddy/shared';
 import type { PublicProfile } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -18,7 +19,6 @@ import {
   Tag,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { firstName, monthYear } from '@/lib/activity';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
@@ -59,7 +59,7 @@ export default function UserProfileScreen() {
           <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">{u.area}</Text>
         ) : null}
         <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
-          On Buddy since {monthYear(u.memberSince)}
+          On Buddy since {monthYear(new Date(u.memberSince))}
         </Text>
         {u.bio ? (
           <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-[15px] leading-[22.5px] text-ink-dim">

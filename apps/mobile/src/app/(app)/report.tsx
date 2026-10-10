@@ -1,11 +1,12 @@
 import {
-  isDeletedAccount,
-  LIMITS,
-  REPORT_REASONS,
   type ActivityDetail,
   type CreateReportInput,
+  firstName,
+  isDeletedAccount,
+  LIMITS,
   type MessagesPage,
   type PublicProfile,
+  REPORT_REASONS,
   type ReportReason,
 } from '@buddy/shared';
 import { useQueryClient } from '@tanstack/react-query';
@@ -26,7 +27,6 @@ import {
   TextField,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { firstName } from '@/lib/activity';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
 

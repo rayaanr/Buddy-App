@@ -1,10 +1,11 @@
 import {
-  MIN_INTERESTS,
   type ActivityGroup,
-  placeLabel,
   type Availability,
+  firstName,
   type Interest,
   type Me,
+  MIN_INTERESTS,
+  placeLabel,
   type UpdateMeInput,
 } from '@buddy/shared';
 import { and, eq, sql } from 'drizzle-orm';
@@ -23,7 +24,6 @@ import type { Storage } from '../../lib/storage';
 import { keyFromUrl, requireUpload } from '../../lib/upload-keys';
 import type { ChangeResult } from '../activities/announce';
 import { cancelLocked, stockCover } from '../activities/service';
-import { firstName } from '../chat/system-messages';
 import type { Urls } from '../../lib/urls';
 import { requirePlace, toPlace } from '../profiles/service';
 

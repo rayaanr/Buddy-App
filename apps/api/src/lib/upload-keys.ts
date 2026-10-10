@@ -1,4 +1,4 @@
-import { IMAGE_TYPES } from '@buddy/shared';
+import { IMAGE_TYPES, UUID_RE } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
 
 import { badRequest, forbidden } from './errors';
@@ -8,7 +8,8 @@ import type { Storage } from './storage';
 export type UploadKind = 'avatar' | 'cover';
 
 const FOLDER: Record<UploadKind, string> = { avatar: 'avatars', cover: 'covers' };
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+/** UUID_RE without its anchors, to embed in the key pattern. */
+const UUID = UUID_RE.source.slice(1, -1);
 
 export const newUploadKey = (kind: UploadKind, userId: string, extension: string) =>
   `${FOLDER[kind]}/${userId}/${randomUUID()}.${extension}`;

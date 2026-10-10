@@ -28,10 +28,8 @@ type Haptic = 'light' | 'selection';
 
 /** How far a surface sinks while held. Literal classes, so Tailwind generates them. */
 const PRESS = {
-  none: '',
   /** Cards and rows: dim slightly, never move. */
   dim: 'active:opacity-90',
-  subtle: 'active:scale-[0.985]',
   normal: 'active:scale-[0.97]',
   strong: 'active:scale-[0.92]',
 } as const;
@@ -91,15 +89,7 @@ export const successHaptic = () => {
  * Grey placeholder block that gently pulses while content loads, so screens
  * keep their shape instead of jumping when data arrives.
  */
-export function Skeleton({
-  className,
-  style,
-  testID,
-}: {
-  className?: string;
-  style?: StyleProp<ViewStyle>;
-  testID?: string;
-}) {
+export function Skeleton({ className, testID }: { className?: string; testID?: string }) {
   const opacity = useSharedValue(0.55);
   useEffect(() => {
     opacity.set(
@@ -115,7 +105,6 @@ export function Skeleton({
   return (
     <View
       className={cn('overflow-hidden rounded-xl', className)}
-      style={style}
       testID={testID}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"

@@ -1,4 +1,11 @@
-import { atLocalDay, clockLabel, LIMITS, localDay, type ActivityGroup } from '@buddy/shared';
+import {
+  type ActivityGroup,
+  atLocalDay,
+  clockLabel,
+  LIMITS,
+  localDay,
+  weekdayName,
+} from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -38,7 +45,7 @@ import { useNow } from '@/hooks/useNow';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { VenueField, type Pin } from './VenueField';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { presetDay, shortDay, weekday } from '@/lib/activity';
+import { presetDay, shortDay } from '@/lib/activity';
 import { colors } from '@/theme';
 
 export interface Draft {
@@ -319,7 +326,7 @@ export function ActivityForm({
         <View className="mt-3 flex-row items-center gap-4 rounded-2xl bg-surface py-3 pl-4 pr-3">
           <View className="flex-1">
             <Text className="font-sans-semibold text-[15.5px] text-ink">
-              Repeat every {weekday(startsAt)}
+              Repeat every {weekdayName(startsAt)}
             </Text>
             <Text className="mt-0.5 font-sans text-[13px] leading-[18px] text-muted">
               Next week’s goes up once this one starts, and this group hears about it.

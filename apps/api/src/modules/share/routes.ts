@@ -1,3 +1,4 @@
+import { firstName, UUID_RE } from '@buddy/shared';
 import type { ActivitySummary } from '@buddy/shared';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
@@ -7,9 +8,6 @@ import type { AppEnv, Deps } from '../../http/context';
 import { escapeHtml as escape, page, pageHeaders } from '../../lib/html';
 import { findActivitySummaries, upcoming } from '../activities/queries';
 import { whenText } from '../activities/service';
-import { firstName } from '../chat/system-messages';
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Public page behind shared links (`/a/:id`). Chat apps read its Open Graph
@@ -21,7 +19,7 @@ export function shareRoutes({ db, urls, env }: Deps) {
   return new Hono<AppEnv>().get('/a/:id', pageHeaders, async (c) => {
     const id = c.req.param('id');
     // Upcoming only: past activities stop being public.
-    const [a] = UUID.test(id)
+    const [a] = UUID_RE.test(id)
       ? await findActivitySummaries(db, urls, {
           viewerId: null,
           where: [eq(activities.id, id), upcoming()],

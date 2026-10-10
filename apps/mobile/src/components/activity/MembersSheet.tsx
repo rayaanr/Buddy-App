@@ -1,3 +1,4 @@
+import { firstName } from '@buddy/shared';
 import type { RemovalReason, UserSummary } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useRef, useState, type ReactNode } from 'react';
@@ -14,7 +15,6 @@ import {
   SectionLabel,
   Sheet,
 } from '@/components/ui';
-import { firstName } from '@/lib/activity';
 import { toast } from '@/store/ui';
 
 interface MembersSheetProps {

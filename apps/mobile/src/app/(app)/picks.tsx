@@ -1,3 +1,4 @@
+import { firstName } from '@buddy/shared';
 import type { Pick } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -7,7 +8,6 @@ import { useMe, usePicks } from '@/api/queries';
 import { SwipeDeck } from '@/components/picks/SwipeDeck';
 import { CloseIcon, Heading, Loading } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { firstName } from '@/lib/activity';
 import { toast } from '@/store/ui';
 
 /** "Picked for you": Tinder-style deck shown to returning users. */

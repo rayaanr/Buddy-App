@@ -1,10 +1,11 @@
+import { firstName } from '@buddy/shared';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
 import { activities, activityMembers, activityRemovals, user } from '../db/schema';
 import type { PushSender } from '../lib/push';
 import type { Logger } from '../logger';
-import { firstName, insertSystemMessage } from '../modules/chat/system-messages';
+import { insertSystemMessage } from '../modules/chat/system-messages';
 import { whenText } from '../modules/activities/service';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

@@ -2,7 +2,15 @@ import type { ActivitySummary, MyActivity } from '@buddy/shared';
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 
-import { ArrowRightIcon, Eyebrow, Photo, PressableScale, Scrim, Skeleton } from '@/components/ui';
+import {
+  ArrowRightIcon,
+  Eyebrow,
+  Heading,
+  Photo,
+  PressableScale,
+  Scrim,
+  Skeleton,
+} from '@/components/ui';
 import {
   availabilityColor,
   distanceLabel,
@@ -37,9 +45,9 @@ export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
         </View>
         <View className="absolute inset-x-[18px] bottom-[18px]">
           <Eyebrow>{a.category}</Eyebrow>
-          <Text className="mt-2.5 font-display text-[27px] leading-[30px] tracking-[-0.68px] text-ink">
+          <Heading size="card" className="mt-2.5">
             {a.title}
-          </Text>
+          </Heading>
           <View className="mt-2.5 flex-row justify-between gap-2.5">
             <Text className="flex-1 font-sans text-[14.5px] text-ink-faint" numberOfLines={1}>
               {a.place} · {distanceLabel(a)}

@@ -5,6 +5,7 @@ import type { Db } from '../../db/client';
 import { activities, blocks, messages, profiles, reports, user } from '../../db/schema';
 import type { Env } from '../../env';
 import { badRequest, notFound } from '../../lib/errors';
+import { escapeHtml } from '../../lib/html';
 import type { Mailer } from '../../lib/mailer';
 import type { Urls } from '../../lib/urls';
 import type { Logger } from '../../logger';
@@ -169,5 +170,3 @@ export async function notifyModerators(
     logger.error({ err, reportId: report.id }, 'Could not email moderators about a report');
   }
 }
-
-const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

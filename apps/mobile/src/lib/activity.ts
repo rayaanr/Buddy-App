@@ -2,6 +2,7 @@ import {
   type ActivitySummary,
   daysUntilWeekday,
   localDay,
+  MONTHS_SHORT,
   type MyActivity,
   whenLabel as formatWhen,
   whenLong as formatWhenLong,
@@ -59,7 +60,6 @@ export function lastMessagePreview(a: MyActivity) {
   return `${m.mine ? 'You' : (m.senderName ?? 'Someone')}: ${m.body}`;
 }
 
-/** Start time for the Create screen's day chip and time chip, in Sri Lanka time. */
 /** The Sri Lanka calendar day ("YYYY-MM-DD") a Create-screen day chip stands for. */
 export function presetDay(day: CreateDay, now = new Date()) {
   const offset =
@@ -67,41 +67,11 @@ export function presetDay(day: CreateDay, now = new Date()) {
   return localDay(now, offset);
 }
 
-const MONTHS_SHORT = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
 /** "16 Oct" from "YYYY-MM-DD". */
 export function shortDay(day: string) {
   const [, m, d] = day.split('-').map(Number);
   return `${d} ${MONTHS_SHORT[(m ?? 1) - 1]}`;
 }
-
-const WEEKDAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
-const COLOMBO_OFFSET_MS = 330 * 60 * 1000;
-
-/** "Saturday": the day of the week in Sri Lanka time. */
-export const weekday = (date: Date) =>
-  WEEKDAY_NAMES[new Date(date.getTime() + COLOMBO_OFFSET_MS).getUTCDay()]!;
 
 /** 1st, 2nd, 3rd, 4th… (waitlist places). */
 export function ordinal(n: number) {
@@ -110,15 +80,5 @@ export function ordinal(n: number) {
   return `${n}${['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 }
 
-export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
-
 /** "Colombo 07, Sri Lanka". */
 export const locationLabel = (area: string) => `${area}, Sri Lanka`;
-
-/** "Mar 2025" from an ISO date. */
-export const monthYear = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
-
-/** "28 Sep" from an ISO date. */
-export const dayMonth = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });

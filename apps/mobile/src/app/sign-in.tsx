@@ -1,3 +1,4 @@
+import { firstName } from '@buddy/shared';
 import type { ActivityGroup } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui';
 import { GROUP_HUES } from '@/data/constants';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { firstName, whenLabel } from '@/lib/activity';
+import { whenLabel } from '@/lib/activity';
 import { useAccountStore, type PicksPreview } from '@/store/account';
 
 const SHADOW = {

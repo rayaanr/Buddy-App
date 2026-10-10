@@ -23,7 +23,7 @@ export default function CommunitiesScreen() {
     >
       <Heading>Communities</Heading>
       <Text className="mt-1.5 font-sans text-[14.5px] text-muted">
-        Groups in Colombo that meet regularly.
+        Groups around Sri Lanka that meet regularly.
       </Text>
       <View className="mt-4 gap-3.5">
         {communities.isLoading ? (

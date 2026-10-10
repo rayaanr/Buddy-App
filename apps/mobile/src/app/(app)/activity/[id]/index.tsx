@@ -1,4 +1,11 @@
-import { ERROR_CODES, isDeletedAccount, LIMITS, type ActivityDetail } from '@buddy/shared';
+import {
+  type ActivityDetail,
+  ERROR_CODES,
+  firstName,
+  isDeletedAccount,
+  LIMITS,
+  weekdayName,
+} from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -44,16 +51,7 @@ import {
 import { MembersSheet } from '@/components/activity/MembersSheet';
 import { useHasPassed } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import {
-  distanceLabel,
-  firstName,
-  hueFor,
-  ordinal,
-  spotsLabel,
-  spotsLeft,
-  weekday,
-  whenLong,
-} from '@/lib/activity';
+import { distanceLabel, hueFor, ordinal, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
 import { shareActivity } from '@/lib/share';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -249,7 +247,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             <InfoTile
               label="When"
               value={whenLong(a)}
-              sub={a.repeatsWeekly ? `Every ${weekday(new Date(a.startsAt))}` : undefined}
+              sub={a.repeatsWeekly ? `Every ${weekdayName(new Date(a.startsAt))}` : undefined}
             />
             <InfoTile label="Where" value={a.place} sub={`${a.area} · ${distanceLabel(a)}`} />
           </View>

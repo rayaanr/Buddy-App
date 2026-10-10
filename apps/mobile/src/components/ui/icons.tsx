@@ -24,7 +24,7 @@ import X from 'lucide-react-native/icons/x';
 
 import { colors } from '@/theme';
 
-export type IconProps = LucideProps;
+type IconProps = LucideProps;
 
 /**
  * The app's icons are Lucide (https://lucide.dev) with Buddy's defaults for

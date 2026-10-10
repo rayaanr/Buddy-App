@@ -1,4 +1,5 @@
 export * from './constants';
+export * from './text';
 export * from './time';
 export * from './schemas/common';
 export * from './schemas/activity';

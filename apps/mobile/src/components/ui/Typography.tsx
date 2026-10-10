@@ -17,8 +17,6 @@ const HEADINGS = {
   section: 'font-display text-[30px] leading-[33px] tracking-[-0.9px]',
   /** 27px — photo card titles. */
   card: 'font-display text-[27px] leading-[30px] tracking-[-0.68px]',
-  /** 24px — sheets. */
-  sheet: 'font-display text-[24px] leading-[28px] tracking-[-0.48px]',
 } as const;
 
 interface HeadingProps extends TextProps {

@@ -16,7 +16,6 @@ const colors = {
   outline: '#343632',
   'chip-border': '#2f312e',
   disabled: '#2a2d29',
-  'disabled-alt': '#232523',
   track: '#262826',
   ink: '#f1f2ee',
   'ink-soft': '#d9dbd5',

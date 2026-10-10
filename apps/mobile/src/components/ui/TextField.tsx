@@ -6,7 +6,6 @@ import { colors, CONTROL_FONT_SCALE } from '@/theme';
 
 interface TextFieldProps extends TextInputProps {
   className?: string;
-  mono?: boolean;
   /** "sunken" sits on the page background, "inset" on a raised sheet. */
   tone?: 'sunken' | 'inset';
   /** lg: 54px / 16px text (auth forms). md: 52px / 15.5px text (create, edit). */
@@ -14,7 +13,7 @@ interface TextFieldProps extends TextInputProps {
 }
 
 export const TextField = forwardRef<TextInput, TextFieldProps>(function TextField(
-  { className, mono, tone = 'sunken', size = 'lg', multiline, ...rest },
+  { className, tone = 'sunken', size = 'lg', multiline, ...rest },
   ref,
 ) {
   return (
@@ -30,7 +29,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
         // Multiline fields set their own height.
         !multiline && (size === 'lg' ? 'h-[54px]' : 'h-[52px]'),
         tone === 'sunken' ? 'bg-surface-sunken' : 'bg-bg',
-        mono ? 'font-mono' : 'font-sans',
+        'font-sans',
         className,
       )}
       {...rest}

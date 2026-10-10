@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { Text, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 
 import { cn } from '@/lib/cn';
@@ -42,7 +41,6 @@ interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> {
   /** Medium-weight labels are used for quiet text buttons ("Log out", "Not you?"). */
   weight?: 'semibold' | 'medium';
   className?: string;
-  icon?: ReactNode;
   haptic?: boolean;
 }
 
@@ -53,7 +51,6 @@ export function Button({
   inactive,
   weight = 'semibold',
   className,
-  icon,
   haptic = variant === 'primary',
   onPress,
   ...rest
@@ -73,7 +70,6 @@ export function Button({
       onPress={onPress}
       {...rest}
     >
-      {icon}
       <Text
         maxFontSizeMultiplier={CONTROL_FONT_SCALE}
         className={cn(

@@ -1,6 +1,6 @@
+import { weekdayName } from '@buddy/shared';
 import { describe, expect, it, jest } from '@jest/globals';
 
-import { weekday } from '@/lib/activity';
 import { draftFrom } from './ActivityForm';
 
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn() } }));
@@ -48,6 +48,6 @@ describe('draftFrom (editing an activity)', () => {
 describe('weekday', () => {
   it('uses Sri Lanka time', () => {
     // Fri 23:00 UTC is already Saturday 04:30 in Colombo.
-    expect(weekday(new Date('2026-10-09T23:00:00Z'))).toBe('Saturday');
+    expect(weekdayName(new Date('2026-10-09T23:00:00Z'))).toBe('Saturday');
   });
 });

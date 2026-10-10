@@ -13,7 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
-import { CheckIcon, CloseIcon, Eyebrow, Photo, Scrim } from '@/components/ui';
+import { CheckIcon, CloseIcon, Eyebrow, Heading, Photo, Scrim } from '@/components/ui';
 import { availabilityColor, distanceLabel, hueFor, spotsLabel, whenLong } from '@/lib/activity';
 import { colors, EASE_OUT } from '@/theme';
 
@@ -208,9 +208,9 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
             <Text className="font-sans-medium text-[13px] text-lime">{reason}</Text>
           </View>
           <Eyebrow className="mt-3">{a.category}</Eyebrow>
-          <Text className="mt-2 font-display text-[27px] leading-[30px] tracking-[-0.68px] text-ink">
+          <Heading size="card" className="mt-2">
             {a.title}
-          </Text>
+          </Heading>
           <View className="mt-3 gap-1">
             <Text className="font-sans text-[14.5px] text-ink-dim">
               {whenLong(a)} · {a.place}

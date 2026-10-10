@@ -1,3 +1,4 @@
+import { dayMonth, monthYear } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
@@ -16,7 +17,7 @@ import {
   Tag,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { dayMonth, locationLabel, monthYear } from '@/lib/activity';
+import { locationLabel } from '@/lib/activity';
 import { colors } from '@/theme';
 
 export default function ProfileScreen() {
@@ -67,7 +68,7 @@ export default function ProfileScreen() {
         {locationLabel(area)}
       </Text>
       <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
-        On Buddy since {monthYear(createdAt)}
+        On Buddy since {monthYear(new Date(createdAt))}
       </Text>
       {bio ? (
         <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-[15px] leading-[22.5px] text-ink-dim">
@@ -106,7 +107,7 @@ export default function ProfileScreen() {
           <Text className="flex-1 font-sans text-[15.5px] text-ink" numberOfLines={1}>
             {a.title}
           </Text>
-          <Text className="font-sans text-[14px] text-muted">{dayMonth(a.startsAt)}</Text>
+          <Text className="font-sans text-[14px] text-muted">{dayMonth(new Date(a.startsAt))}</Text>
         </Pressable>
       ))}
 

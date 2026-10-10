@@ -1,10 +1,10 @@
+import { firstName } from '@buddy/shared';
 import { ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useBlocked, useSetBlocked } from '@/api/queries';
 import { Avatar, BackButton, Button, Heading, LoadError, Loading } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { firstName } from '@/lib/activity';
 import { toast } from '@/store/ui';
 
 /** Profile → Blocked people: everyone you blocked, with a way to unblock. */

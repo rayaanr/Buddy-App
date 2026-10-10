@@ -5,11 +5,11 @@ import {
   atLocalTime,
   clockLabel,
   dayLabel,
-  daysBetween,
+  dayMonth,
   daysUntilWeekday,
-  isToday,
-  isWeekend,
   localDay,
+  monthYear,
+  weekdayName,
   whenLabel,
 } from './time';
 
@@ -42,12 +42,13 @@ describe('clockLabel and whenLabel', () => {
   });
 });
 
-describe('calendar checks', () => {
-  it('detects today and weekends in local time', () => {
-    expect(isToday(new Date('2026-10-09T18:29:00Z'), now)).toBe(true);
-    expect(isToday(new Date('2026-10-09T18:30:00Z'), now)).toBe(false);
-    expect(isWeekend(new Date('2026-10-09T12:00:00Z'))).toBe(false); // Friday
-    expect(isWeekend(new Date('2026-10-09T18:30:00Z'))).toBe(true); // Saturday 00:00 local
+describe('date labels', () => {
+  it('names days and months in Sri Lanka time, not the device’s', () => {
+    // 18:30 UTC on Friday is 00:00 on Saturday in Colombo.
+    expect(weekdayName(new Date('2026-10-09T18:29:00Z'))).toBe('Friday');
+    expect(weekdayName(new Date('2026-10-09T18:30:00Z'))).toBe('Saturday');
+    expect(dayMonth(new Date('2026-09-30T19:00:00Z'))).toBe('1 Oct');
+    expect(monthYear(new Date('2025-12-31T19:00:00Z'))).toBe('Jan 2026');
   });
 });
 
@@ -77,10 +78,5 @@ describe('calendar days in Sri Lanka time', () => {
   it('builds the instant for a local day and time', () => {
     expect(atLocalDay('2026-10-10', '18:30').toISOString()).toBe('2026-10-10T13:00:00.000Z');
     expect(clockLabel(atLocalDay('2026-10-10', '07:05'))).toBe('07:05');
-  });
-
-  it('counts days between local days', () => {
-    expect(daysBetween('2026-10-10', '2026-10-10')).toBe(0);
-    expect(daysBetween('2026-10-10', '2027-01-08')).toBe(90);
   });
 });
