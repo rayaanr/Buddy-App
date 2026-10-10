@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { KeyboardScreen } from './Keyboard';
+import { ModalKeyboardScreen } from './Keyboard';
 import { AnimatedView } from './Motion';
 
 /** vaul's curve and timing (the drawer behind shadcn/ui), so sheets move the same way. */
@@ -110,7 +110,7 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
     >
       {/* Gestures inside a Modal need their own root on Android. */}
       <GestureHandlerRootView style={styles.fill}>
-        <KeyboardScreen style={[styles.end, { paddingTop: insets.top + 12 }]}>
+        <ModalKeyboardScreen style={[styles.end, { paddingTop: insets.top + 12 }]}>
           <AnimatedView style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
             <Pressable
               style={styles.fill}
@@ -144,7 +144,7 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
               </View>
             </AnimatedView>
           </GestureDetector>
-        </KeyboardScreen>
+        </ModalKeyboardScreen>
       </GestureHandlerRootView>
     </Modal>
   );

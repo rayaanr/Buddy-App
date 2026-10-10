@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { authClient } from '@/api/auth-client';
@@ -60,15 +61,18 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-        <SafeAreaProvider>
-          <ThemeProvider value={navTheme}>
-            <StatusBar style="light" />
-            <View style={{ flex: 1 }}>
-              <RootNavigator />
-              <ToastHost />
-            </View>
-          </ThemeProvider>
-        </SafeAreaProvider>
+        {/* Edge-to-edge on Android: the app draws under both system bars. */}
+        <KeyboardProvider statusBarTranslucent navigationBarTranslucent>
+          <SafeAreaProvider>
+            <ThemeProvider value={navTheme}>
+              <StatusBar style="light" />
+              <View style={{ flex: 1 }}>
+                <RootNavigator />
+                <ToastHost />
+              </View>
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
   );

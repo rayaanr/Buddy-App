@@ -1,91 +1,112 @@
-import { useEffect, useRef, useEffectEvent } from 'react';
+import { createContext, use, useEffect, useState, type ReactNode } from 'react';
 import {
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TextInput,
-  type KeyboardAvoidingViewProps,
-  type LayoutChangeEvent,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
+  KeyboardAvoidingView as NativeKeyboardAvoidingView,
   type ScrollViewProps,
 } from 'react-native';
+import { cssInterop } from 'nativewind';
+import {
+  KeyboardAvoidingView,
+  KeyboardAwareScrollView as LibraryScrollView,
+  KeyboardStickyView,
+  type KeyboardAvoidingViewProps,
+} from 'react-native-keyboard-controller';
 
 /**
- * Root for any screen with a text field: makes room for the keyboard on
- * both platforms.
+ * Keyboard handling, from react-native-keyboard-controller (Android apps are
+ * edge-to-edge, so the system no longer makes room for the keyboard itself).
  *
- * Android apps are edge-to-edge (always, since Expo SDK 54), so the system no
- * longer shrinks the window when the keyboard opens. Without this, Android
- * leaves inputs behind the keyboard. Padding is measured against the
- * keyboard's actual position, so it never doubles up if the window does
- * resize.
+ * Two layouts:
+ * - A screen whose content doesn't scroll (sign in, the code screen, chat):
+ *   `KeyboardScreen` lifts everything above the keyboard.
+ * - A form (`KeyboardAwareScrollView`, usually with a `Footer`): the form
+ *   scrolls the focused field into view and the footer rides on the keyboard.
+ *   Lifting the whole screen as well would leave the space twice, so the
+ *   screen stops doing it as soon as a form is inside.
  */
-export function KeyboardScreen(props: Omit<KeyboardAvoidingViewProps, 'behavior'>) {
-  return <KeyboardAvoidingView behavior="padding" {...props} />;
+interface KeyboardLayout {
+  /** A form registered itself: the screen stops lifting its content. */
+  setHasForm: (has: boolean) => void;
+  hasForm: boolean;
+  /** The footer's height, so the focused field stays above it too. */
+  footerHeight: number;
+  setFooterHeight: (height: number) => void;
 }
+const KeyboardLayoutContext = createContext<KeyboardLayout | null>(null);
+
+// NativeWind only turns `className` into styles for components it knows.
+cssInterop(KeyboardAvoidingView, { className: 'style' });
+cssInterop(LibraryScrollView, {
+  className: 'style',
+  contentContainerClassName: 'contentContainerStyle',
+});
 
 /** Space kept between the focused field and whatever covers the bottom edge. */
 const GAP = 24;
 
-/**
- * A ScrollView for forms: once the keyboard is open and the screen has made
- * room for it, scrolls the focused field into view if it ended up below the
- * visible area (behind the keyboard or a footer).
- */
-export function KeyboardAwareScrollView({ onScroll, onLayout, ...props }: ScrollViewProps) {
-  const scroll = useRef<ScrollView>(null);
-  const offset = useRef(0);
-
-  const revealFocusedInput = () => {
-    // Browsers handle the on-screen keyboard themselves (and lack these APIs).
-    if (Platform.OS === 'web') return;
-    const input = TextInput.State.currentlyFocusedInput();
-    const view = scroll.current;
-    const node = view?.getNativeScrollRef();
-    if (!input || !view || !node || !Keyboard.isVisible()) return;
-    node.measureInWindow((_vx, viewY, _vw, viewHeight) => {
-      input.measureInWindow((_x, y, _w, height) => {
-        const visibleBottom = Math.min(
-          viewY + viewHeight,
-          Keyboard.metrics()?.screenY ?? Number.POSITIVE_INFINITY,
-        );
-        const hidden = y + height + GAP - visibleBottom;
-        if (hidden > 0) view.scrollTo({ y: offset.current + hidden, animated: true });
-      });
-    });
-  };
-
-  // The keyboard opening usually shrinks this view (via KeyboardScreen), which
-  // triggers onLayout below; this covers screens where nothing resizes.
-  const onKeyboardShown = useEffectEvent(revealFocusedInput);
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const sub = Keyboard.addListener('keyboardDidShow', () => {
-      clearTimeout(timer);
-      timer = setTimeout(onKeyboardShown, 50);
-    });
-    return () => {
-      sub.remove();
-      clearTimeout(timer);
-    };
-  }, []);
-
+/** Root for any screen with a text field. */
+export function KeyboardScreen({
+  children,
+  ...props
+}: Omit<KeyboardAvoidingViewProps, 'behavior'> & { children: ReactNode }) {
+  const [hasForm, setHasForm] = useState(false);
+  const [footerHeight, setFooterHeight] = useState(0);
   return (
-    <ScrollView
-      ref={scroll}
+    <KeyboardLayoutContext value={{ hasForm, setHasForm, footerHeight, setFooterHeight }}>
+      <KeyboardAvoidingView behavior="padding" enabled={!hasForm} {...props}>
+        {children}
+      </KeyboardAvoidingView>
+    </KeyboardLayoutContext>
+  );
+}
+
+/**
+ * The same for content inside a Modal (drawers). Modals are separate windows
+ * on Android, so this uses React Native's own view, which handles them.
+ */
+export function ModalKeyboardScreen(props: Omit<KeyboardAvoidingViewProps, 'behavior'>) {
+  return <NativeKeyboardAvoidingView behavior="padding" {...props} />;
+}
+
+/** A form that keeps the focused field above the keyboard (and the footer). */
+export function KeyboardAwareScrollView(props: ScrollViewProps) {
+  const layout = use(KeyboardLayoutContext);
+  const setHasForm = layout?.setHasForm;
+  useEffect(() => {
+    setHasForm?.(true);
+    return () => setHasForm?.(false);
+  }, [setHasForm]);
+  return (
+    <LibraryScrollView
       keyboardShouldPersistTaps="handled"
-      scrollEventThrottle={16}
+      bottomOffset={(layout?.footerHeight ?? 0) + GAP}
       {...props}
-      onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        offset.current = e.nativeEvent.contentOffset.y;
-        onScroll?.(e);
-      }}
-      onLayout={(e: LayoutChangeEvent) => {
-        revealFocusedInput();
-        onLayout?.(e);
-      }}
     />
+  );
+}
+
+/**
+ * Wraps a footer: in a form, it rides on top of the keyboard and reports its
+ * height; anywhere else it's a plain view (the screen lifts it).
+ */
+export function KeyboardFooter({
+  children,
+  openedOffset = 0,
+}: {
+  children: ReactNode;
+  /** Moves it this much lower while the keyboard is open. */
+  openedOffset?: number;
+}) {
+  const layout = use(KeyboardLayoutContext);
+  if (!layout?.hasForm) return children;
+  return (
+    <KeyboardStickyView
+      offset={{ opened: openedOffset }}
+      // What still shows above the keyboard.
+      onLayout={(e) =>
+        layout.setFooterHeight(Math.round(e.nativeEvent.layout.height - openedOffset))
+      }
+    >
+      {children}
+    </KeyboardStickyView>
   );
 }

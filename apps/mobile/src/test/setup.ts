@@ -16,3 +16,9 @@ jest.mock('expo-notifications', () => ({
   clearLastNotificationResponse: jest.fn(),
   AndroidImportance: { HIGH: 4 },
 }));
+
+// Keyboard handling is native; the library ships its own stand-in.
+jest.mock('react-native-keyboard-controller', () =>
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('react-native-keyboard-controller/jest'),
+);
