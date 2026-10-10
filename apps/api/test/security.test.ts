@@ -67,6 +67,14 @@ describe('hardening', () => {
     expect(res.status).toBe(413);
   });
 
+  it('marks API responses no-store (a cached copy would undo joins and edits)', async () => {
+    const { headers } = await t.signIn();
+    const res = await t.app.request('/v1/communities', { headers });
+    expect(res.headers.get('cache-control')).toBe('no-store');
+    // The public pages' CSP and caching stay on those pages.
+    expect(res.headers.get('content-security-policy')).toBeNull();
+  });
+
   it('serves the share page with a no-script CSP', async () => {
     const { headers } = await t.signIn();
     const { id } = await padel(headers);

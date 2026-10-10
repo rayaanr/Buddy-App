@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 
 import type { AppEnv, Deps } from '../../http/context';
 import { escapeHtml, page, pageHeaders } from '../../lib/html';
@@ -21,12 +21,13 @@ export function legalRoutes({ env }: Deps) {
   const privacy = render('Privacy policy', PRIVACY_UPDATED, privacyHtml(contact));
   const terms = render('Terms of use', TERMS_UPDATED, termsHtml(contact));
 
+  // Headers go on these two routes only: this app is mounted at "/", where a
+  // bare .use() would apply them to every API response too.
+  const cached = (html: string) => (c: Context<AppEnv>) => {
+    c.header('cache-control', 'public, max-age=3600');
+    return c.html(html);
+  };
   return new Hono<AppEnv>()
-    .use(pageHeaders)
-    .use(async (c, next) => {
-      await next();
-      c.header('cache-control', 'public, max-age=3600');
-    })
-    .get('/privacy', (c) => c.html(privacy))
-    .get('/terms', (c) => c.html(terms));
+    .get('/privacy', pageHeaders, cached(privacy))
+    .get('/terms', pageHeaders, cached(terms));
 }

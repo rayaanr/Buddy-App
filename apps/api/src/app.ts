@@ -99,6 +99,12 @@ export function createApp(deps: Deps) {
   });
 
   const v1 = new Hono<AppEnv>()
+    // Personal data that changes with every join, message and edit: never
+    // let a phone's HTTP cache or a proxy serve an old copy.
+    .use(async (c, next) => {
+      await next();
+      c.header('cache-control', 'no-store');
+    })
     .use(loadSession(deps))
     .route('/me', meRoutes(deps))
     .route('/activities/:id/chat', chatRoutes(deps))
