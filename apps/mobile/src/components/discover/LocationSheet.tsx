@@ -1,13 +1,10 @@
 import { DISCOVER_RADII, placeLabel } from '@buddy/shared';
-import { useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { errorMessage } from '@/api/client';
 import { PlaceRow, PlaceSearch } from '@/components/places/PlaceSearch';
 import { Chip, LocateIcon, MapPinIcon, SectionLabel, Sheet } from '@/components/ui';
-import { currentPoint } from '@/lib/location';
+import { useLocate } from '@/hooks/useLocate';
 import { useDiscoverStore } from '@/store/discover';
-import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
 interface LocationSheetProps {
@@ -25,20 +22,11 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
   const origin = useDiscoverStore((s) => s.origin);
   const radiusKm = useDiscoverStore((s) => s.radiusKm);
   const { setOrigin, setRadius, setHere } = useDiscoverStore.getState();
-  const [locating, setLocating] = useState(false);
-
-  const nearMe = async () => {
-    setLocating(true);
-    try {
-      setHere(await currentPoint());
-      setOrigin({ kind: 'here' });
-      onClose();
-    } catch (err) {
-      toast(errorMessage(err));
-    } finally {
-      setLocating(false);
-    }
-  };
+  const { locating, locate: nearMe } = useLocate((point) => {
+    setHere(point);
+    setOrigin({ kind: 'here' });
+    onClose();
+  });
 
   return (
     <Sheet open={open} onClose={onClose}>
@@ -55,7 +43,7 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
             icon={locating ? <ActivityIndicator color={colors.lime} /> : <LocateIcon />}
             label={locating ? 'Finding you…' : 'Near me'}
             sub="Where you are right now"
-            onPress={locating ? undefined : () => void nearMe()}
+            onPress={locating ? undefined : nearMe}
             selected={origin.kind === 'here'}
             accent
           />

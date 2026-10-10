@@ -10,7 +10,7 @@ export type When =
   | { daysAgo: number; time: string };
 
 /** A chat line: [sender name, text], or ['system', text] for lines like "Kavindu joined". */
-export type SeedMessage = [from: string, text: string];
+type SeedMessage = [from: string, text: string];
 
 export interface SeedActivity {
   title: string;

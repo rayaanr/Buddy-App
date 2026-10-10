@@ -9,7 +9,7 @@ export interface PicksPreview {
   cards: { coverUrl: string | null; group: string; title: string; startsAt: string }[];
 }
 
-export interface RememberedAccount {
+interface RememberedAccount {
   email: string;
   name: string;
   /** Home town as shown, e.g. "Peradeniya, Kandy". */

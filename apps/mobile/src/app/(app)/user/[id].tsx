@@ -10,15 +10,15 @@ import { ActivityRow } from '@/components/activity/ActivityCards';
 import {
   ActionSheet,
   Avatar,
-  BackButton,
   Button,
   Heading,
   MoreButton,
   QueryFallback,
+  ScreenHeader,
   SectionLabel,
+  StatTile,
   Tag,
 } from '@/components/ui';
-import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
@@ -26,7 +26,6 @@ export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useUser(id);
   const me = useMe();
-  const { top } = useScreenInsets();
   const [sheet, setSheet] = useState<'menu' | 'confirm-block' | null>(null);
 
   if (!user.data)
@@ -37,10 +36,9 @@ export default function UserProfileScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <View className="flex-row justify-between px-[18px]" style={{ paddingTop: top(56) }}>
-        <BackButton />
-        {me.data && !isMe ? <MoreButton onPress={() => setSheet('menu')} /> : null}
-      </View>
+      <ScreenHeader
+        right={me.data && !isMe ? <MoreButton onPress={() => setSheet('menu')} /> : null}
+      />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 30 }}
@@ -71,8 +69,8 @@ export default function UserProfileScreen() {
         {u.blockedByYou ? null : (
           <>
             <View className="mt-5 flex-row gap-2">
-              <Stat value={u.hostedCount} label="Hosted" />
-              <Stat value={u.joinedCount} label="Joined" />
+              <StatTile value={u.hostedCount} label="Hosted" />
+              <StatTile value={u.joinedCount} label="Joined" />
             </View>
 
             <View className="mb-2.5 mt-6 flex-row justify-between">
@@ -104,15 +102,6 @@ export default function UserProfileScreen() {
       </ScrollView>
 
       <SafetySheet person={u} mode={sheet} onChange={setSheet} />
-    </View>
-  );
-}
-
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <View className="flex-1 rounded-2xl bg-surface px-3.5 pb-4 pt-3.5">
-      <Text className="font-display text-[22px] text-ink">{value}</Text>
-      <Text className="mt-1 font-sans text-[13px] text-muted">{label}</Text>
     </View>
   );
 }

@@ -17,7 +17,6 @@ import { InterestTile, toggle } from '@/components/onboarding/InterestPicker';
 import {
   ActionSheet,
   Avatar,
-  BackButton,
   Button,
   CameraIcon,
   Chip,
@@ -27,12 +26,12 @@ import {
   KeyboardScreen,
   PressableScale,
   QueryFallback,
+  ScreenHeader,
   SectionLabel,
   TextField,
 } from '@/components/ui';
 import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
-import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
@@ -53,7 +52,6 @@ interface Saved {
 }
 
 function EditProfileForm({ me }: { me: Saved }) {
-  const { top } = useScreenInsets();
   const update = useUpdateMe();
   const [name, setName] = useState(me.name);
   const [bio, setBio] = useState(me.bio);
@@ -90,9 +88,7 @@ function EditProfileForm({ me }: { me: Saved }) {
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
-      <View className="px-[18px]" style={{ paddingTop: top(56) }}>
-        <BackButton />
-      </View>
+      <ScreenHeader />
       <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 24 }}

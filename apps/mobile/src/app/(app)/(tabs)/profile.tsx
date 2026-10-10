@@ -14,6 +14,7 @@ import {
   Refresh,
   SectionLabel,
   SettingsIcon,
+  StatTile,
   Tag,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -78,10 +79,7 @@ export default function ProfileScreen() {
 
       <View className="mt-5 flex-row gap-2">
         {stats.map((st) => (
-          <View key={st.label} className="flex-1 rounded-2xl bg-surface px-3.5 pb-4 pt-3.5">
-            <Text className="font-display text-[22px] text-ink">{st.value}</Text>
-            <Text className="mt-1 font-sans text-[13px] text-muted">{st.label}</Text>
-          </View>
+          <StatTile key={st.label} value={st.value} label={st.label} />
         ))}
       </View>
 

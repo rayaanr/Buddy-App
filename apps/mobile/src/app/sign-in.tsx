@@ -1,11 +1,9 @@
-import { firstName } from '@buddy/shared';
-import type { ActivityGroup } from '@buddy/shared';
+import { firstName, type ActivityGroup } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, Text, View, type ViewStyle } from 'react-native';
 
-import { isEmail, sendSignInCode } from '@/api/auth';
-import { errorMessage } from '@/api/client';
+import { isEmail } from '@/api/auth';
 import {
   BrandMark,
   Button,
@@ -18,6 +16,7 @@ import {
 } from '@/components/ui';
 import { GROUP_HUES } from '@/data/constants';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { useSendCode } from '@/hooks/useSendCode';
 import { whenLabel } from '@/lib/activity';
 import { useAccountStore, type PicksPreview } from '@/store/account';
 
@@ -28,25 +27,6 @@ const SHADOW = {
   shadowOffset: { width: 0, height: 16 },
   elevation: 12,
 };
-
-/** Emails a code and opens the code screen; shared by both sign-in modes. */
-function useSendCode() {
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const send = async (email: string) => {
-    setSending(true);
-    setError(null);
-    try {
-      await sendSignInCode(email);
-      router.push({ pathname: '/verify', params: { email: email.trim().toLowerCase() } });
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSending(false);
-    }
-  };
-  return { send, sending, error };
-}
 
 export default function SignInScreen() {
   const remembered = useAccountStore((s) => s.remembered);

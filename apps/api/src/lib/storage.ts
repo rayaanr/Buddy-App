@@ -2,7 +2,7 @@ import { AwsClient } from 'aws4fetch';
 
 import type { Env } from '../env';
 
-export interface PresignedPut {
+interface PresignedPut {
   url: string;
   headers: Record<string, string>;
   expiresAt: Date;

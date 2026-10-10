@@ -3,13 +3,11 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useBlocked, useSetBlocked } from '@/api/queries';
-import { Avatar, BackButton, Button, Heading, LoadError, Loading } from '@/components/ui';
-import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { Avatar, Button, Heading, LoadError, Loading, ScreenHeader } from '@/components/ui';
 import { toast } from '@/store/ui';
 
 /** Profile → Blocked people: everyone you blocked, with a way to unblock. */
 export default function BlockedPeopleScreen() {
-  const { top } = useScreenInsets();
   const blocked = useBlocked();
   const setBlocked = useSetBlocked();
 
@@ -24,9 +22,7 @@ export default function BlockedPeopleScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <View className="px-[18px]" style={{ paddingTop: top(56) }}>
-        <BackButton />
-      </View>
+      <ScreenHeader />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}

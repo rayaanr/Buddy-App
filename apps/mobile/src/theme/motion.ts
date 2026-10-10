@@ -21,7 +21,7 @@ export const spring = {
   bouncy: { damping: 11, stiffness: 260, mass: 0.7 },
 } satisfies Record<string, WithSpringConfig>;
 
-export const duration = { fast: 150, base: 220, slow: 320 } as const;
+const duration = { fast: 150, base: 220, slow: 320 } as const;
 
 /** List items arriving: rise and fade, staggered for the first few. */
 export const enterItem = (index = 0) =>

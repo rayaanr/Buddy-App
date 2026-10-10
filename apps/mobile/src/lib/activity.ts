@@ -15,8 +15,7 @@ type Activity = Pick<ActivitySummary, 'capacity' | 'goingCount' | 'waitingCount'
 
 export const spotsLeft = (a: Activity) => a.capacity - a.goingCount;
 
-export const isParticipating = (a: Pick<ActivitySummary, 'viewer'>) =>
-  a.viewer.joined || a.viewer.hosting;
+const isParticipating = (a: Pick<ActivitySummary, 'viewer'>) => a.viewer.joined || a.viewer.hosting;
 
 /** "Tonight · 18:30" in Sri Lanka time. */
 export const whenLabel = (a: Pick<ActivitySummary, 'startsAt'>) => formatWhen(new Date(a.startsAt));

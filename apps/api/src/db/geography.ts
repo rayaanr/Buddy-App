@@ -9,7 +9,7 @@ export interface LatLng {
  * Parses a PostGIS point from hex EWKB, the format Postgres returns for
  * geography/geometry columns: byte order, type (with SRID flag), SRID, x, y.
  */
-export function parsePointEwkb(hex: string): LatLng {
+function parsePointEwkb(hex: string): LatLng {
   const buf = Buffer.from(hex, 'hex');
   const little = buf.readUInt8(0) === 1;
   const type = little ? buf.readUInt32LE(1) : buf.readUInt32BE(1);

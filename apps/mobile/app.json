@@ -56,6 +56,7 @@
           "locationAlwaysPermission": false
         }
       ],
+      "expo-system-ui",
       "expo-secure-store",
       "expo-web-browser"
     ],

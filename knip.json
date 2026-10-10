@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["design/**"],
+  "ignoreDependencies": [
+    "@jest/globals",
+    "postcss",
+    "react-native-css-interop",
+    "expo-updates",
+    "@tailwindcss/container-queries"
+  ],
+  "workspaces": {
+    "apps/api": {
+      "entry": ["scripts/**/*.ts"]
+    },
+    "apps/mobile": {
+      "metro": false,
+      "entry": ["metro.config.js"]
+    },
+    "packages/shared": {}
+  }
+}

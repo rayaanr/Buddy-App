@@ -4,8 +4,7 @@ import { openBrowserAsync } from 'expo-web-browser';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { isEmail, sendSignInCode } from '@/api/auth';
-import { errorMessage } from '@/api/client';
+import { isEmail } from '@/api/auth';
 import {
   BrandMark,
   Button,
@@ -19,6 +18,7 @@ import {
 import { TownField } from '@/components/places/TownField';
 import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { useSendCode } from '@/hooks/useSendCode';
 import { useAccountStore } from '@/store/account';
 
 export default function SignUpScreen() {
@@ -29,33 +29,26 @@ export default function SignUpScreen() {
   const [email, setEmail] = useState('');
   const [town, setTown] = useState<Place | null>(null);
   const [tried, setTried] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { send, sending, error } = useSendCode((normalised) => {
+    if (town) {
+      setPendingSignUp({
+        name: name.trim(),
+        email: normalised,
+        placeId: town.id,
+        area: placeLabel(town),
+      });
+    }
+  });
 
   const emailValid = isEmail(email);
   const canSubmit = !!name.trim() && emailValid && !!town;
 
-  const submit = async () => {
-    if (!canSubmit || !town) {
+  const submit = () => {
+    if (!canSubmit) {
       setTried(true);
       return;
     }
-    setSending(true);
-    setError(null);
-    try {
-      await sendSignInCode(email);
-      setPendingSignUp({
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        placeId: town.id,
-        area: placeLabel(town),
-      });
-      router.push({ pathname: '/verify', params: { email: email.trim().toLowerCase() } });
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSending(false);
-    }
+    send(email);
   };
 
   return (

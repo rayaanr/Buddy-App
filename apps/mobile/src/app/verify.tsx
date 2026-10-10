@@ -1,12 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { sendSignInCode, verifySignInCode } from '@/api/auth';
 import { api, errorMessage, unwrap } from '@/api/client';
 import { keys } from '@/api/queries';
 import { BackButton, Button, Heading, KeyboardScreen } from '@/components/ui';
+import { useNow } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { useAccountStore } from '@/store/account';
@@ -28,14 +29,12 @@ export default function VerifyScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendIn, setResendIn] = useState(RESEND_AFTER_S);
+  // Counted from a deadline, so a phone that pauses timers in the background
+  // still shows the right number when it comes back.
+  const [resendAt, setResendAt] = useState(() => Date.now() + RESEND_AFTER_S * 1000);
+  const now = useNow(1000);
+  const resendIn = Math.max(0, Math.ceil((resendAt - now.getTime()) / 1000));
   const input = useRef<TextInput>(null);
-
-  useEffect(() => {
-    if (resendIn <= 0) return;
-    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [resendIn]);
 
   const verify = async (otp: string) => {
     if (busy) return;
@@ -78,7 +77,7 @@ export default function VerifyScreen() {
     setError(null);
     try {
       await sendSignInCode(email);
-      setResendIn(RESEND_AFTER_S);
+      setResendAt(Date.now() + RESEND_AFTER_S * 1000);
     } catch (err) {
       setError(errorMessage(err));
     }

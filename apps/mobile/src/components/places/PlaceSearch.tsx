@@ -2,12 +2,10 @@ import type { Place } from '@buddy/shared';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-import { errorMessage } from '@/api/client';
 import { nearestPlace, usePlaceSearch } from '@/api/queries';
 import { LocateIcon, MapPinIcon, Sheet, TextField } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
-import { currentPoint } from '@/lib/location';
-import { toast } from '@/store/ui';
+import { useLocate } from '@/hooks/useLocate';
 import { colors } from '@/theme';
 
 /** "Kandy District", or "Cinnamon Gardens · Colombo" for places with another name. */
@@ -36,19 +34,10 @@ export function PlaceSearch({
   const [query, setQuery] = useState('');
   // One request once typing pauses, not one per keystroke.
   const results = usePlaceSearch(useDebounced(query, 250));
-  const [locating, setLocating] = useState(false);
   const typed = query.trim().length > 0;
-
-  const pickCurrent = async () => {
-    setLocating(true);
-    try {
-      onPick(await nearestPlace(await currentPoint()));
-    } catch (err) {
-      toast(errorMessage(err));
-    } finally {
-      setLocating(false);
-    }
-  };
+  const { locating, locate: pickCurrent } = useLocate(async (point) =>
+    onPick(await nearestPlace(point)),
+  );
 
   return (
     <View>
@@ -71,7 +60,7 @@ export function PlaceSearch({
             <PlaceRow
               icon={locating ? <ActivityIndicator color={colors.lime} /> : <LocateIcon />}
               label={locating ? 'Finding you…' : 'Use my current location'}
-              onPress={locating ? undefined : () => void pickCurrent()}
+              onPress={locating ? undefined : pickCurrent}
               accent
             />
           ) : null}

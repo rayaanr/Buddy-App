@@ -5,7 +5,7 @@ import { SHARE_URL } from '@/config';
 import { toast } from '@/store/ui';
 import { whenLong } from './activity';
 
-export const activityLink = (id: string) => `${SHARE_URL}/a/${id}`;
+const activityLink = (id: string) => `${SHARE_URL}/a/${id}`;
 
 /**
  * Opens the share sheet with a link to the activity. The link's preview page

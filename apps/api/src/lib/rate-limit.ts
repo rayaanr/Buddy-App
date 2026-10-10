@@ -76,7 +76,7 @@ interface LimitOptions {
 }
 
 /** 429s once a user (or IP) goes over `limit` requests per `windowMs`. */
-export function rateLimit(limiter: RateLimiter, trustedHops: number, opts: LimitOptions) {
+function rateLimit(limiter: RateLimiter, trustedHops: number, opts: LimitOptions) {
   return createMiddleware<AppEnv>(async (c, next) => {
     const who = opts.by === 'user' ? c.get('user')?.id : clientIp(c, trustedHops);
     const { ok, retryAfterS } = limiter.hit(

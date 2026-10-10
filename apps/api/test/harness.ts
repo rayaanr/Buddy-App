@@ -14,7 +14,7 @@ import { seed } from '../scripts/seed/index';
 import { TEST_DATABASE_URL } from './global-setup';
 
 /** Captures outgoing email so tests can read sign-in codes. */
-export function captureMailer() {
+function captureMailer() {
   const sent: Mail[] = [];
   const mailer: Mailer = {
     async send(mail) {

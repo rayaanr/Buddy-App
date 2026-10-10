@@ -20,7 +20,7 @@ export interface VenueProvider {
   attribution: string | null;
 }
 
-export interface VenueResults {
+interface VenueResults {
   venues: Venue[];
   attribution: string | null;
 }
@@ -131,7 +131,7 @@ export function googleProvider(apiKey: string, fetcher = fetch): VenueProvider {
 }
 
 /** Towns only: no outside service. */
-export function townsProvider(db: Db): VenueProvider {
+function townsProvider(db: Db): VenueProvider {
   return {
     attribution: null,
     async search(query) {

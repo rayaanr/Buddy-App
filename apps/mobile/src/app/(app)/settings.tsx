@@ -4,23 +4,19 @@ import { Pressable, ScrollView, Switch, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
-import { BackButton, ChevronRightIcon, Heading, SectionLabel } from '@/components/ui';
+import { ChevronRightIcon, Heading, ScreenHeader, SectionLabel } from '@/components/ui';
 import { PRIVACY_URL, TERMS_URL } from '@/config';
-import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
 /** Profile → Settings: account details and the less common account actions. */
 export default function SettingsScreen() {
-  const { top } = useScreenInsets();
   const me = useMe();
 
   return (
     <View className="flex-1 bg-bg">
-      <View className="px-[18px]" style={{ paddingTop: top(56) }}>
-        <BackButton />
-      </View>
+      <ScreenHeader />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}

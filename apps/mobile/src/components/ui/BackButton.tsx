@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
+import { View } from 'react-native';
 
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { ArrowLeftIcon, MoreIcon } from './icons';
 import { PressableScale } from './Motion';
@@ -68,4 +70,15 @@ export function BackButton({ onPress, ...rest }: HeaderButtonProps) {
 /** "⋯": opens less common actions (report, block) without crowding the screen. */
 export function MoreButton({ onPress, ...rest }: HeaderButtonProps & { onPress: () => void }) {
   return <IconButton icon={<MoreIcon />} label="More options" onPress={onPress} {...rest} />;
+}
+
+/** The plain screen header: Back on the left, an optional button on the right. */
+export function ScreenHeader({ right }: { right?: ReactNode }) {
+  const { top } = useScreenInsets();
+  return (
+    <View className="flex-row justify-between px-[18px]" style={{ paddingTop: top(56) }}>
+      <BackButton />
+      {right}
+    </View>
+  );
 }

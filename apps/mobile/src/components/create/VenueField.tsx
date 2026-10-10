@@ -2,13 +2,11 @@ import type { Venue } from '@buddy/shared';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
-import { errorMessage } from '@/api/client';
 import { useVenueSearch } from '@/api/queries';
 import { LocateIcon, MapPinIcon, TextField } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
-import { currentPoint } from '@/lib/location';
+import { useLocate } from '@/hooks/useLocate';
 import { useDiscoverStore } from '@/store/discover';
-import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
 /** The exact meeting point, and how to describe it under the field. */
@@ -37,25 +35,19 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
   const here = useDiscoverStore((s) => s.here);
   const query = useDebounced(where.trim());
   const venues = useVenueSearch(typing ? query : '', pin ?? here);
-  const [locating, setLocating] = useState(false);
 
   const pick = (v: Venue) => {
     setTyping(false);
     onChange(v.name, { ...v.location, label: v.address || v.name });
   };
 
-  const pinHere = async () => {
-    setLocating(true);
-    try {
-      const point = await currentPoint(true);
+  const { locating, locate: pinHere } = useLocate(
+    (point) => {
       useDiscoverStore.getState().setHere(point);
       onChange(where, { ...point, label: 'Where you are now' });
-    } catch (err) {
-      toast(errorMessage(err));
-    } finally {
-      setLocating(false);
-    }
-  };
+    },
+    { precise: true },
+  );
 
   const suggestions = typing && query.length >= 2 ? (venues.data?.venues ?? []).slice(0, 5) : [];
 
@@ -114,7 +106,7 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
           </Text>
         </View>
         <Pressable
-          onPress={locating ? undefined : () => void pinHere()}
+          onPress={locating ? undefined : pinHere}
           accessibilityRole="button"
           hitSlop={8}
           className="flex-row items-center gap-1.5 rounded-full border border-outline px-3 py-1.5 active:opacity-70"

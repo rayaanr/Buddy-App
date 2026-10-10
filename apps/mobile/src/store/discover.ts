@@ -6,7 +6,7 @@ import type { Point } from '@/lib/location';
 import { persistStorage } from './storage';
 
 /** Where Discover measures from. */
-export type DiscoverOrigin =
+type DiscoverOrigin =
   | { kind: 'home' }
   /** Where the phone is now (needs location permission). */
   | { kind: 'here' }

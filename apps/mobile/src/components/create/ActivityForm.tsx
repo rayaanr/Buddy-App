@@ -109,7 +109,7 @@ export function draftFrom(
   };
 }
 
-export interface ActivityValues {
+interface ActivityValues {
   /** undefined: unchanged; null: back to the stock photo; string: a new upload. */
   coverKey?: string | null;
   title: string;

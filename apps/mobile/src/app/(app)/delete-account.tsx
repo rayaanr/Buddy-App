@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
@@ -20,21 +20,11 @@ const WHAT_GOES = [
 export default function DeleteAccountScreen() {
   const { top } = useScreenInsets();
   const me = useMe();
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const confirm = async () => {
-    setDeleting(true);
-    setError(null);
-    try {
-      // Push tokens are deleted with the account. The root navigator returns to
-      // sign-up once the session is gone.
-      await deleteAccount();
-    } catch (err) {
-      setError(errorMessage(err));
-      setDeleting(false);
-    }
-  };
+  // Push tokens are deleted with the account. The root navigator returns to
+  // sign-up once the session is gone.
+  const remove = useMutation({ mutationFn: deleteAccount });
+  const deleting = remove.isPending || remove.isSuccess;
+  const error = remove.error ? errorMessage(remove.error) : null;
 
   return (
     <View className="flex-1 bg-bg">
@@ -69,7 +59,7 @@ export default function DeleteAccountScreen() {
           label={deleting ? 'Deleting…' : 'Delete my account'}
           variant="danger-outline"
           disabled={deleting}
-          onPress={confirm}
+          onPress={() => remove.mutate()}
         />
       </Footer>
     </View>
