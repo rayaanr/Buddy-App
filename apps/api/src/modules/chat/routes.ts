@@ -6,6 +6,8 @@ import type { WebSocket } from 'ws';
 
 import { currentUser, requireUser } from '../../auth/middleware';
 import type { AppEnv, Deps } from '../../http/context';
+import { limits, MINUTE } from '../../lib/rate-limit';
+import { forbidden } from '../../lib/errors';
 import { idParam, validate } from '../../lib/validate';
 import type { Peer } from '../../realtime/hub';
 import { blockedIds } from '../safety/blocks';
@@ -18,10 +20,33 @@ const PUSH_PREVIEW_CHARS = 120;
 type ChatEnv = AppEnv & { Variables: { activityTitle: string } };
 
 /** Chat for one activity, mounted under /v1/activities/:id/chat. */
-export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
+export function chatRoutes(deps: Deps) {
+  const { db, urls, hub, push, logger } = deps;
+  // Each message can push to everyone in the chat.
+  const sending = limits(deps)({ name: 'chat', limit: 30, windowMs: MINUTE, by: 'user' });
   const memberOnly = createMiddleware<ChatEnv>(async (c, next) => {
     const { title } = await requireMember(db, c.req.param('id')!, currentUser(c).id);
     c.set('activityTitle', title);
+    await next();
+  });
+
+  /**
+   * Browsers send cookies with cross-site WebSocket requests, so refuse other
+   * sites' pages. The apps send no Origin, or the address they connected to
+   * (or the API's public one); the web app's origins are in WEB_ORIGINS.
+   */
+  const sameSiteOnly = createMiddleware<ChatEnv>(async (c, next) => {
+    const origin = c.req.header('origin');
+    const ownOrigin = new URL(deps.env.BETTER_AUTH_URL).origin;
+    if (origin && origin !== ownOrigin && !deps.env.WEB_ORIGINS.includes(origin)) {
+      let host: string | null = null;
+      try {
+        host = new URL(origin).host;
+      } catch {
+        // Not a URL: treat as foreign.
+      }
+      if (host !== c.req.header('host')) throw forbidden('Chat isn’t available from this site');
+    }
     await next();
   });
 
@@ -34,7 +59,7 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
         return c.json(await listMessages(db, urls, c.req.param('id')!, currentUser(c).id, q));
       })
 
-      .post('/messages', validate('json', sendMessageInput), async (c) => {
+      .post('/messages', sending, validate('json', sendMessageInput), async (c) => {
         const me = currentUser(c);
         const activityId = c.req.param('id')!;
         const { message, created } = await sendMessage(
@@ -83,6 +108,7 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
       // Live events. Sign-in and membership are checked above, before upgrading.
       .get(
         '/ws',
+        sameSiteOnly,
         upgradeWebSocket((c) => {
           const me = currentUser(c);
           const activityId = c.req.param('id')!;
@@ -101,6 +127,12 @@ export function chatRoutes({ db, urls, hub, push, logger }: Deps) {
                 close: () => ws.close(4403, 'No longer a member'),
               };
               leave = hub.join(activityId, peer);
+              // Membership was checked before upgrading; someone removed (or who
+              // left) in between would otherwise keep receiving the chat.
+              requireMember(db, activityId, me.id).catch(() => {
+                leave?.();
+                ws.close(4403, 'Not a member');
+              });
 
               // Detect phones that vanished without closing (tunnels, airplane mode).
               let alive = true;

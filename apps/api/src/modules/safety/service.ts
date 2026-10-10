@@ -1,5 +1,5 @@
 import { REPORT_REASONS, type CreateReportInput, type UserSummary } from '@buddy/shared';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
 import { activities, blocks, messages, profiles, reports, user } from '../../db/schema';
@@ -8,6 +8,7 @@ import { badRequest, notFound } from '../../lib/errors';
 import type { Mailer } from '../../lib/mailer';
 import type { Urls } from '../../lib/urls';
 import type { Logger } from '../../logger';
+import { visibleTo } from '../activities/queries';
 import { requireMember } from '../chat/service';
 
 async function userExists(db: Db, id: string) {
@@ -72,10 +73,11 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
     activityId = msg.activityId;
     messageId = input.messageId;
   } else if (input.activityId) {
+    // Only what you can see (so this can't confirm hidden activities exist).
     const [activity] = await db
       .select({ hostId: activities.hostId })
       .from(activities)
-      .where(eq(activities.id, input.activityId));
+      .where(and(eq(activities.id, input.activityId), visibleTo(reporterId)));
     if (!activity) throw notFound('Activity');
     targetUserId = activity.hostId;
     activityId = input.activityId;
@@ -84,6 +86,20 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
     targetUserId = input.userId!;
   }
   if (targetUserId === reporterId) throw badRequest('You can’t report yourself');
+
+  // Reporting the same person again within a day is saved but doesn't email
+  // the moderators again (no inbox flooding).
+  const [recent] = await db
+    .select({ id: reports.id })
+    .from(reports)
+    .where(
+      and(
+        eq(reports.reporterId, reporterId),
+        eq(reports.targetUserId, targetUserId),
+        sql`${reports.createdAt} > now() - interval '1 day'`,
+      ),
+    )
+    .limit(1);
 
   const [row] = await db
     .insert(reports)
@@ -96,7 +112,7 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
       details: input.details || null,
     })
     .returning();
-  return row!;
+  return { report: row!, repeat: !!recent };
 }
 
 /**

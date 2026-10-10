@@ -61,6 +61,7 @@ export function useTestApp(
 
   beforeEach(async () => {
     mail.sent.length = 0;
+    deps.limiter.reset();
     await seed(deps.db);
   });
   afterAll(() => close());

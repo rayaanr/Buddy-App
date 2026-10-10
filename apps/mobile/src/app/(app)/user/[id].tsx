@@ -66,7 +66,9 @@ export default function UserProfileScreen() {
         <Heading size="section" className="mt-4 text-center">
           {u.name}
         </Heading>
-        <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">{u.area}</Text>
+        {u.area ? (
+          <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">{u.area}</Text>
+        ) : null}
         <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
           On Buddy since {monthYear(u.memberSince)}
         </Text>
@@ -76,20 +78,27 @@ export default function UserProfileScreen() {
           </Text>
         ) : null}
 
-        <View className="mt-5 flex-row gap-2">
-          <Stat value={u.hostedCount} label="Hosted" />
-          <Stat value={u.joinedCount} label="Joined" />
-        </View>
+        {/* Blocked by you: the API only sends their name and photo. */}
+        {u.blockedByYou ? null : (
+          <>
+            <View className="mt-5 flex-row gap-2">
+              <Stat value={u.hostedCount} label="Hosted" />
+              <Stat value={u.joinedCount} label="Joined" />
+            </View>
 
-        <View className="mb-2.5 mt-6 flex-row justify-between">
-          <SectionLabel>Into</SectionLabel>
-          {common.size ? <SectionLabel tone="lime">{common.size} in common</SectionLabel> : null}
-        </View>
-        <View className="flex-row flex-wrap gap-2">
-          {u.interests.map((t) => (
-            <Tag key={t} label={t} active={common.has(t)} />
-          ))}
-        </View>
+            <View className="mb-2.5 mt-6 flex-row justify-between">
+              <SectionLabel>Into</SectionLabel>
+              {common.size ? (
+                <SectionLabel tone="lime">{common.size} in common</SectionLabel>
+              ) : null}
+            </View>
+            <View className="flex-row flex-wrap gap-2">
+              {u.interests.map((t) => (
+                <Tag key={t} label={t} active={common.has(t)} />
+              ))}
+            </View>
+          </>
+        )}
 
         {u.hosting.length > 0 ? (
           <>

@@ -50,6 +50,20 @@ export interface SummaryOptions {
   limit?: number;
 }
 
+/**
+ * Activities someone may see: not hosted by someone on either side of a block
+ * with them, not cancelled, unless they're going; never one they were removed
+ * from. Signed out (null): not cancelled.
+ */
+export function visibleTo(viewerId: string | null) {
+  if (!viewerId) return isNull(activities.cancelledAt);
+  return and(
+    sql`(not ${blockedBetween(viewerId, activities.hostId)} or ${isMember(viewerId)})`,
+    sql`(${activities.cancelledAt} is null or ${isMember(viewerId)})`,
+    sql`not exists (select 1 from activity_removals r where r.activity_id = ${activities.id} and r.user_id = ${viewerId})`,
+  );
+}
+
 const isMember = (viewerId: string) =>
   sql`exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${viewerId})`;
 
@@ -109,21 +123,7 @@ export async function findActivitySummaries(
     .innerJoin(user, eq(user.id, activities.hostId))
     .leftJoin(profiles, eq(profiles.userId, activities.hostId))
     .leftJoin(communities, eq(communities.id, activities.communityId))
-    .where(
-      and(
-        ...where,
-        viewerId
-          ? sql`(not ${blockedBetween(viewerId, activities.hostId)} or ${isMember(viewerId)})`
-          : undefined,
-        viewerId
-          ? sql`(${activities.cancelledAt} is null or ${isMember(viewerId)})`
-          : isNull(activities.cancelledAt),
-        // Removed by the host: gone for good.
-        viewerId
-          ? sql`not exists (select 1 from activity_removals r where r.activity_id = ${activities.id} and r.user_id = ${viewerId})`
-          : undefined,
-      ),
-    )
+    .where(and(...where, visibleTo(viewerId)))
     .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));
 
   const rows = limit ? await query.limit(limit) : await query;

@@ -23,6 +23,7 @@ import {
   user,
 } from '../../db/schema';
 import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
+import { isOwnUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
 import { homePlace, nearestPlace, originFor } from '../profiles/service';
@@ -47,8 +48,6 @@ const DEFAULT_COVERS: Record<ActivityGroup, string> = {
 };
 export const stockCover = (group: ActivityGroup) =>
   `https://images.unsplash.com/photo-${DEFAULT_COVERS[group]}?w=800&q=70&auto=format&fit=crop`;
-
-export const coverKeyPrefix = (userId: string) => `covers/${userId}/`;
 
 export async function getActivityDetail(
   db: Db | Tx,
@@ -109,7 +108,7 @@ export async function createActivity(
   input: CreateActivityInput & { description: string },
 ) {
   checkStartsAt(input.startsAt);
-  if (input.coverKey && !input.coverKey.startsWith(coverKeyPrefix(host.id))) {
+  if (input.coverKey && !isOwnUpload(input.coverKey, 'cover', host.id)) {
     throw forbidden('That image was not uploaded by you');
   }
 
@@ -289,7 +288,8 @@ export async function removeGuest(
   reason: RemovalReason,
 ) {
   return db.transaction(async (tx) => {
-    const row = await lockForHost(tx, host.id, activityId);
+    // Removing someone stays possible once it's started (trouble on the day).
+    const row = await lockForHost(tx, host.id, activityId, { evenIfStarted: true });
     if (userId === host.id) throw forbidden('Hosts can’t remove themselves');
     const [person] = await tx.select({ name: user.name }).from(user).where(eq(user.id, userId));
     const left = await tx
@@ -319,9 +319,17 @@ export async function removeGuest(
 
 /** Leaves the waitlist. A no-op if you weren't on it. */
 export async function leaveWaitlist(db: Db, userId: string, activityId: string) {
-  await db
-    .delete(activityWaitlist)
-    .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)));
+  await db.transaction(async (tx) => {
+    // Locked like joins and promotions, so nobody is moved in just as they leave.
+    await tx
+      .select({ id: activities.id })
+      .from(activities)
+      .where(eq(activities.id, activityId))
+      .for('update');
+    await tx
+      .delete(activityWaitlist)
+      .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)));
+  });
 }
 
 /** "Sat 14 Nov, 17:45" in Sri Lanka time, for chat lines and notifications. */
@@ -340,7 +348,12 @@ export const whenText = (date: Date) =>
  * Locks an activity the host is about to change. Only its host may, and only
  * while it's still ahead and not cancelled.
  */
-async function lockForHost(tx: Tx, hostId: string, activityId: string) {
+async function lockForHost(
+  tx: Tx,
+  hostId: string,
+  activityId: string,
+  { evenIfStarted = false } = {},
+) {
   const [row] = await tx
     .select()
     .from(activities)
@@ -349,7 +362,9 @@ async function lockForHost(tx: Tx, hostId: string, activityId: string) {
   if (!row) throw notFound('Activity');
   if (row.hostId !== hostId) throw forbidden('Only the host can change this activity');
   if (row.cancelledAt) throw conflict('This activity was cancelled');
-  if (row.startsAt.getTime() < Date.now()) throw conflict('This activity has already started');
+  if (!evenIfStarted && row.startsAt.getTime() < Date.now()) {
+    throw conflict('This activity has already started');
+  }
   return row;
 }
 
@@ -365,7 +380,7 @@ export async function updateActivity(
   input: UpdateActivityInput,
 ) {
   if (input.startsAt !== undefined) checkStartsAt(input.startsAt);
-  if (input.coverKey && !input.coverKey.startsWith(coverKeyPrefix(host.id))) {
+  if (input.coverKey && !isOwnUpload(input.coverKey, 'cover', host.id)) {
     throw forbidden('That image was not uploaded by you');
   }
   return db.transaction(async (tx) => {

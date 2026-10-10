@@ -1,8 +1,10 @@
 import type { ActivitySummary } from '@buddy/shared';
+import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 
+import { activities } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
-import { findActivitySummary } from '../activities/queries';
+import { findActivitySummaries, upcoming } from '../activities/queries';
 import { whenText } from '../activities/service';
 import { firstName } from '../chat/system-messages';
 
@@ -23,11 +25,19 @@ const escape = (s: string) =>
 export function shareRoutes({ db, urls, env }: Deps) {
   return new Hono<AppEnv>().get('/a/:id', async (c) => {
     const id = c.req.param('id');
-    const a = UUID.test(id) ? await findActivitySummary(db, urls, id, null) : null;
+    // Upcoming only: past activities stop being public.
+    const [a] = UUID.test(id)
+      ? await findActivitySummaries(db, urls, {
+          viewerId: null,
+          where: [eq(activities.id, id), upcoming()],
+        })
+      : [];
     c.header('cache-control', 'public, max-age=300');
     if (!a) return c.html(page(notFoundBody(), {}), 404);
     const appLink = `${env.APP_SCHEME}://activity/${a.id}`;
-    return c.html(page(activityBody(a, appLink), meta(a, new URL(c.req.url).href)));
+    // From config, not the request's Host header (cached pages can't be poisoned).
+    const url = new URL(`/a/${a.id}`, env.BETTER_AUTH_URL).href;
+    return c.html(page(activityBody(a, appLink), meta(a, url)));
   });
 }
 

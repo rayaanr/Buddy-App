@@ -5,6 +5,7 @@ import type { Deps } from './http/context';
 import { createMailer, type Mailer } from './lib/mailer';
 import { createPushSender, type PushSender } from './lib/push';
 import { createStorage, type Storage } from './lib/storage';
+import { RateLimiter } from './lib/rate-limit';
 import { createUrls } from './lib/urls';
 import { createVenueSearch, type VenueSearch } from './lib/venues';
 import { createLogger } from './logger';
@@ -23,7 +24,8 @@ export function createDeps(
   const logger = createLogger(env);
   const { db, close } = createDb(env.DATABASE_URL);
   const mailer = overrides.mailer ?? createMailer(env, logger);
-  const auth = createAuth({ db, env, mailer, logger });
+  const limiter = new RateLimiter();
+  const auth = createAuth({ db, env, mailer, logger, limiter });
   const storage = overrides.storage !== undefined ? overrides.storage : createStorage(env);
   const push = overrides.push ?? createPushSender(db, logger, env.EXPO_ACCESS_TOKEN);
   const deps: Deps = {
@@ -37,6 +39,7 @@ export function createDeps(
     hub: new ChatHub(),
     push,
     venues: overrides.venues ?? createVenueSearch(env, db, logger),
+    limiter,
   };
   return { deps, close };
 }

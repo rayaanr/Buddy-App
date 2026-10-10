@@ -18,6 +18,7 @@ import {
   places,
 } from '../../db/schema';
 import { forbidden, notFound } from '../../lib/errors';
+import { isOwnUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
 import { requirePlace, toPlace } from '../profiles/service';
 
@@ -60,11 +61,9 @@ export async function getMe(db: Db, urls: Urls, userId: string): Promise<Me> {
   };
 }
 
-/** Avatar keys are issued per user by the upload endpoint; reject anyone else's. */
-export const avatarKeyPrefix = (userId: string) => `avatars/${userId}/`;
-
 export async function updateMe(db: Db, userId: string, input: UpdateMeInput) {
-  if (input.avatarKey && !input.avatarKey.startsWith(avatarKeyPrefix(userId))) {
+  // Avatar keys are issued per user by the upload endpoint; reject anyone else's.
+  if (input.avatarKey && !isOwnUpload(input.avatarKey, 'avatar', userId)) {
     throw forbidden('That image was not uploaded by you');
   }
   if (input.placeId !== undefined) await requirePlace(db, input.placeId);

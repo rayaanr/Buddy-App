@@ -15,6 +15,7 @@ import { currentUser, requireUser } from '../../auth/middleware';
 import { activities, activityMembers, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
+import { HOUR, limits, MINUTE } from '../../lib/rate-limit';
 import { idParam, validate } from '../../lib/validate';
 import { toChatMessage, type MessageRow } from '../chat/service';
 import { originFor } from '../profiles/service';
@@ -43,12 +44,16 @@ import {
 } from './service';
 
 const HISTORY_LIMIT = 10;
+const FROM_COMMUNITIES_LIMIT = 20;
 /** Discover widens to these (km) while it has fewer than ENOUGH to show; 450 covers the island. */
 const WIDER_KM = [50, 100, 200, 450];
 const ENOUGH = 3;
 
 export function activityRoutes(deps: Deps) {
-  const { db, urls, hub, push } = deps;
+  const { db, urls, hub, push, limiter } = deps;
+  const limit = limits(deps);
+  const joins = limit({ name: 'joins', limit: 30, windowMs: 10 * MINUTE, by: 'user' });
+  const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
 
   /**
    * After a change: posts its chat lines, tells everyone going about a host
@@ -68,7 +73,9 @@ export function activityRoutes(deps: Deps) {
     for (const row of result.messages) {
       hub.publish(id, { type: 'message', message: await toChatMessage(db, urls, row) });
     }
-    if (result.notice) {
+    // Host notices push to everyone going: at most 3 an hour per activity, so
+    // repeated edits can't spam phones (the chat lines still go up).
+    if (result.notice && limiter.hit(`notice:${id}`, 3, HOUR).ok) {
       const message = {
         ...result.notice,
         data: { activityId: id },
@@ -147,6 +154,7 @@ export function activityRoutes(deps: Deps) {
             ),
             sql`not exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${me.id})`,
           ],
+          limit: FROM_COMMUNITIES_LIMIT,
         });
         return c.json({ activities: items });
       })
@@ -196,12 +204,17 @@ export function activityRoutes(deps: Deps) {
         });
       })
 
-      .post('/', validate('json', createActivityInput), async (c) => {
-        const me = currentUser(c);
-        return c.json(await createActivity(db, urls, me, c.req.valid('json')), 201);
-      })
+      .post(
+        '/',
+        limit({ name: 'create', limit: 20, windowMs: HOUR, by: 'user' }),
+        validate('json', createActivityInput),
+        async (c) => {
+          const me = currentUser(c);
+          return c.json(await createActivity(db, urls, me, c.req.valid('json')), 201);
+        },
+      )
 
-      .patch('/:id', idParam(), validate('json', updateActivityInput), async (c) => {
+      .patch('/:id', hosting, idParam(), validate('json', updateActivityInput), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         await announce(id, me.id, await updateActivity(db, urls, me, id, c.req.valid('json')));
@@ -209,14 +222,14 @@ export function activityRoutes(deps: Deps) {
       })
 
       // No JSON body (older apps) validates as {}: cancel this week only.
-      .post('/:id/cancel', idParam(), validate('json', cancelActivityInput), async (c) => {
+      .post('/:id/cancel', hosting, idParam(), validate('json', cancelActivityInput), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         await announce(id, me.id, await cancelActivity(db, me, id, c.req.valid('json')));
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
-      .post('/:id/membership', idParam(), async (c) => {
+      .post('/:id/membership', joins, idParam(), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         const result = await joinActivity(db, me, id);
@@ -229,7 +242,7 @@ export function activityRoutes(deps: Deps) {
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
-      .delete('/:id/membership', idParam(), async (c) => {
+      .delete('/:id/membership', joins, idParam(), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         const result = await leaveActivity(db, me, id);
@@ -241,6 +254,7 @@ export function activityRoutes(deps: Deps) {
       // Host removes a guest or someone waiting.
       .post(
         '/:id/members/:userId/remove',
+        hosting,
         validate('param', z.object({ id: z.uuid(), userId: z.uuid() })),
         validate('json', removeGuestInput),
         async (c) => {
@@ -273,7 +287,7 @@ export function activityRoutes(deps: Deps) {
       })
 
       // Full activities: wait for a spot (joins straight away if one is free).
-      .post('/:id/waitlist', idParam(), async (c) => {
+      .post('/:id/waitlist', joins, idParam(), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         const result = await joinWaitlist(db, me, id);
@@ -284,7 +298,7 @@ export function activityRoutes(deps: Deps) {
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 
-      .delete('/:id/waitlist', idParam(), async (c) => {
+      .delete('/:id/waitlist', joins, idParam(), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
         await leaveWaitlist(db, me.id, id);

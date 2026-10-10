@@ -4,6 +4,7 @@ import type { Env } from '../env';
 import type { Mailer } from '../lib/mailer';
 import type { PushSender } from '../lib/push';
 import type { Storage } from '../lib/storage';
+import type { RateLimiter } from '../lib/rate-limit';
 import type { Urls } from '../lib/urls';
 import type { VenueSearch } from '../lib/venues';
 import type { Logger } from '../logger';
@@ -22,6 +23,7 @@ export interface Deps {
   hub: ChatHub;
   push: PushSender;
   venues: VenueSearch;
+  limiter: RateLimiter;
 }
 
 export interface SessionUser {

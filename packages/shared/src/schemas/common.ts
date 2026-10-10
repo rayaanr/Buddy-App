@@ -36,5 +36,6 @@ export const ERROR_CODES = {
   conflict: 'conflict',
   activityFull: 'activity_full',
   waitlistFull: 'waitlist_full',
+  rateLimited: 'rate_limited',
   internal: 'internal_error',
 } as const;

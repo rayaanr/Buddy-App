@@ -55,6 +55,21 @@ const schema = z
      * via Photon), `google` (Places API, needs GOOGLE_PLACES_API_KEY) or `towns`.
      */
     VENUE_PROVIDER: z.enum(['osm', 'google', 'towns']).default('osm'),
+    /**
+     * Reverse proxies in front of the API (e.g. 1 for Caddy). Rate limits then
+     * read the client IP from X-Forwarded-For; 0 uses the socket address.
+     */
+    TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    /** Proxy IPs/CIDRs for sign-in rate limits when there's more than one hop (comma-separated). */
+    TRUSTED_PROXIES: z
+      .string()
+      .default('')
+      .transform((v) =>
+        v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
     /** Photon server for `osm`; run your own for heavy use (the public one asks for fair use). */
     PHOTON_URL: z.url().default('https://photon.komoot.io'),
     GOOGLE_PLACES_API_KEY: z.string().optional(),

@@ -110,8 +110,11 @@ describe('cover photos', () => {
         body: { coverKey },
       });
 
-    expect((await patch(`covers/${host.userId}/a.jpg`)).status).toBe(200);
+    const mine = `covers/${host.userId}/0b6c1c44-6a1e-4e2b-9c43-2a3b4c5d6e7f.jpg`;
+    expect((await patch(mine)).status).toBe(200);
     expect((await patch('covers/someone-else/a.jpg')).status).toBe(403);
+    // A prefix match isn't enough: no climbing out into someone else's folder.
+    expect((await patch(`covers/${host.userId}/../../avatars/x/y.jpg`)).status).toBe(403);
     expect((await patch(null)).body.coverUrl).toContain('unsplash');
   });
 });

@@ -66,6 +66,19 @@ export function userRoutes({ db, urls }: Deps) {
         hosting,
         blockedByYou: row.blockedByYou,
       };
+      // Blocked by you: just enough to recognise them and unblock.
+      if (row.blockedByYou) {
+        return c.json({
+          ...profile,
+          area: '',
+          bio: '',
+          interests: [],
+          commonInterests: [],
+          hostedCount: 0,
+          joinedCount: 0,
+          hosting: [],
+        } satisfies PublicProfile);
+      }
       return c.json(profile);
     })
 

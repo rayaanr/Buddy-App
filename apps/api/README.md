@@ -116,6 +116,27 @@ Buddy covers all of Sri Lanka. The `places` table holds ~2,100 towns (postal tow
 - **Updating the towns.** `bunx tsx scripts/places/build.ts` (from `apps/api`) prints the SQL; put it in a new migration (rows upsert by id).
 - **Data sources and licences.** Towns from [`sri-lanka-postal-locations`](https://github.com/hareeshkar/sri-lanka-postal-locations) (MIT), derived from [madurapa/sri-lanka-provinces-districts-cities](https://github.com/madurapa/sri-lanka-provinces-districts-cities) (MIT, © 2016 Maduka Jayalath) and [SKIDDOW/SriLankaCitiesDatabase](https://github.com/SKIDDOW/SriLankaCitiesDatabase) (MIT, © 2024 SKIDDOW); main post offices from [`lankapost`](https://github.com/AbQaadir/lankapost) (MIT). Venue results from Photon are © OpenStreetMap contributors (ODbL), so show "© OpenStreetMap" where venue results appear in a public release.
 
+## Rate limits and abuse
+
+Per signed-in user unless noted (`src/lib/rate-limit.ts`; counted in memory, so per API instance):
+
+| What                          | Limit                                              | Why                                                            |
+| ----------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| Chat messages                 | 30 / minute                                        | Each can push to everyone in the chat                          |
+| Join, leave, waitlist         | 30 / 10 minutes                                    | Each posts a chat line                                         |
+| Host edits, cancels, removals | 30 / hour                                          | Time/place changes push to everyone                            |
+| Host change notifications     | 3 / hour per activity                              | The chat line still goes up; phones aren't spammed             |
+| New activities                | 20 / hour                                          |                                                                |
+| Reports                       | 10 / hour                                          | Each emails the moderators (repeat reports within a day don't) |
+| Venue search                  | 60 / minute                                        | Google Places is billed per call; Photon asks for fair use     |
+| Upload tickets                | 30 / hour                                          | Storage costs                                                  |
+| Town search (public)          | 120 / minute per IP                                |                                                                |
+| Sign-in codes                 | 3 / minute per IP (production), 5 / hour per email | Each sends an email; no inbox bombing                          |
+
+Over the limit is a `429` with code `rate_limited` and a `Retry-After` header. Behind a reverse proxy set `TRUSTED_PROXY_HOPS` (1 for Caddy on the same server) so limits see the client's IP, not the proxy's; with more than one proxy, also list them in `TRUSTED_PROXIES` for sign-in limits.
+
+Also hardened: Better Auth's own `update-user`, `change-email` and `delete-user` routes are off (the app uses `/v1/me`), upload keys must match exactly what `/v1/uploads` issued, chat sockets refuse other sites' pages and re-check membership once open, share pages only show upcoming activities, and a blocked person's profile shows only their name and photo. Known and accepted: chat system lines ("Ashan joined") still name someone you blocked.
+
 ## Photo uploads (Cloudflare R2)
 
 Uploads stay disabled (`POST /v1/uploads` answers 503) until all `R2_*` variables are set:
