@@ -46,6 +46,7 @@ export class RateLimiter {
  * The caller's IP. Behind a reverse proxy (Caddy, nginx) every request comes
  * from the proxy, so with TRUSTED_PROXY_HOPS = n the address n hops from the
  * right of X-Forwarded-For is used (entries further left can be forged).
+ * Without proxies the header is ignored: anyone can send it.
  */
 export function clientIp(c: Context, trustedHops: number) {
   if (trustedHops > 0) {
@@ -53,7 +54,9 @@ export function clientIp(c: Context, trustedHops: number) {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
-    const ip = chain[chain.length - trustedHops];
+    // A shorter chain than expected: the leftmost entry is the best we have
+    // (the socket would be the proxy, putting everyone in one bucket).
+    const ip = chain[chain.length - trustedHops] ?? chain[0];
     if (ip) return ip;
   }
   try {

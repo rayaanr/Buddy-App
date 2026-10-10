@@ -135,7 +135,7 @@ Per signed-in user unless noted (`src/lib/rate-limit.ts`; counted in memory, so 
 | Town search (public)          | 120 / minute per IP                                |                                                                |
 | Sign-in codes                 | 3 / minute per IP (production), 5 / hour per email | Each sends an email; no inbox bombing                          |
 
-Over the limit is a `429` with code `rate_limited` and a `Retry-After` header. Behind a reverse proxy set `TRUSTED_PROXY_HOPS` (1 for Caddy on the same server) so limits see the client's IP, not the proxy's; with more than one proxy, also list them in `TRUSTED_PROXIES` for sign-in limits.
+Over the limit is a `429` with code `rate_limited` and a `Retry-After` header. Behind a reverse proxy set `TRUSTED_PROXY_HOPS` (1 for Caddy on the same server) so limits see the client's IP, not the proxy's (2 for Cloudflare then Caddy). With 0, `X-Forwarded-For` is ignored, sign-in limits included.
 
 Also hardened: Better Auth's own `update-user`, `change-email` and `delete-user` routes are off (the app uses `/v1/me`), upload keys must match exactly what `/v1/uploads` issued, chat sockets refuse other sites' pages and re-check membership once open, share pages only show upcoming activities, and a blocked person's profile shows only their name and photo. Known and accepted: chat system lines ("Ashan joined") still name someone you blocked.
 

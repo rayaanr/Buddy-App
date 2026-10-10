@@ -8,9 +8,18 @@ export interface PresignedPut {
   expiresAt: Date;
 }
 
+export interface StoredObject {
+  contentType: string;
+  size: number;
+}
+
 export interface Storage {
   /** A URL the app can PUT exactly one file to, of exactly this type and size. */
   presignPut(key: string, contentType: string, size: number): Promise<PresignedPut>;
+  /** What's stored at `key`, or null if nothing was uploaded there. */
+  stat(key: string): Promise<StoredObject | null>;
+  /** Deletes these objects; missing ones are ignored. */
+  remove(keys: string[]): Promise<void>;
 }
 
 const UPLOAD_TTL_SECONDS = 5 * 60;
@@ -56,6 +65,25 @@ export function createStorage(env: Env): Storage | null {
         headers,
         expiresAt: new Date(Date.now() + UPLOAD_TTL_SECONDS * 1000),
       };
+    },
+
+    async stat(key) {
+      const res = await client.fetch(`${endpoint}/${key}`, { method: 'HEAD' });
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`R2 HEAD answered ${res.status}`);
+      return {
+        contentType: res.headers.get('content-type') ?? '',
+        size: Number(res.headers.get('content-length') ?? 0),
+      };
+    },
+
+    async remove(keys) {
+      await Promise.all(
+        keys.map(async (key) => {
+          const res = await client.fetch(`${endpoint}/${key}`, { method: 'DELETE' });
+          if (!res.ok && res.status !== 404) throw new Error(`R2 DELETE answered ${res.status}`);
+        }),
+      );
     },
   };
 }

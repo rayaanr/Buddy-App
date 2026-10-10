@@ -1,6 +1,7 @@
 import type { ActivitySummary } from '@buddy/shared';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { secureHeaders } from 'hono/secure-headers';
 
 import { activities } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
@@ -9,6 +10,18 @@ import { whenText } from '../activities/service';
 import { firstName } from '../chat/system-messages';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** No scripts at all; inline styles and https images only. */
+export const pageHeaders = secureHeaders({
+  contentSecurityPolicy: {
+    defaultSrc: ["'none'"],
+    styleSrc: ["'unsafe-inline'"],
+    imgSrc: ['https:'],
+    baseUri: ["'none'"],
+    formAction: ["'none'"],
+    frameAncestors: ["'none'"],
+  },
+});
 
 const escape = (s: string) =>
   s.replace(
@@ -23,7 +36,7 @@ const escape = (s: string) =>
  * and the host's first name only.
  */
 export function shareRoutes({ db, urls, env }: Deps) {
-  return new Hono<AppEnv>().get('/a/:id', async (c) => {
+  return new Hono<AppEnv>().get('/a/:id', pageHeaders, async (c) => {
     const id = c.req.param('id');
     // Upcoming only: past activities stop being public.
     const [a] = UUID.test(id)
@@ -53,7 +66,7 @@ function meta(a: ActivitySummary, url: string) {
 function activityBody(a: ActivitySummary, appLink: string) {
   const left = a.capacity - a.goingCount;
   return `
-    ${a.coverUrl ? `<img class="cover" src="${escape(a.coverUrl)}" alt="" onerror="this.remove()">` : ''}
+    ${a.coverUrl ? `<img class="cover" src="${escape(a.coverUrl)}" alt="">` : ''}
     <main>
       <p class="eyebrow">${escape(a.category)}</p>
       <h1>${escape(a.title)}</h1>

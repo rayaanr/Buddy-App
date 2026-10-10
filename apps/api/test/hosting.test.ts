@@ -5,10 +5,12 @@ import { describe, expect, it } from 'vitest';
 
 import { messages } from '../src/db/schema';
 import type { PushMessage } from '../src/lib/push';
-import { useTestApp } from './harness';
+import { memoryStorage, useTestApp } from './harness';
 
 const pushes: { activityId: string; message: PushMessage; except: string[] }[] = [];
+const r2 = memoryStorage();
 const t = useTestApp({
+  storage: r2.storage,
   push: {
     notifyActivity: async (activityId, message, except) => {
       pushes.push({ activityId, message, except: [...except] });
@@ -111,6 +113,7 @@ describe('cover photos', () => {
       });
 
     const mine = `covers/${host.userId}/0b6c1c44-6a1e-4e2b-9c43-2a3b4c5d6e7f.jpg`;
+    r2.upload(mine);
     expect((await patch(mine)).status).toBe(200);
     expect((await patch('covers/someone-else/a.jpg')).status).toBe(403);
     // A prefix match isn't enough: no climbing out into someone else's folder.

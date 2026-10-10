@@ -2,6 +2,7 @@ import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins';
+import { createHash } from 'node:crypto';
 
 import type { Db } from '../db/client';
 import * as schema from '../db/schema';
@@ -22,6 +23,10 @@ export interface AuthDeps {
 
 /** Sign-in codes per email address per hour, whatever IP asks (stops inbox bombing). */
 const CODES_PER_EMAIL_PER_HOUR = 5;
+
+/** A stable, non-reversible tag for an address, so logs can be correlated without holding emails. */
+const emailTag = (email: string) =>
+  createHash('sha256').update(email.toLowerCase()).digest('hex').slice(0, 12);
 
 /**
  * Email one-time-code sign-in. The first successful sign-in creates the
@@ -49,12 +54,10 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
     disabledPaths: ['/update-user', '/change-email', '/delete-user'],
     advanced: {
       database: { generateId: 'uuid' },
-      ipAddress: {
-        // Caddy sits in front in production and sets the real client address.
-        ipAddressHeaders: ['x-forwarded-for'],
-        // With more than one proxy (e.g. Cloudflare then Caddy), list them here.
-        ...(env.TRUSTED_PROXIES.length && { trustedProxies: env.TRUSTED_PROXIES }),
-      },
+      // The app resolves the client IP itself (clientIp, honouring
+      // TRUSTED_PROXY_HOPS) and hands it over as a single X-Forwarded-For
+      // value before calling the handler; see app.ts.
+      ipAddress: { ipAddressHeaders: ['x-forwarded-for'] },
     },
     rateLimit: {
       // On everywhere but tests, so a server started without NODE_ENV=production
@@ -87,12 +90,15 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
         async sendVerificationOTP({ email, otp }) {
           if (!limiter.hit(`otp:${email.toLowerCase()}`, CODES_PER_EMAIL_PER_HOUR, 3_600_000).ok) {
             // Look the same as success, so this can't be used to probe addresses.
-            logger.warn({ email }, 'Too many sign-in codes for this email; not sending');
+            logger.warn(
+              { email: emailTag(email) },
+              'Too many sign-in codes for this email; not sending',
+            );
             return;
           }
           // Not awaited by the caller's response path to avoid timing leaks; errors are logged.
           mailer.send(signInCodeEmail(email, otp)).catch((err: unknown) => {
-            logger.error({ err, email }, 'Failed to send sign-in code');
+            logger.error({ err, email: emailTag(email) }, 'Failed to send sign-in code');
           });
         },
       }),

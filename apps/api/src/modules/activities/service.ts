@@ -23,7 +23,8 @@ import {
   user,
 } from '../../db/schema';
 import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
-import { isOwnUpload } from '../../lib/upload-keys';
+import type { Storage } from '../../lib/storage';
+import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
 import { firstName, insertSystemMessage } from '../chat/system-messages';
 import { homePlace, nearestPlace, originFor } from '../profiles/service';
@@ -103,14 +104,12 @@ async function meetingPoint(db: Db | Tx, hostId: string, at?: { lat: number; lng
 
 export async function createActivity(
   db: Db,
-  urls: Urls,
+  { urls, storage }: { urls: Urls; storage: Storage | null },
   host: { id: string; name: string },
   input: CreateActivityInput & { description: string },
 ) {
   checkStartsAt(input.startsAt);
-  if (input.coverKey && !isOwnUpload(input.coverKey, 'cover', host.id)) {
-    throw forbidden('That image was not uploaded by you');
-  }
+  if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', host.id);
 
   const where = await meetingPoint(db, host.id, input.location);
   const id = await db.transaction(async (tx) => {
@@ -374,15 +373,13 @@ async function lockForHost(
  */
 export async function updateActivity(
   db: Db,
-  urls: Urls,
+  { urls, storage }: { urls: Urls; storage: Storage | null },
   host: { id: string; name: string },
   activityId: string,
   input: UpdateActivityInput,
 ) {
   if (input.startsAt !== undefined) checkStartsAt(input.startsAt);
-  if (input.coverKey && !isOwnUpload(input.coverKey, 'cover', host.id)) {
-    throw forbidden('That image was not uploaded by you');
-  }
+  if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', host.id);
   return db.transaction(async (tx) => {
     const row = await lockForHost(tx, host.id, activityId);
 

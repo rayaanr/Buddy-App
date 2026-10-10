@@ -50,7 +50,7 @@ const WIDER_KM = [50, 100, 200, 450];
 const ENOUGH = 3;
 
 export function activityRoutes(deps: Deps) {
-  const { db, urls, hub, push, limiter } = deps;
+  const { db, urls, hub, push, limiter, storage } = deps;
   const limit = limits(deps);
   const joins = limit({ name: 'joins', limit: 30, windowMs: 10 * MINUTE, by: 'user' });
   const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
@@ -210,14 +210,18 @@ export function activityRoutes(deps: Deps) {
         validate('json', createActivityInput),
         async (c) => {
           const me = currentUser(c);
-          return c.json(await createActivity(db, urls, me, c.req.valid('json')), 201);
+          return c.json(await createActivity(db, { urls, storage }, me, c.req.valid('json')), 201);
         },
       )
 
       .patch('/:id', hosting, idParam(), validate('json', updateActivityInput), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
-        await announce(id, me.id, await updateActivity(db, urls, me, id, c.req.valid('json')));
+        await announce(
+          id,
+          me.id,
+          await updateActivity(db, { urls, storage }, me, id, c.req.valid('json')),
+        );
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 

@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
 import { activities } from '../src/db/schema';
+import { clientIp } from '../src/lib/rate-limit';
 import { useTestApp } from './harness';
 
 const t = useTestApp();
@@ -37,7 +38,43 @@ describe('rate limits', () => {
   });
 });
 
+describe('client addresses', () => {
+  const at = (xff?: string) =>
+    ({ req: { header: () => xff }, env: {} }) as unknown as Parameters<typeof clientIp>[0];
+
+  it('ignores X-Forwarded-For without proxies (anyone can send it)', () => {
+    expect(clientIp(at('203.0.113.9'), 0)).toBe('unknown');
+  });
+
+  it('takes the address the trusted proxy saw, not the forgeable left end', () => {
+    expect(clientIp(at('6.6.6.6, 203.0.113.9'), 1)).toBe('203.0.113.9');
+    expect(clientIp(at('6.6.6.6, 203.0.113.9, 10.0.0.2'), 2)).toBe('203.0.113.9');
+  });
+
+  it('uses the leftmost address when the chain is shorter than the proxies configured', () => {
+    expect(clientIp(at('203.0.113.9'), 2)).toBe('203.0.113.9');
+  });
+});
+
 describe('hardening', () => {
+  it('refuses oversized request bodies before parsing them', async () => {
+    const { headers } = await t.signIn();
+    const res = await t.app.request('/v1/me', {
+      method: 'PATCH',
+      headers: { ...headers, 'content-type': 'application/json' },
+      body: JSON.stringify({ bio: 'x'.repeat(100 * 1024) }),
+    });
+    expect(res.status).toBe(413);
+  });
+
+  it('serves the share page with a no-script CSP', async () => {
+    const { headers } = await t.signIn();
+    const { id } = await padel(headers);
+    const res = await t.app.request(`/a/${id}`);
+    expect(res.headers.get('content-security-policy')).toContain("default-src 'none'");
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
   it('turns off Better Auth’s update-user (it skips /v1/me’s name rules)', async () => {
     const { headers } = await t.signIn();
     const res = await t.app.request('/api/auth/update-user', {

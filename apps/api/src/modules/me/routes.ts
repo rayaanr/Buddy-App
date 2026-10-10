@@ -9,7 +9,7 @@ import { validate } from '../../lib/validate';
 import { listBlocked } from '../safety/service';
 import { deleteAccount, getMe, updateMe } from './service';
 
-export function meRoutes({ db, urls, hub }: Deps) {
+export function meRoutes({ db, urls, hub, storage }: Deps) {
   return (
     new Hono<AppEnv>()
       .use(requireUser)
@@ -18,7 +18,7 @@ export function meRoutes({ db, urls, hub }: Deps) {
 
       .patch('/', validate('json', updateMeInput), async (c) => {
         const me = currentUser(c);
-        await updateMe(db, me.id, c.req.valid('json'));
+        await updateMe(db, storage, me.id, c.req.valid('json'));
         return c.json(await getMe(db, urls, me.id));
       })
 

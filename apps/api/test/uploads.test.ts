@@ -2,8 +2,8 @@ import type { Me, UploadTicket } from '@buddy/shared';
 import { describe, expect, it } from 'vitest';
 
 import { loadEnv } from '../src/env';
-import { createStorage, type Storage } from '../src/lib/storage';
-import { useTestApp } from './harness';
+import { createStorage } from '../src/lib/storage';
+import { memoryStorage, useTestApp } from './harness';
 
 describe('R2 presigned uploads', () => {
   const env = loadEnv({
@@ -51,32 +51,24 @@ describe('POST /v1/uploads without R2', () => {
 });
 
 describe('POST /v1/uploads with storage', () => {
-  const requested: { key: string; contentType: string; size: number }[] = [];
-  const fakeStorage: Storage = {
-    async presignPut(key, contentType, size) {
-      requested.push({ key, contentType, size });
-      return {
-        url: `https://upload.example.com/${key}?sig=x`,
-        headers: { 'content-type': contentType, 'content-length': String(size) },
-        expiresAt: new Date(Date.now() + 300_000),
-      };
-    },
-  };
+  const r2 = memoryStorage();
   const t = useTestApp({
-    storage: fakeStorage,
+    storage: r2.storage,
     env: { R2_PUBLIC_URL: 'https://media.example.com' },
   });
+  const ticket = async (headers: Record<string, string>, contentType = 'image/png') =>
+    t.call<UploadTicket>('/v1/uploads', {
+      method: 'POST',
+      headers,
+      body: { kind: 'avatar', contentType, size: 2048 },
+    });
 
   it('issues a per-user key that can then be set as the avatar', async () => {
     const { headers, userId } = await t.signIn();
-    const res = await t.call<UploadTicket>('/v1/uploads', {
-      method: 'POST',
-      headers,
-      body: { kind: 'avatar', contentType: 'image/png', size: 2048 },
-    });
+    const res = await ticket(headers);
     expect(res.status).toBe(201);
     expect(res.body.key).toMatch(new RegExp(`^avatars/${userId}/[0-9a-f-]{36}\\.png$`));
-    expect(requested.at(-1)).toMatchObject({ contentType: 'image/png', size: 2048 });
+    r2.upload(res.body.key, 'image/png');
 
     const me = await t.call<Me>('/v1/me', {
       method: 'PATCH',
@@ -84,6 +76,29 @@ describe('POST /v1/uploads with storage', () => {
       body: { avatarKey: res.body.key },
     });
     expect(me.body.avatarUrl).toBe(`https://media.example.com/${res.body.key}`);
+  });
+
+  it('refuses a key whose upload never happened', async () => {
+    const { headers } = await t.signIn();
+    const res = await ticket(headers);
+    const me = await t.call('/v1/me', {
+      method: 'PATCH',
+      headers,
+      body: { avatarKey: res.body.key },
+    });
+    expect(me.status).toBe(400);
+  });
+
+  it('refuses a key where something other than an image was stored', async () => {
+    const { headers } = await t.signIn();
+    const res = await ticket(headers);
+    r2.upload(res.body.key, 'text/html');
+    const me = await t.call('/v1/me', {
+      method: 'PATCH',
+      headers,
+      body: { avatarKey: res.body.key },
+    });
+    expect(me.status).toBe(400);
   });
 
   it('rejects oversized files and non-image types', async () => {

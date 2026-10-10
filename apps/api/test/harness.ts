@@ -9,7 +9,7 @@ import { loadEnv } from '../src/env';
 import type { Mail, Mailer } from '../src/lib/mailer';
 import type { PushSender } from '../src/lib/push';
 import type { VenueSearch } from '../src/lib/venues';
-import type { Storage } from '../src/lib/storage';
+import type { Storage, StoredObject } from '../src/lib/storage';
 import { seed } from '../scripts/seed/index';
 import { TEST_DATABASE_URL } from './global-setup';
 
@@ -28,6 +28,36 @@ export function captureMailer() {
     return code;
   };
   return { mailer, sent, codeFor };
+}
+
+/**
+ * Storage that keeps uploads in memory. `upload` stands in for the app's PUT
+ * to the signed URL; keys never uploaded read as missing, like R2.
+ */
+export function memoryStorage() {
+  const objects = new Map<string, StoredObject>();
+  const removed: string[] = [];
+  const storage: Storage = {
+    async presignPut(key, contentType, size) {
+      return {
+        url: `https://upload.example.com/${key}?sig=x`,
+        headers: { 'content-type': contentType, 'content-length': String(size) },
+        expiresAt: new Date(Date.now() + 300_000),
+      };
+    },
+    async stat(key) {
+      return objects.get(key) ?? null;
+    },
+    async remove(keys) {
+      for (const key of keys) {
+        objects.delete(key);
+        removed.push(key);
+      }
+    },
+  };
+  const upload = (key: string, contentType = 'image/jpeg') =>
+    objects.set(key, { contentType, size: 1000 });
+  return { storage, objects, removed, upload };
 }
 
 /**

@@ -1,12 +1,15 @@
 import { ERROR_CODES } from '@buddy/shared';
 import { sql } from 'drizzle-orm';
 import { Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
+import { secureHeaders } from 'hono/secure-headers';
 
 import { loadSession } from './auth/middleware';
 import type { AppEnv, Deps } from './http/context';
 import { HttpError } from './lib/errors';
+import { clientIp } from './lib/rate-limit';
 import { activityRoutes } from './modules/activities/routes';
 import { chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
@@ -55,6 +58,22 @@ export function createApp(deps: Deps) {
     );
   }
 
+  // nosniff, no framing, no referrer leaks; the share page adds its own CSP.
+  app.use(secureHeaders());
+
+  // Every request body is small JSON (the largest is a 2,000-character
+  // message); photos go straight to R2. Refuse anything bigger before parsing.
+  app.use(
+    bodyLimit({
+      maxSize: 64 * 1024,
+      onError: (c) =>
+        c.json(
+          { error: { code: ERROR_CODES.validation, message: 'That request is too large' } },
+          413,
+        ),
+    }),
+  );
+
   app.notFound((c) =>
     c.json({ error: { code: ERROR_CODES.notFound, message: 'Route not found' } }, 404),
   );
@@ -69,7 +88,13 @@ export function createApp(deps: Deps) {
   app.route('/', shareRoutes(deps));
 
   // Better Auth owns everything under /api/auth (send code, sign in, sign out, session).
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw));
+  // Its rate limits key on X-Forwarded-For, which clients can forge. Replace
+  // it with the address we trust (see clientIp) so limits can't be dodged.
+  app.on(['GET', 'POST'], '/api/auth/*', (c) => {
+    const headers = new Headers(c.req.raw.headers);
+    headers.set('x-forwarded-for', clientIp(c, env.TRUSTED_PROXY_HOPS));
+    return auth.handler(new Request(c.req.raw, { headers }));
+  });
 
   const v1 = new Hono<AppEnv>()
     .use(loadSession(deps))
