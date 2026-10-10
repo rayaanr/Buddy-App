@@ -33,7 +33,7 @@ bun run --filter @buddy/api db:seed        # wipes existing data
 bun run --filter @buddy/api dev            # http://localhost:7400/health
 ```
 
-Both images are Alpine: `postgis/postgis:16-3.4-alpine` and `node:22-alpine`. The API image ([`Dockerfile`](Dockerfile)) contains only the bundled `dist/` and the migrations, with no `node_modules`; it applies migrations on start. Compose runs it with `NODE_ENV=development`; override settings (R2 keys, `RESEND_API_KEY`) in a `.env` next to `compose.yaml`.
+Both images are Alpine: `imresamu/postgis:17-3.5-alpine` (multi-arch build of PostGIS; the official image has no arm64) and `node:22-alpine`. The API image ([`Dockerfile`](Dockerfile)) contains only the bundled `dist/` and the migrations, with no `node_modules`; it applies migrations on start. Compose runs it with `NODE_ENV=development`; override settings (R2 keys, `RESEND_API_KEY`) in a `.env` next to `compose.yaml`.
 
 **Signing in during development:** without `RESEND_API_KEY`, sign-in codes are printed to the API log instead of emailed.
 

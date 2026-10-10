@@ -6,7 +6,8 @@
     "postcss",
     "react-native-css-interop",
     "expo-updates",
-    "@tailwindcss/container-queries"
+    "@tailwindcss/container-queries",
+    "pino-pretty"
   ],
   "workspaces": {
     "apps/api": {

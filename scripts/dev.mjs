@@ -86,7 +86,7 @@ if (await listening(DB_PORT)) {
   if (docker.status !== 0) {
     fail(
       `Nothing is listening on :${DB_PORT} and Docker isn't available.\n` +
-        `  Start Docker, or run Postgres 16 with PostGIS on port ${DB_PORT}.`,
+        `  Start Docker, or run Postgres 17 with PostGIS on port ${DB_PORT}.`,
     );
   }
   run('docker', ['compose', 'up', '-d', '--wait', 'db']);

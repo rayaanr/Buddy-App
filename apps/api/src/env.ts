@@ -11,6 +11,8 @@ const schema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
+    /** Human-readable logs (pino-pretty, a dev dependency). Leave off in Docker and production. */
+    LOG_PRETTY: z.stringbool().default(false),
 
     DATABASE_URL: z.url(),
 

@@ -16,7 +16,7 @@ Find people nearby to do things with: runs, games, markets and more, in Colombo.
 
 ## Quick start
 
-Needs [Bun](https://bun.sh), Node 22 and Docker (or your own Postgres 16 + PostGIS on port 7432).
+Needs [Bun](https://bun.sh), Node 22 and Docker (or your own Postgres 17 + PostGIS on port 7432).
 
 ```bash
 bun run dev
