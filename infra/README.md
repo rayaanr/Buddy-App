@@ -1,56 +1,94 @@
 # Deploying the API and landing page to a VPS
 
-One Ubuntu server runs three containers: Postgres with PostGIS (private), the API, and Caddy, which serves HTTPS (renewing certificates by itself) and the landing page from `landing/`. Migrations run each time the API starts.
+One server runs four containers: Postgres with PostGIS, the API, Caddy (routes by hostname and serves the landing page from `landing/`) and `cloudflared`, a Cloudflare Tunnel. Cloudflare handles HTTPS; the tunnel connects out to it, so nothing publishes a port. That lets Buddy share a server with other apps (AutoDLer's Caddy owns 80/443) and means moving servers needs no DNS change.
 
-| File                 | What it is                                                        |
-| -------------------- | ----------------------------------------------------------------- |
-| `docker-compose.yml` | The three services                                                |
-| `Caddyfile`          | HTTPS, the proxy to the API (WebSockets too) and the landing page |
-| `.env.example`       | Every production setting; copy to `.env`                          |
-| `backup.sh`          | Nightly compressed `pg_dump`, keeps 14                            |
+Deploys run from GitHub Actions ([`deploy.yml`](../.github/workflows/deploy.yml)): after CI passes on `main`, it builds the API image, pushes it to GHCR, then SSHes in and deploys that exact commit. Everything the server needs lives in GitHub secrets, so the server holds nothing you'd miss if it disappeared (apart from the database: see backups).
+
+| File                 | What it is                                                      |
+| -------------------- | --------------------------------------------------------------- |
+| `docker-compose.yml` | The four services                                               |
+| `caddy/Caddyfile`    | Routes the two hostnames: API (WebSockets too) and landing page |
+| `.env.example`       | Every production setting; the real one is the `ENV_FILE` secret |
+| `deploy.sh`          | Run by CI on the server: pull, migrate, restart                 |
+| `backup.sh`          | Nightly compressed `pg_dump`, keeps 14                          |
 
 ## 1. Server
 
-Ubuntu 24.04 with 2 GB of RAM or more (the image builds on the server). Set `DOMAIN` in `infra/.env` (e.g. `example.com`) and point DNS A records for `api-buddy.<DOMAIN>` (the API) and `buddy.<DOMAIN>` (the landing page) at its IP before starting, or Caddy can't get certificates.
+Debian or Ubuntu with 1 GB of RAM or more (images are built in CI, not on the server). Buddy needs no open ports beyond SSH.
 
-As root on a fresh server:
+As root on a fresh server (cloud images that log you in as a sudo user can skip the first block):
 
 ```bash
-# A user for deploys, with your SSH key
+# A user for deploys, with passwordless sudo (the first deploy installs Docker)
 adduser --disabled-password --gecos "" deploy
-usermod -aG sudo deploy
+echo 'deploy ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/deploy
 rsync --archive --chown=deploy:deploy ~/.ssh /home/deploy
 
 # SSH keys only
 sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/; s/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
 systemctl restart ssh
 
-# Firewall: SSH and web only
-ufw allow OpenSSH && ufw allow 80 && ufw allow 443 && ufw --force enable
-
-# Security updates, Docker
-apt update && apt install -y unattended-upgrades git
-curl -fsSL https://get.docker.com | sh
-usermod -aG docker deploy
+# Firewall: Buddy only needs SSH. On a box shared with an app that serves
+# 80/443 itself (AutoDLer), allow those too or that app goes offline.
+apt update && apt install -y ufw unattended-upgrades
+ufw allow OpenSSH && ufw --force enable
 ```
 
-Docker writes its own firewall rules, but only Caddy publishes ports, so Postgres and the API stay unreachable from outside.
+Docker writes its own firewall rules, but no Buddy container publishes a port, so none of it is reachable except through the tunnel.
 
-## 2. First deploy
+### Cloudflare Tunnel
 
-As `deploy`:
+In Cloudflare: Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared. Name it `buddy`, copy the token (the long string after `--token`) into `TUNNEL_TOKEN` in your `.env`, and skip the install step: the `cloudflared` container runs it. Then add two public hostnames, both with service type HTTP and URL `caddy:80`:
+
+- `api-buddy.<DOMAIN>`
+- `buddy.<DOMAIN>`
+
+Cloudflare creates their DNS records. Delete any existing A records for those names first, or it refuses.
+
+Then give GitHub Actions its own SSH key. On your machine:
 
 ```bash
-git clone <your repo URL> buddy && cd buddy/infra
-cp .env.example .env
-nano .env          # fill in every value; generators are in the comments
-docker compose up -d --build
-docker compose logs -f api   # "Migrations applied." then "Buddy API listening"
+ssh-keygen -t ed25519 -f buddy-deploy -N "" -C "github-actions"
+ssh-copy-id -i buddy-deploy.pub deploy@<server-ip>
 ```
+
+## 2. GitHub secrets
+
+In the repo: Settings → Secrets and variables → Actions → New repository secret.
+
+| Secret               | Value                                                      |
+| -------------------- | ---------------------------------------------------------- |
+| `SERVER_HOST`        | The server's IP or hostname                                |
+| `SERVER_USER`        | `deploy`                                                   |
+| `SERVER_SSH_KEY`     | The whole private key file `buddy-deploy`                  |
+| `ENV_FILE`           | The whole production `.env` (start from `.env.example`)    |
+| `SERVER_DEPLOY_PATH` | Optional. Where the repo is cloned; defaults to `~/buddy`. |
+
+Or from the terminal: `gh secret set ENV_FILE < infra/.env.production`, and likewise for the others. Delete the local `buddy-deploy` key once it's stored.
+
+## 3. Deploy
+
+Every push to `main` deploys once CI passes. For the first deploy (or to redeploy without a push): Actions → Deploy → Run workflow.
+
+The first run on a bare server installs git and Docker, clones the repo and adds the nightly backup to cron. Each run then:
+
+1. checks out the commit the image was built from,
+2. rewrites `infra/.env` from `ENV_FILE` (plus `API_IMAGE`, the image tag),
+3. runs `deploy.sh`: pull the image, apply migrations with it, restart onto it, reload Caddy.
+
+A failed migration stops the deploy with the old API still serving. Landing page and Caddyfile changes go out with the same deploy.
 
 Check `https://api-buddy.example.com/health` answers `{"status":"ok"}`, that `/privacy` and `/terms` load, and that `https://buddy.example.com` shows the landing page.
 
-Then point the app at it. The production URL lives on EAS, not in git (the `production` profile in `apps/mobile/eas.json` reads the EAS `production` environment). From `apps/mobile` (run it again to change it):
+**Changing a setting:** edit the `ENV_FILE` secret, then run the workflow. Editing `infra/.env` on the server is overwritten by the next deploy.
+
+**Rolling back:** revert the commit on `main`, or run the workflow from an older commit's branch.
+
+**Moving to a new server:** set it up as in step 1 (not the tunnel: it moves with its token), change `SERVER_HOST`, run the workflow, then restore the database (below). Stop the old server's containers so only one copy serves the tunnel.
+
+### Point the app at it
+
+The production URL lives on EAS, not in git (the `production` profile in `apps/mobile/eas.json` reads the EAS `production` environment). From `apps/mobile` (run it again to change it):
 
 ```bash
 eas env:set --name EXPO_PUBLIC_API_URL --value https://api-buddy.<DOMAIN> --environment production --visibility plaintext
@@ -58,23 +96,20 @@ eas env:set --name EXPO_PUBLIC_API_URL --value https://api-buddy.<DOMAIN> --envi
 
 Then build with `eas build --profile production`. A release build without it stops at launch with an error rather than pointing at nothing.
 
-## 3. Updates
-
-```bash
-cd ~/buddy && git pull && cd infra && docker compose up -d --build
-```
-
-The API restarts on the new image and applies any new migrations first. Requests in flight finish before the old one stops. Landing page changes are live as soon as `git pull` finishes: Caddy reads `landing/` straight from the checkout.
-
 ## 4. Backups
 
-```bash
-crontab -e
-# then add:
-30 2 * * * /home/deploy/buddy/infra/backup.sh >> /home/deploy/buddy/infra/backups/backup.log 2>&1
-```
+Each deploy installs a cron job that runs `backup.sh` nightly at 02:30. Dumps go to `infra/backups/` on the server. To keep copies off the server (do this: it's what lets you move servers), install rclone, add an R2 remote named `r2` (`rclone config`), and the script copies each dump to the `buddy-backups` bucket (or `BACKUP_BUCKET`).
 
-Dumps go to `infra/backups/`. To keep copies off the server, install rclone, add an R2 remote named `r2` (`rclone config`), and the script copies each dump to the `buddy-backups` bucket (or `BACKUP_BUCKET`).
+**Restoring onto a new server:** run the workflow once so the database exists, then:
+
+```bash
+cd ~/buddy/infra
+docker compose stop api
+docker compose exec db psql -U buddy -d postgres -c "drop database buddy" -c "create database buddy owner buddy"
+docker compose exec db psql -U buddy -d buddy -c "create extension if not exists postgis"
+gunzip -c buddy-<date>.sql.gz | docker compose exec -T db psql -U buddy -d buddy -q
+docker compose start api
+```
 
 **Test a restore once**, so you know the backups work:
 
@@ -87,8 +122,10 @@ docker compose exec db psql -U buddy -d postgres -c "drop database restore_test"
 
 ## 5. Running it
 
+Run these from `~/buddy/infra` on the server.
+
 - **Logs:** `docker compose logs -f api` (JSON, one line per request).
 - **Uptime:** point a free monitor (e.g. UptimeRobot) at `/health`; it checks the database too.
 - **One API container only.** Rate limits and live chat are kept in memory; a second copy would need Redis.
 - **Database shell:** `docker compose exec db psql -U buddy -d buddy`. Reports are in the `reports` table.
-- **Cloudflare in front** (orange cloud): set `TRUSTED_PROXY_HOPS=2` and the SSL mode to Full (strict).
+- **Tunnel status:** `docker compose logs cloudflared` ("Registered tunnel connection"), or the tunnel's page in Cloudflare.

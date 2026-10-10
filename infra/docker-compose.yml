@@ -1,4 +1,6 @@
-# Production: Postgres + PostGIS, the API, and Caddy (HTTPS + the landing page), on one VPS.
+# Production: Postgres + PostGIS, the API, Caddy (routing + the landing page) and a
+# Cloudflare Tunnel, on one VPS. Nothing publishes a port, so it shares a server
+# with other apps without clashing over 80/443.
 # Settings come from infra/.env (copy .env.example). From this folder:
 #
 #   docker compose up -d --build      # first start and every update
@@ -25,6 +27,9 @@ services:
     restart: unless-stopped
 
   api:
+    # CI deploys set API_IMAGE to the image it pushed to GHCR (see deploy.sh);
+    # without it, `docker compose up -d --build` builds from this checkout.
+    image: ${API_IMAGE:-buddy-api:local}
     build:
       context: ..
       dockerfile: apps/api/Dockerfile
@@ -34,8 +39,8 @@ services:
       PORT: 7400
       DATABASE_URL: postgres://buddy:${DB_PASSWORD}@db:5432/buddy
       BETTER_AUTH_URL: https://api-buddy.${DOMAIN:?Set DOMAIN in infra/.env}
-      # Caddy is the one proxy in front; rate limits read the client IP it sets.
-      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
+      # cloudflared then Caddy: the client is two hops from the right of X-Forwarded-For.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-2}
     depends_on:
       db:
         condition: service_healthy
@@ -43,19 +48,27 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    ports:
-      - '80:80'
-      - '443:443'
-      - '443:443/udp'
     environment:
       DOMAIN: ${DOMAIN}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # A folder, not the file: git pull replaces the file, and a single-file
+      # mount would keep showing the old one.
+      - ./caddy:/etc/caddy:ro
       - ../landing:/srv/landing:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - api
+    restart: unless-stopped
+
+  # Connects out to Cloudflare, which sends both hostnames to caddy:80.
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in infra/.env}
+    depends_on:
+      - caddy
     restart: unless-stopped
 
 volumes:

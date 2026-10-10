@@ -1,0 +1,111 @@
+name: Deploy
+
+# After CI passes on main (or by hand), build the API image, push it to GHCR,
+# then SSH into the server and deploy that exact commit. The first run on a
+# fresh Debian/Ubuntu server also installs git and Docker, clones the repo and
+# sets up nightly backups, so moving servers is: change SERVER_HOST, run this.
+#
+# Secrets: SERVER_HOST, SERVER_USER, SERVER_SSH_KEY, ENV_FILE (the whole
+# infra/.env). Optional: SERVER_DEPLOY_PATH (default ~/buddy).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
+
+      # GHCR names must be lowercase.
+      - name: Image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/buddy-api" >> "$GITHUB_ENV"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push the API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ env.SHA }}
+            ${{ env.IMAGE }}:latest
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to the server
+        uses: appleboy/ssh-action@v1
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+          DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}
+          API_IMAGE: ${{ env.IMAGE }}:${{ env.SHA }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: ENV_FILE,DEPLOY_PATH,API_IMAGE,GHCR_TOKEN,GHCR_USER,REPO,SHA
+          script: |
+            set -eu
+            # First run on a bare server. Needs passwordless sudo (the default
+            # on cloud-init Debian/Ubuntu images).
+            if ! command -v git >/dev/null 2>&1; then
+              sudo apt-get update -q && sudo apt-get install -yq git
+            fi
+            if ! command -v docker >/dev/null 2>&1; then
+              curl -fsSL https://get.docker.com | sudo sh
+              sudo usermod -aG docker "$USER"
+            fi
+
+            DEPLOY_PATH="${DEPLOY_PATH:-$HOME/buddy}"
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              git clone "https://github.com/$REPO.git" "$DEPLOY_PATH"
+            fi
+            cd "$DEPLOY_PATH"
+            # The exact commit the image was built from, so compose, Caddyfile
+            # and landing/ always match the running API.
+            git fetch --quiet origin
+            git checkout --quiet --force --detach "$SHA"
+
+            # GitHub holds the real .env; the server copy is rewritten every deploy.
+            umask 077
+            { printf '%s\n' "$ENV_FILE"; echo "API_IMAGE=$API_IMAGE"; } > infra/.env
+
+            # Right after installing Docker, this session isn't in the docker group yet.
+            if docker info >/dev/null 2>&1; then
+              sh infra/deploy.sh
+            else
+              sudo --preserve-env=GHCR_TOKEN,GHCR_USER sh infra/deploy.sh
+            fi
+
+            # Nightly database backup (idempotent).
+            mkdir -p infra/backups
+            ( crontab -l 2>/dev/null | grep -v 'infra/backup.sh' || true
+              echo "30 2 * * * $PWD/infra/backup.sh >> $PWD/infra/backups/backup.log 2>&1"
+            ) | crontab -

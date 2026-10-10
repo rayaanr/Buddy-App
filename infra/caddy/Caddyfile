@@ -1,0 +1,26 @@
+# Cloudflare terminates HTTPS and a Cloudflare Tunnel (the cloudflared
+# service) brings requests here over the Docker network, so Caddy publishes
+# no ports and serves plain HTTP. Hostnames come from DOMAIN in infra/.env;
+# the tunnel's public hostnames in Cloudflare must match them.
+{
+	servers {
+		# Only cloudflared reaches Caddy. Keep the X-Forwarded-For it passes
+		# on (the client, as Cloudflare saw it) so the API's rate limits see
+		# real addresses; see TRUSTED_PROXY_HOPS.
+		trusted_proxies static private_ranges
+	}
+}
+
+# The API. WebSockets (live chat) pass straight through.
+http://api-buddy.{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:7400
+}
+
+# The landing page (landing/index.html, mounted read-only).
+http://buddy.{$DOMAIN} {
+	encode zstd gzip
+	root * /srv/landing
+	file_server
+	header Cache-Control "public, max-age=300"
+}
