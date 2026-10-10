@@ -13,7 +13,7 @@ import { useTestApp } from './harness';
 
 const t = useTestApp();
 
-/** The demo layer is what `npm run db:seed` loads for local testing. */
+/** The demo layer is what `bun run db:seed` loads for local testing. */
 describe('demo seed', () => {
   it('gives the demo user something on every screen', async () => {
     const counts = await seed(t.deps.db, { demo: true });

@@ -1,15 +1,17 @@
 {
   "name": "buddy",
   "private": true,
+  "packageManager": "bun@1.4.2",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "mobile": "npm run start -w @buddy/mobile",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "mobile": "bun run --filter @buddy/mobile start",
+    "api": "bun run --filter @buddy/api dev",
+    "lint": "bun run --filter '*' lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun run --filter '*' test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -21,6 +23,9 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "typescript-eslint": "^8.71.1"
   },
+  "trustedDependencies": [
+    "unrs-resolver"
+  ],
   "engines": {
     "node": ">=22"
   }

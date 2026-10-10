@@ -1,8 +1,8 @@
 /**
  * Wipes the database and loads the sample data.
  *
- *   npm run db:seed -w @buddy/api            core + demo extras
- *   npm run db:seed -w @buddy/api -- --core  just what the tests use
+ *   bun run --filter @buddy/api db:seed         core + demo extras
+ *   bun run --filter @buddy/api db:seed --core  just what the tests use
  *
  * In Docker: docker compose -f infra/docker-compose.dev.yml exec api node dist/seed.js
  */

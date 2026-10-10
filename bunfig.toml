@@ -1,0 +1,5 @@
+# Bun installs and runs scripts; the API itself runs on Node (see apps/api/Dockerfile).
+[install]
+# A flat node_modules like npm's: Expo's Metro bundler and the Jest module
+# mappings expect hoisted dependencies, not Bun's isolated layout.
+linker = "hoisted"

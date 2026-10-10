@@ -24,11 +24,11 @@ cp apps/api/.env.example apps/api/.env
 #    then set BETTER_AUTH_SECRET:  openssl rand -base64 32
 
 # 3. Schema and sample data
-npm run db:migrate -w @buddy/api
-npm run db:seed -w @buddy/api        # wipes existing data
+bun run --filter @buddy/api db:migrate
+bun run --filter @buddy/api db:seed        # wipes existing data
 
 # 4. Run
-npm run dev -w @buddy/api            # http://localhost:7400/health
+bun run --filter @buddy/api dev            # http://localhost:7400/health
 ```
 
 Both images are Alpine: `postgis/postgis:16-3.4-alpine` and `node:22-alpine`. The API image ([`Dockerfile`](Dockerfile)) contains only the bundled `dist/` and the migrations, with no `node_modules`; it applies migrations on start. Compose runs it with `NODE_ENV=development`; override settings (R2 keys, `RESEND_API_KEY`) in a `.env` next to `compose.yaml`.
@@ -55,7 +55,7 @@ The **core** layer is the design's data; the integration tests seed it before ev
 | `nethmi@buddy.test`  | Hosts two runs (the other side of a chat)                                                                                                      |
 | `sanduni@buddy.test` | Hosts _Sunrise yoga_, which is full: anyone else sees "Activity full"                                                                          |
 
-Everyone else signs in as `<first name>@buddy.test`. Pass `--core` for the test data only: `npm run db:seed -w @buddy/api -- --core`.
+Everyone else signs in as `<first name>@buddy.test`. Pass `--core` for the test data only: `bun run --filter @buddy/api db:seed --core`.
 
 ## Real-time chat
 
@@ -113,7 +113,7 @@ Buddy covers all of Sri Lanka. The `places` table holds ~2,100 towns (postal tow
 - **Activities** store the meeting point and the town it's in (`place_id`, a foreign key to `places`, the town nearest the point); `area` keeps that town's name for display.
 - **Venue search** is pluggable (`src/lib/venues.ts`): `VENUE_PROVIDER=osm` (default; OpenStreetMap via [Photon](https://photon.komoot.io), built for search-as-you-type), `google` (Places API (New) Text Search, needs `GOOGLE_PLACES_API_KEY`; billed per request beyond Google's free tier) or `towns` (no outside service). Results are cached for 10 minutes, and if the provider is down it falls back to towns. Adding a provider means one more `search(query, near)` returning `Venue[]`. For production traffic, run your own Photon (`PHOTON_URL`) rather than the public server.
 - **Data quality.** The source gives some villages a nearby town's coordinates; places sharing a point with two or more others are marked `approximate` and never used to name a location. Towns with a main post office are marked `main` and preferred when naming one.
-- **Updating the towns.** `npx tsx scripts/places/build.ts` prints the SQL; put it in a new migration (rows upsert by id).
+- **Updating the towns.** `bunx tsx scripts/places/build.ts` (from `apps/api`) prints the SQL; put it in a new migration (rows upsert by id).
 - **Data sources and licences.** Towns from [`sri-lanka-postal-locations`](https://github.com/hareeshkar/sri-lanka-postal-locations) (MIT), derived from [madurapa/sri-lanka-provinces-districts-cities](https://github.com/madurapa/sri-lanka-provinces-districts-cities) (MIT, © 2016 Maduka Jayalath) and [SKIDDOW/SriLankaCitiesDatabase](https://github.com/SKIDDOW/SriLankaCitiesDatabase) (MIT, © 2024 SKIDDOW); main post offices from [`lankapost`](https://github.com/AbQaadir/lankapost) (MIT). Venue results from Photon are © OpenStreetMap contributors (ODbL), so show "© OpenStreetMap" where venue results appear in a public release.
 
 ## Photo uploads (Cloudflare R2)

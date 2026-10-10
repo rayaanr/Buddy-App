@@ -1,7 +1,7 @@
 /**
  * Prints the SQL that loads Sri Lanka's towns into `places`, for a migration.
  *
- *   npx tsx scripts/places/build.ts > drizzle/00xx_places_data.sql
+ *   bunx tsx scripts/places/build.ts > drizzle/00xx_places_data.sql   (from apps/api)
  *
  * Sources (both MIT): postal towns with coordinates and Sinhala/Tamil names
  * from `sri-lanka-postal-locations` (derived from

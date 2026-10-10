@@ -1,5 +1,5 @@
 /**
- * Used only by `npm run auth:generate` to regenerate src/db/schema/auth.ts.
+ * Used only by `bun run auth:generate` to regenerate src/db/schema/auth.ts.
  * Mirrors the plugins in src/auth/auth.ts that affect the database schema.
  */
 import { expo } from '@better-auth/expo';

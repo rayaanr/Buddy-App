@@ -3,7 +3,7 @@
  *  - core: what the app was designed with. The integration tests seed this
  *    before every test and assert on it, so change it with the tests.
  *  - demo: extras for exploring the app locally (hosting, a full activity,
- *    every area and filter, past activities). `npm run db:seed` loads both.
+ *    every area and filter, past activities). `bun run db:seed` loads both.
  *
  * Seeding wipes all data first.
  */

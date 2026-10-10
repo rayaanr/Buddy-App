@@ -9,25 +9,25 @@ Expo app for **Buddy**: find people nearby to do things with. Built from a Claud
 The app needs the API running. Follow [`apps/api/README.md`](../api/README.md) first (Postgres, `.env`, migrate, seed), then:
 
 ```bash
-npm install                 # from the repo root (npm workspaces)
-npm run dev -w @buddy/api   # terminal 1: API on :7400 (or: docker compose up -d)
-npm run mobile              # terminal 2: press i / a, or scan the QR code
+bun install                 # from the repo root (Bun workspaces)
+bun run api                 # terminal 1: API on :7400 (or: docker compose up -d)
+bun run mobile              # terminal 2: press i / a, or scan the QR code
 ```
 
 **Where the app looks for the API:** `EXPO_PUBLIC_API_URL` if set; otherwise the machine running the Expo dev server, port 7400. A phone on the same Wi-Fi works without configuration.
 
 **Signing in during development:** sign-in codes are printed in the API's log (no email is sent without `RESEND_API_KEY`). The seed's demo user is `kavindu@buddy.test`.
 
-**Expo Go vs a development build:** everything except push notifications works in Expo Go. Push needs a development build (`npx expo run:ios|android` or `eas build --profile development`) and an EAS project ID; until then the app skips push registration quietly.
+**Expo Go vs a development build:** everything except push notifications works in Expo Go. Push needs a development build (`bunx expo run:ios|android` or `eas build --profile development`) and an EAS project ID; until then the app skips push registration quietly.
 
-**Web (for quick checks):** set `WEB_ORIGINS=http://localhost:7481` in `apps/api/.env` so the browser may call the API, then `npm run web -w @buddy/mobile`.
+**Web (for quick checks):** set `WEB_ORIGINS=http://localhost:7481` in `apps/api/.env` so the browser may call the API, then `bun run --filter @buddy/mobile web`.
 
 Checks (run from `apps/mobile`, or from the root for every package):
 
 ```bash
-npm run typecheck     # tsc --noEmit
-npm run lint          # expo lint
-npm run format        # prettier + tailwind class sorting
+bun run typecheck     # tsc --noEmit
+bun run lint          # expo lint
+bun run format        # prettier + tailwind class sorting
 ```
 
 ## Flows
@@ -81,7 +81,7 @@ src/
 - **Reanimated views never take `className`.** NativeWind doesn't style `Animated.View`, `Animated.ScrollView` or `AnimatedView` on native (web hides this, because classes pass straight to the browser). Give them style objects, or put classes on a plain `View` inside. Press feedback needs no Reanimated: `PressableScale` is a plain `Pressable` with NativeWind's `active:scale-*` classes. Avoid NativeWind `transition-*` classes: they write Reanimated values during render, which Reanimated 4 warns about (a test checks this). To animate a value changing in place (a count, a status), use `useEnterOnChange` rather than remounting with a new `key`.
 - **Drawers use `Sheet`** (or `ActionSheet` for a list of actions): it slides with vaul's curve (the drawer behind shadcn/ui), drags down to dismiss, and animates out before unmounting. Run follow-ups (navigation, a confirmation) in `onClosed`, so they never appear under a closing drawer.
 - **1 rem = 16px on phones too** (`rem` in `src/theme/tokens.js`, passed to NativeWind in `metro.config.js`), so `p-4` or `h-11` match the design and the web build.
-- **Native style tests:** `npm test -w @buddy/mobile` renders components with NativeWind's native runtime and the app's real Tailwind config (`src/test/native.tsx`), and fails if a Reanimated view is given `className`. Check UI changes there, not only in the browser.
+- **Native style tests:** `bun run --filter @buddy/mobile test` renders components with NativeWind's native runtime and the app's real Tailwind config (`src/test/native.tsx`), and fails if a Reanimated view is given `className`. Check UI changes there, not only in the browser.
 - **Judge smoothness in a release build.** Development mode (and Expo Go) runs JavaScript far slower, so animations can stutter there that are fine in production.
 - **Wrappers forward everything.** Android and web clone a ScrollView's `refreshControl` and pass the scroll view in as `children`; a wrapper that drops props blanks the screen (see `Refresh`).
 - **Design → device spacing.** The prototype was drawn on a 390×844 frame. `useScreenInsets().top(designPx)` and `.bottom(designPx)` turn its paddings into safe-area-aware values.
