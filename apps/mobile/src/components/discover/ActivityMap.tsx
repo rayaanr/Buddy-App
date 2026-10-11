@@ -8,7 +8,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { IconButton, MaximizeIcon } from '@/components/ui';
-import { MAP_ATTRIBUTION, MAP_BACKGROUND } from '@/config';
+import { MAP_ATTRIBUTION, MAP_BACKGROUND, MAP_SHADE } from '@/config';
 import { availabilityColor } from '@/lib/activity';
 import { project } from '@/lib/gestures';
 import { fitPoints, fromWorldPixel, tilesAround, worldPixel } from '@/lib/maps';
@@ -194,6 +194,8 @@ export function ActivityMap({
                 accessible={false}
               />
             ))}
+            {/* Moves with the tiles, so it reaches as far as they do while dragging. */}
+            <View pointerEvents="none" style={styles.shade} />
             {pins.map(({ a, x, y }) => {
               const on = a.id === picked;
               return (
@@ -281,6 +283,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: MAP_BACKGROUND,
   },
+  shade: { position: 'absolute', inset: -MARGIN, backgroundColor: MAP_SHADE },
   pin: {
     position: 'absolute',
     width: PIN,

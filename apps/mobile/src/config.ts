@@ -52,5 +52,7 @@ export const MAP_TILES =
   'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
 /** Shown under tiles still loading: close to Voyager's land colour. */
 export const MAP_BACKGROUND = '#EDEBE6';
+/** Laid over the tiles, under the pins: dims the light map to sit in the dark UI. */
+export const MAP_SHADE = 'rgba(0, 0, 0, 0.22)';
 export const MAP_ATTRIBUTION =
   process.env.EXPO_PUBLIC_MAP_ATTRIBUTION ?? '© OpenStreetMap contributors © CARTO';

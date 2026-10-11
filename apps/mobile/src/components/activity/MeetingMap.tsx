@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MapPinIcon, Menu } from '@/components/ui';
-import { MAP_ATTRIBUTION, MAP_BACKGROUND } from '@/config';
+import { MAP_ATTRIBUTION, MAP_BACKGROUND, MAP_SHADE } from '@/config';
 import { mapsApps, tilesAround } from '@/lib/maps';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -70,6 +70,7 @@ export function MeetingMap({ location, place, children }: MeetingMapProps) {
             accessible={false}
           />
         ))}
+        <View pointerEvents="none" style={styles.shade} />
         <View pointerEvents="none" style={styles.center}>
           <View style={styles.halo} />
           <View style={styles.pin}>
@@ -115,6 +116,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: MAP_BACKGROUND,
   },
+  shade: { position: 'absolute', inset: 0, backgroundColor: MAP_SHADE },
   center: {
     position: 'absolute',
     inset: 0,

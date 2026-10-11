@@ -94,7 +94,7 @@ src/
 
 ## Notes
 
-- Signed out, the server can't personalise anything, so the "Good to see you" screen shows a picks preview saved on the device at the last session.
+- Signed out, the server can't personalise anything, so the "Good to see you" screen shows the same made-up example activities as the welcome screen (`EXAMPLE_CARDS` in `src/components/auth/CardFan.tsx`).
 - Edit profile is one page (photo, name, bio, home town, interests, when you're free) saved together. The home town is picked from a search of ~2,100 Sri Lankan towns (or "Use my current location"); only the town is stored, and distances are measured from its centre.
 - **Location is only asked for when someone taps** "Use my current location", "Near me" or "Use where I am" (`src/lib/location.ts`), never at launch. On later launches "Near me" refreshes without asking, and falls back to home if permission was taken away.
 - **Discover's location pill** (top left) switches between Near me, Home and any town (`src/store/discover.ts`, remembered on the device), with a 5/10/25/50 km distance. When nothing's that close the API widens the search and the screen says so.

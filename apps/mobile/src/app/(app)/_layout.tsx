@@ -8,8 +8,6 @@ import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
 import { useScreenAnimation } from '@/theme/motion';
 
-const PREVIEW_CARDS = 3;
-
 export default function AppLayout() {
   const me = useMe();
   const picks = usePicks();
@@ -44,18 +42,6 @@ export default function AppLayout() {
       .getState()
       .remember({ email: me.data.email, name: me.data.name, area: me.data.area });
   }, [me.data]);
-  useEffect(() => {
-    if (!picks.data) return;
-    useAccountStore.getState().rememberPicks({
-      count: picks.data.length,
-      cards: picks.data.slice(0, PREVIEW_CARDS).map(({ activity: a }) => ({
-        coverUrl: a.coverUrl,
-        group: a.group,
-        title: a.title,
-        startsAt: a.startsAt,
-      })),
-    });
-  }, [picks.data]);
 
   // Only refreshes the token if allowed; the permission prompt waits for a
   // first join, hosted activity or message (see askForPush).

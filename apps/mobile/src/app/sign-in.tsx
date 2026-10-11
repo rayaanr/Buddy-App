@@ -1,4 +1,4 @@
-import { firstName, type ActivityGroup } from '@buddy/shared';
+import { firstName } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -13,20 +13,11 @@ import {
   SectionLabel,
   TextField,
 } from '@/components/ui';
-import { CardFan, type FanCardData } from '@/components/auth/CardFan';
+import { CardFan, EXAMPLE_CARDS } from '@/components/auth/CardFan';
 import { GoogleSignIn } from '@/components/auth/GoogleButton';
-import { GROUP_HUES } from '@/data/constants';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useSendCode } from '@/hooks/useSendCode';
-import { whenLabel } from '@/lib/activity';
-import { useAccountStore, type PicksPreview } from '@/store/account';
-
-const toFanCard = (card: PicksPreview['cards'][number]): FanCardData => ({
-  coverUrl: card.coverUrl,
-  hue: GROUP_HUES[card.group as ActivityGroup] ?? GROUP_HUES.Social,
-  eyebrow: whenLabel(card),
-  title: card.title,
-});
+import { useAccountStore } from '@/store/account';
 
 export default function SignInScreen() {
   const remembered = useAccountStore((s) => s.remembered);
@@ -48,12 +39,8 @@ function WelcomeBack() {
     >
       <BrandMark />
       <View className="flex-1 items-center justify-center pt-2.5">
-        {remembered.picks?.cards.length ? (
-          <CardFan
-            cards={remembered.picks.cards.map(toFanCard)}
-            badge={`${remembered.picks.count} new pick${remembered.picks.count === 1 ? '' : 's'} near ${remembered.area}`}
-          />
-        ) : null}
+        {/* Examples, not real activities: signed out, the server can't pick any. */}
+        <CardFan cards={EXAMPLE_CARDS} badge="Happening near you this week" />
       </View>
       <Heading size="hero" className="text-center">
         Good to see you, {name}
@@ -65,12 +52,8 @@ function WelcomeBack() {
         <Text className="mt-3 text-center font-sans text-label text-danger">{error}</Text>
       ) : null}
       <Button
-        label={
-          sending
-            ? 'Sending code…'
-            : `Continue as ${name}
-          loading={sending}`
-        }
+        label={sending ? 'Sending code…' : `Continue as ${name}`}
+        loading={sending}
         inactive={sending}
         onPress={() => send(remembered.email)}
         className="mt-7"

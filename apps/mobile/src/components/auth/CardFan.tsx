@@ -8,6 +8,31 @@ const SHADOW = {
   boxShadow: shadows.overlay,
 };
 
+const photo = (id: string) =>
+  `https://images.unsplash.com/photo-${id}?w=600&q=70&auto=format&fit=crop`;
+
+/** Made-up activities for the signed-out screens: the same examples as the landing page. */
+export const EXAMPLE_CARDS: FanCardData[] = [
+  {
+    eyebrow: 'TONIGHT · 18:00',
+    title: 'Sunset 5K at Galle Face',
+    coverUrl: photo('1552674605-db6ffd4facb5'),
+    hue: '#5a3420',
+  },
+  {
+    eyebrow: 'SUN · 16:30',
+    title: 'Beach cricket, Mount Lavinia',
+    coverUrl: photo('1523275147196-8c1f5e82a3a3'),
+    hue: '#6b5b44',
+  },
+  {
+    eyebrow: 'TONIGHT · 19:30',
+    title: 'Board games night',
+    coverUrl: photo('1676562330790-f0875c4f7fa8'),
+    hue: '#3b2a20',
+  },
+];
+
 export interface FanCardData {
   coverUrl: string | null;
   /** Shown while the photo loads, or instead of a missing one. */

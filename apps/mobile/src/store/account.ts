@@ -3,18 +3,11 @@ import { persist } from 'zustand/middleware';
 
 import { persistStorage } from './storage';
 
-/** What the sign-in screen shows while signed out (the server can't personalise it then). */
-export interface PicksPreview {
-  count: number;
-  cards: { coverUrl: string | null; group: string; title: string; startsAt: string }[];
-}
-
 interface RememberedAccount {
   email: string;
   name: string;
   /** Home town as shown, e.g. "Peradeniya, Kandy". */
   area: string;
-  picks?: PicksPreview;
 }
 
 interface AccountState {
@@ -23,8 +16,7 @@ interface AccountState {
   /** The email just entered on Sign up, so the code screen knows it's a new account. */
   pendingSignUp: { email: string } | null;
 
-  remember: (account: Omit<RememberedAccount, 'picks'>) => void;
-  rememberPicks: (picks: PicksPreview) => void;
+  remember: (account: RememberedAccount) => void;
   forget: () => void;
   setPendingSignUp: (details: AccountState['pendingSignUp']) => void;
 }
@@ -34,15 +26,7 @@ export const useAccountStore = create<AccountState>()(
     (set) => ({
       remembered: null,
       pendingSignUp: null,
-      remember: (account) =>
-        set((s) => ({
-          remembered: {
-            ...account,
-            picks: s.remembered?.email === account.email ? s.remembered.picks : undefined,
-          },
-        })),
-      rememberPicks: (picks) =>
-        set((s) => (s.remembered ? { remembered: { ...s.remembered, picks } } : {})),
+      remember: (remembered) => set({ remembered }),
       forget: () => set({ remembered: null, pendingSignUp: null }),
       setPendingSignUp: (pendingSignUp) => set({ pendingSignUp }),
     }),
