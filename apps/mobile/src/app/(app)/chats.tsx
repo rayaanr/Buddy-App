@@ -1,7 +1,16 @@
 import { type ChatPreview, clockLabel, dayMonth, firstName, localDay } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { BackHandler, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  BackHandler,
+  FlatList,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { useChats } from '@/api/queries';
 import { useToggleMute } from '@/components/chat/useToggleMute';
@@ -81,39 +90,46 @@ export default function ChatsScreen() {
       ) : (
         <ScreenHeader title="Chats" />
       )}
-      <ScrollView
-        className="flex-1"
+      {/* Virtualised: only the rows on screen are drawn, however many chats there are. */}
+      <FlatList
+        style={styles.fill}
+        data={shown}
+        keyExtractor={(c) => c.id}
+        extraData={selectedId}
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
         refreshControl={
           <Refresh refreshing={chats.isRefetching} onRefresh={() => void chats.refetch()} />
         }
-      >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="-mx-[22px] mb-1"
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingBottom: 6 }}
-        >
-          {FILTERS.map((f) => (
-            <Chip
-              key={f.key}
-              label={f.label}
-              shape="compact"
-              selected={filter === f.key}
-              onPress={() => setFilter(f.key)}
-            />
-          ))}
-        </ScrollView>
-        <View>
-          {chats.isLoading ? <Loading className="py-10" /> : null}
-          {chats.error ? (
-            <LoadError
-              error={chats.error}
-              onRetry={() => void chats.refetch()}
-              stale={!!chats.data}
-            />
-          ) : null}
-          {chats.data?.length === 0 ? (
+        ListHeaderComponent={
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              className="-mx-[22px] mb-1"
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingBottom: 6 }}
+            >
+              {FILTERS.map((f) => (
+                <Chip
+                  key={f.key}
+                  label={f.label}
+                  shape="compact"
+                  selected={filter === f.key}
+                  onPress={() => setFilter(f.key)}
+                />
+              ))}
+            </ScrollView>
+            {chats.isLoading ? <Loading className="py-10" /> : null}
+            {chats.error ? (
+              <LoadError
+                error={chats.error}
+                onRetry={() => void chats.refetch()}
+                stale={!!chats.data}
+              />
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={
+          chats.data?.length === 0 ? (
             <EmptyState
               card
               title="No chats yet"
@@ -121,26 +137,24 @@ export default function ChatsScreen() {
               cta="Find something to do"
               onPress={() => router.navigate('/')}
             />
-          ) : null}
-          {chats.data?.length && !shown.length ? (
+          ) : chats.data ? (
             <Text className="py-10 text-center font-sans text-[14.5px] text-muted">
               {filter === 'unread' ? 'You’re all caught up.' : 'No chats here yet.'}
             </Text>
-          ) : null}
-          {shown.map((c) => (
-            <Row
-              key={c.id}
-              chat={c}
-              selected={c.id === selectedId}
-              selecting={!!selected}
-              onSelect={(on) => {
-                if (on) holdHaptic();
-                setSelectedId(on ? c.id : null);
-              }}
-            />
-          ))}
-        </View>
-      </ScrollView>
+          ) : null
+        }
+        renderItem={({ item: c }) => (
+          <Row
+            chat={c}
+            selected={c.id === selectedId}
+            selecting={!!selected}
+            onSelect={(on) => {
+              if (on) holdHaptic();
+              setSelectedId(on ? c.id : null);
+            }}
+          />
+        )}
+      />
     </View>
   );
 }
@@ -233,3 +247,5 @@ function Row({
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

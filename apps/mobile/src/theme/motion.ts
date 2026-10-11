@@ -29,7 +29,7 @@ export const spring = {
   settle: { duration: 400, dampingRatio: 1 },
   /** Home after a drag; pass the finger's `velocity`. */
   snapBack: { duration: 400, dampingRatio: 0.8 },
-  /** Sheets and drawers after a drag; pass the finger's `velocity`. */
+  /** Thrown away by a drag (e.g. the photo viewer); pass the finger's `velocity`. */
   sheet: { duration: 300, dampingRatio: 0.8 },
   /** A little overshoot, for moments worth celebrating (joining). */
   pop: { duration: 450, dampingRatio: 0.6 },

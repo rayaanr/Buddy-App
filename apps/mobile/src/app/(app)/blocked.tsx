@@ -1,5 +1,5 @@
 import { firstName } from '@buddy/shared';
-import { ScrollView, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useBlocked, useSetBlocked } from '@/api/queries';
@@ -23,52 +23,54 @@ export default function BlockedPeopleScreen() {
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title="Blocked people" />
-      <ScrollView
-        className="flex-1"
+      <FlatList
+        style={styles.fill}
+        data={blocked.data ?? []}
+        keyExtractor={(person) => person.id}
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
-      >
-        <Text className="font-sans text-[15px] leading-[22px] text-muted">
-          You won’t see each other’s activities or messages, and they can’t view your profile. They
-          aren’t told.
-        </Text>
-
-        {blocked.isLoading ? <Loading /> : null}
-        {blocked.error ? (
-          <View className="mt-6">
-            <LoadError
-              error={blocked.error}
-              onRetry={() => void blocked.refetch()}
-              stale={!!blocked.data}
+        ListHeaderComponent={
+          <View className="mb-5">
+            <Text className="font-sans text-[15px] leading-[22px] text-muted">
+              You won’t see each other’s activities or messages, and they can’t view your profile.
+              They aren’t told.
+            </Text>
+            {blocked.isLoading ? <Loading /> : null}
+            {blocked.error ? (
+              <View className="mt-6">
+                <LoadError
+                  error={blocked.error}
+                  onRetry={() => void blocked.refetch()}
+                  stale={!!blocked.data}
+                />
+              </View>
+            ) : null}
+          </View>
+        }
+        ListEmptyComponent={
+          blocked.data ? (
+            <Text className="mt-3 text-center font-sans text-[15px] text-muted">
+              You haven’t blocked anyone.
+            </Text>
+          ) : null
+        }
+        renderItem={({ item: person }) => (
+          <View className="flex-row items-center gap-3.5 border-b border-divider py-3.5">
+            <Avatar uri={person.avatarUrl ?? undefined} name={person.name} size={44} />
+            <Text className="flex-1 font-sans-medium text-[16px] text-ink" numberOfLines={1}>
+              {person.name}
+            </Text>
+            <Button
+              label="Unblock"
+              variant="outline"
+              size="sm"
+              disabled={setBlocked.isPending}
+              onPress={() => unblock(person.id, person.name)}
             />
           </View>
-        ) : null}
-        {blocked.data?.length === 0 ? (
-          <Text className="mt-8 text-center font-sans text-[15px] text-muted">
-            You haven’t blocked anyone.
-          </Text>
-        ) : null}
-
-        <View className="mt-5">
-          {blocked.data?.map((person) => (
-            <View
-              key={person.id}
-              className="flex-row items-center gap-3.5 border-b border-divider py-3.5"
-            >
-              <Avatar uri={person.avatarUrl ?? undefined} name={person.name} size={44} />
-              <Text className="flex-1 font-sans-medium text-[16px] text-ink" numberOfLines={1}>
-                {person.name}
-              </Text>
-              <Button
-                label="Unblock"
-                variant="outline"
-                size="sm"
-                disabled={setBlocked.isPending}
-                onPress={() => unblock(person.id, person.name)}
-              />
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        )}
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

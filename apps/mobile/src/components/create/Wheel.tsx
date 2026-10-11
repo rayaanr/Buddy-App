@@ -33,8 +33,8 @@ interface WheelProps {
  * A scrolling picker column, like the phone's own time picker: drag or flick
  * and it settles on the nearest row; tap a row to jump to it.
  *
- * Built on a pan gesture rather than a ScrollView so it claims the drag
- * before the drawer it sits in does (the drawer closes on a downward drag).
+ * Built on a pan gesture rather than a ScrollView, so it rubber-bands at the
+ * ends and settles exactly on a row.
  */
 export function Wheel({ values, index, onChange, label, width = 92 }: WheelProps) {
   const last = values.length - 1;

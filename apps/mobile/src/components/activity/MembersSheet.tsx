@@ -13,7 +13,7 @@ import {
   Loading,
   PressableScale,
   SectionLabel,
-  Sheet,
+  Dialog,
 } from '@/components/ui';
 import { toast } from '@/store/ui';
 
@@ -48,7 +48,7 @@ export function MembersSheet({
   const me = useMe();
   const remove = useRemoveGuest(activityId);
   // Opening a profile, or asking why someone's being removed, waits until
-  // the drawer has slid away.
+  // the dialog has gone.
   const next = useRef<{ profile: string } | { remove: UserSummary } | null>(null);
   const [removing, setRemoving] = useState<UserSummary | null>(null);
   const waitlist = people.data?.waitlist ?? [];
@@ -106,7 +106,7 @@ export function MembersSheet({
 
   return (
     <>
-      <Sheet
+      <Dialog
         open={open}
         onClose={onClose}
         onClosed={() => {
@@ -150,7 +150,7 @@ export function MembersSheet({
             </>
           ) : null}
         </View>
-      </Sheet>
+      </Dialog>
       <ActionSheet
         visible={!!removing}
         onClose={() => setRemoving(null)}

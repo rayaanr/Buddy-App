@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Button, Sheet } from '@/components/ui';
+import { Button, Dialog } from '@/components/ui';
 import { Wheel } from './Wheel';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -17,7 +17,7 @@ interface TimePickerSheetProps {
 }
 
 /**
- * Hour and minute wheels (5-minute steps) in a drawer, 24-hour like the rest
+ * Hour and minute wheels (5-minute steps) in a dialog, 24-hour like the rest
  * of the app. Mount with a new `key` per opening so it starts on `value`.
  */
 export function TimePickerSheet({ open, onClose, value, onChange }: TimePickerSheetProps) {
@@ -26,7 +26,7 @@ export function TimePickerSheet({ open, onClose, value, onChange }: TimePickerSh
   const time = `${HOURS[hour]}:${MINUTES[minute]}`;
 
   return (
-    <Sheet open={open} onClose={onClose}>
+    <Dialog open={open} onClose={onClose}>
       <View className="px-[22px]">
         <Text className="text-center font-sans-semibold text-[17px] text-ink">Start time</Text>
 
@@ -45,6 +45,6 @@ export function TimePickerSheet({ open, onClose, value, onChange }: TimePickerSh
           }}
         />
       </View>
-    </Sheet>
+    </Dialog>
   );
 }

@@ -1,7 +1,7 @@
 import { firstName } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useCommunity, useCommunityMembers, useMe, useRemoveCommunityMember } from '@/api/queries';
@@ -31,64 +31,68 @@ export default function CommunityMembersScreen() {
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title="Members" />
-      <ScrollView
-        className="flex-1"
+      <FlatList
+        style={styles.fill}
+        data={members.data ?? []}
+        keyExtractor={(m) => m.id}
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
-      >
-        {community.data ? (
-          <Text className="font-sans text-[14.5px] text-muted">
-            {community.data.name} · {community.data.memberCount}
-          </Text>
-        ) : null}
-
-        <View className="mt-4">
-          {members.isLoading ? <Loading className="py-10" /> : null}
-          {members.error ? (
-            <LoadError
-              error={members.error}
-              onRetry={() => void members.refetch()}
-              stale={!!members.data}
-            />
-          ) : null}
-          {members.data?.map((m) => (
-            <View key={m.id} className="flex-row items-center border-b border-divider">
-              <Pressable
-                onPress={() => router.push(`/user/${m.id}`)}
-                accessibilityRole="button"
-                className="flex-1 flex-row items-center gap-3 py-3 active:opacity-70"
-              >
-                <Avatar uri={m.avatarUrl ?? undefined} name={m.name} size={40} />
-                <Text className="flex-1 font-sans-medium text-[15.5px] text-ink" numberOfLines={1}>
-                  {m.name}
-                  {m.id === me.data?.id ? <Text className="text-muted"> (you)</Text> : null}
-                </Text>
-                {m.isCreator ? (
-                  <Text className="font-mono-medium text-[11px] uppercase tracking-[1px] text-lime">
-                    Started it
-                  </Text>
-                ) : null}
-              </Pressable>
-              {canRemove && !m.isCreator ? (
-                <Menu
-                  label={`Options for ${m.name}`}
-                  trigger={
-                    <View className="ml-2 h-9 w-9 items-center justify-center rounded-full">
-                      <MoreIcon size={18} />
-                    </View>
-                  }
-                  items={[
-                    {
-                      label: 'Remove from community',
-                      destructive: true,
-                      onPress: () => setRemoving(m),
-                    },
-                  ]}
+        ListHeaderComponent={
+          <View className="mb-4">
+            {community.data ? (
+              <Text className="font-sans text-[14.5px] text-muted">
+                {community.data.name} · {community.data.memberCount}
+              </Text>
+            ) : null}
+            {members.isLoading ? <Loading className="py-10" /> : null}
+            {members.error ? (
+              <View className="mt-4">
+                <LoadError
+                  error={members.error}
+                  onRetry={() => void members.refetch()}
+                  stale={!!members.data}
                 />
+              </View>
+            ) : null}
+          </View>
+        }
+        renderItem={({ item: m }) => (
+          <View className="flex-row items-center border-b border-divider">
+            <Pressable
+              onPress={() => router.push(`/user/${m.id}`)}
+              accessibilityRole="button"
+              className="flex-1 flex-row items-center gap-3 py-3 active:opacity-70"
+            >
+              <Avatar uri={m.avatarUrl ?? undefined} name={m.name} size={40} />
+              <Text className="flex-1 font-sans-medium text-[15.5px] text-ink" numberOfLines={1}>
+                {m.name}
+                {m.id === me.data?.id ? <Text className="text-muted"> (you)</Text> : null}
+              </Text>
+              {m.isCreator ? (
+                <Text className="font-mono-medium text-[11px] uppercase tracking-[1px] text-lime">
+                  Started it
+                </Text>
               ) : null}
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+            </Pressable>
+            {canRemove && !m.isCreator ? (
+              <Menu
+                label={`Options for ${m.name}`}
+                trigger={
+                  <View className="ml-2 h-9 w-9 items-center justify-center rounded-full">
+                    <MoreIcon size={18} />
+                  </View>
+                }
+                items={[
+                  {
+                    label: 'Remove from community',
+                    destructive: true,
+                    onPress: () => setRemoving(m),
+                  },
+                ]}
+              />
+            ) : null}
+          </View>
+        )}
+      />
 
       <ConfirmDialog
         visible={!!removing}
@@ -112,3 +116,5 @@ export default function CommunityMembersScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

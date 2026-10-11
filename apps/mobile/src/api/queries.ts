@@ -176,7 +176,7 @@ export const useActivity = (id: string) =>
     enabled: !!id,
   });
 
-/** Everyone going; fetched when the members drawer opens. */
+/** Everyone going; fetched when the members list opens. */
 export const useActivityMembers = (id: string, enabled: boolean) =>
   useQuery({
     queryKey: [...keys.activity(id), 'members'],

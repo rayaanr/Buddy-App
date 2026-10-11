@@ -22,7 +22,7 @@ interface ConfirmDialogProps {
  * "Are you sure?" before something that can't easily be undone: a small
  * dialog in the middle of the screen. Built on @rn-primitives' alert dialog
  * (screen readers treat it as one; it only closes on a choice or Cancel).
- * Menus of options use a drawer or a popover instead.
+ * Menus of options use a popover (Menu) or a Dialog instead.
  */
 export function ConfirmDialog({
   visible,

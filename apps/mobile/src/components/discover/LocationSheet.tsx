@@ -2,7 +2,7 @@ import { DISCOVER_RADII, placeLabel } from '@buddy/shared';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import { PlaceRow, PlaceSearch } from '@/components/places/PlaceSearch';
-import { Chip, LocateIcon, MapPinIcon, SectionLabel, Sheet } from '@/components/ui';
+import { Chip, LocateIcon, MapPinIcon, SectionLabel, Dialog } from '@/components/ui';
 import { useLocate } from '@/hooks/useLocate';
 import { useDiscoverStore } from '@/store/discover';
 import { colors } from '@/theme';
@@ -29,7 +29,7 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
   });
 
   return (
-    <Sheet open={open} onClose={onClose}>
+    <Dialog position="top" open={open} onClose={onClose}>
       <View className="px-[22px]">
         <Text className="mb-3 font-sans-semibold text-[18px] text-ink">Show activities near</Text>
         <PlaceSearch
@@ -77,6 +77,6 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
           If there’s nothing that close, Discover looks further and tells you.
         </Text>
       </View>
-    </Sheet>
+    </Dialog>
   );
 }

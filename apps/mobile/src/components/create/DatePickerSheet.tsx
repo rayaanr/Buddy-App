@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { ChevronLeftIcon, ChevronRightIcon, IconButton, Sheet } from '@/components/ui';
+import { ChevronLeftIcon, ChevronRightIcon, IconButton, Dialog } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
@@ -37,7 +37,7 @@ interface DatePickerSheetProps {
 }
 
 /**
- * Month calendar in a drawer. Days are plain calendar dates, so it reads the
+ * Month calendar in a dialog. Days are plain calendar dates, so it reads the
  * same whatever time zone the phone is in. Mount with a new `key` per opening
  * so it starts on the selected month.
  */
@@ -77,7 +77,7 @@ export function DatePickerSheet({
   );
 
   return (
-    <Sheet open={open} onClose={onClose}>
+    <Dialog open={open} onClose={onClose}>
       <View className="px-[22px]">
         <View className="flex-row items-center justify-between">
           <IconButton
@@ -148,6 +148,6 @@ export function DatePickerSheet({
           ))}
         </View>
       </View>
-    </Sheet>
+    </Dialog>
   );
 }

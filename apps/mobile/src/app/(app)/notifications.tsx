@@ -1,7 +1,7 @@
 import { type AppNotification, clockLabel, dayMonth, localDay } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useMarkNotificationsRead, useNotifications } from '@/api/queries';
 import {
@@ -31,30 +31,37 @@ export default function NotificationsScreen() {
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title="Notifications" />
-      <ScrollView
-        className="flex-1"
+      <FlatList
+        style={styles.fill}
+        data={list.data?.notifications ?? []}
+        keyExtractor={(n) => n.id}
+        renderItem={({ item }) => <Row notification={item} />}
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
         refreshControl={
           <Refresh refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />
         }
-      >
-        <View>
-          {list.isLoading ? <Loading className="py-10" /> : null}
-          {list.error ? (
-            <LoadError error={list.error} onRetry={() => void list.refetch()} stale={!!list.data} />
-          ) : null}
-          {list.data?.notifications.length === 0 ? (
+        ListHeaderComponent={
+          <>
+            {list.isLoading ? <Loading className="py-10" /> : null}
+            {list.error ? (
+              <LoadError
+                error={list.error}
+                onRetry={() => void list.refetch()}
+                stale={!!list.data}
+              />
+            ) : null}
+          </>
+        }
+        ListEmptyComponent={
+          list.data ? (
             <EmptyState
               card
               title="Nothing yet"
               subtitle="Reminders, changes to activities you’re in, and new activities in your communities show up here."
             />
-          ) : null}
-          {list.data?.notifications.map((n) => (
-            <Row key={n.id} notification={n} />
-          ))}
-        </View>
-      </ScrollView>
+          ) : null
+        }
+      />
     </View>
   );
 }
@@ -108,3 +115,5 @@ function Row({ notification: n }: { notification: AppNotification }) {
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

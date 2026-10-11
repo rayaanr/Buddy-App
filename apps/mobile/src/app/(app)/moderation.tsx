@@ -8,7 +8,7 @@ import {
 } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useAdminReports, useLiftSuspension, useResolveReport } from '@/api/queries';
@@ -51,35 +51,46 @@ export default function ModerationScreen() {
   return (
     <View className="flex-1 bg-bg">
       <ScreenHeader title="Moderation" />
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
+      <FlatList
+        style={styles.fill}
+        data={reports.data ?? []}
+        keyExtractor={(r) => r.id}
+        contentContainerStyle={{
+          paddingHorizontal: 22,
+          paddingTop: 12,
+          paddingBottom: 30,
+          gap: 12,
+        }}
         refreshControl={
           <Refresh refreshing={reports.isRefetching} onRefresh={() => void reports.refetch()} />
         }
-      >
-        <Text className="font-sans text-[14px] leading-[20px] text-muted">
-          Act on reports within 24 hours. Tap one for what you can do.
-        </Text>
-        <SegmentedControl
-          className="mt-5"
-          segments={[
-            { value: 'open', label: 'Open' },
-            { value: 'resolved', label: 'Done' },
-          ]}
-          value={status}
-          onChange={setStatus}
-        />
-
-        <View className="mt-4 gap-3">
-          {reports.error ? (
-            <LoadError
-              error={reports.error}
-              onRetry={() => void reports.refetch()}
-              stale={!!reports.data}
+        ListHeaderComponent={
+          <View className="mb-1">
+            <Text className="font-sans text-[14px] leading-[20px] text-muted">
+              Act on reports within 24 hours. Tap one for what you can do.
+            </Text>
+            <SegmentedControl
+              className="mt-5"
+              segments={[
+                { value: 'open', label: 'Open' },
+                { value: 'resolved', label: 'Done' },
+              ]}
+              value={status}
+              onChange={setStatus}
             />
-          ) : null}
-          {reports.data?.length === 0 ? (
+            {reports.error ? (
+              <View className="mt-4">
+                <LoadError
+                  error={reports.error}
+                  onRetry={() => void reports.refetch()}
+                  stale={!!reports.data}
+                />
+              </View>
+            ) : null}
+          </View>
+        }
+        ListEmptyComponent={
+          reports.data ? (
             <EmptyState
               card
               title={status === 'open' ? 'Nothing to review' : 'Nothing yet'}
@@ -87,16 +98,15 @@ export default function ModerationScreen() {
                 status === 'open' ? 'New reports show up here.' : 'Reports you act on move here.'
               }
             />
-          ) : null}
-          {reports.data?.map((r) => (
-            <ReportCard
-              key={r.id}
-              report={r}
-              onPress={status === 'open' || r.person?.suspended ? () => setActing(r) : undefined}
-            />
-          ))}
-        </View>
-      </ScrollView>
+          ) : null
+        }
+        renderItem={({ item: r }) => (
+          <ReportCard
+            report={r}
+            onPress={status === 'open' || r.person?.suspended ? () => setActing(r) : undefined}
+          />
+        )}
+      />
 
       <ActionSheet
         visible={!!acting}
@@ -262,3 +272,5 @@ function Link({ label, onPress }: { label: string; onPress: () => void }) {
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });

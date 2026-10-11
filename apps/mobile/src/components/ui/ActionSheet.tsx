@@ -4,7 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { cn } from '@/lib/cn';
 import { Button } from './Button';
 import { CONTROL_FONT_SCALE } from '@/theme';
-import { Sheet } from './Sheet';
+import { Dialog } from './Dialog';
 
 export interface SheetAction {
   label: string;
@@ -25,9 +25,9 @@ interface ActionSheetProps {
 }
 
 /**
- * A drawer of actions with Cancel, for options that shouldn't crowd a screen
- * (report, block). The chosen action runs once the drawer has slid away, so
- * a follow-up (a confirmation, a new screen) never appears under it.
+ * A dialog of actions with Cancel, for options that shouldn't crowd a screen
+ * (report, block, a reason to pick). The chosen action runs once the dialog
+ * has gone, so a follow-up (a confirmation, a new screen) never appears under it.
  */
 export function ActionSheet({
   visible,
@@ -47,7 +47,7 @@ export function ActionSheet({
   }
 
   return (
-    <Sheet
+    <Dialog
       open={visible}
       onClose={onClose}
       onClosed={() => {
@@ -105,6 +105,6 @@ export function ActionSheet({
           className="mt-3"
         />
       </View>
-    </Sheet>
+    </Dialog>
   );
 }

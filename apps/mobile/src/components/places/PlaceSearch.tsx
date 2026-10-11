@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { nearestPlace, usePlaceSearch } from '@/api/queries';
-import { LocateIcon, MapPinIcon, Sheet, TextField } from '@/components/ui';
+import { LocateIcon, MapPinIcon, Dialog, TextField } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useLocate } from '@/hooks/useLocate';
 import { colors } from '@/theme';
@@ -132,7 +132,7 @@ export function PlaceRow({
   );
 }
 
-/** A drawer for choosing a town: Sign up and Edit profile ("Where do you live?"). */
+/** A dialog for choosing a town: Sign up and Edit profile ("Where do you live?"). */
 export function PlacePickerSheet({
   open,
   onClose,
@@ -145,7 +145,7 @@ export function PlacePickerSheet({
   title: string;
 }) {
   return (
-    <Sheet open={open} onClose={onClose}>
+    <Dialog position="top" open={open} onClose={onClose}>
       <View className="px-[22px]">
         <Text className="mb-3 font-sans-semibold text-[18px] text-ink">{title}</Text>
         <PlaceSearch
@@ -156,6 +156,6 @@ export function PlacePickerSheet({
           }}
         />
       </View>
-    </Sheet>
+    </Dialog>
   );
 }

@@ -60,7 +60,7 @@ export function KeyboardScreen({
 }
 
 /**
- * The same for content inside a Modal (drawers). Modals are separate windows
+ * The same for content inside a Modal (dialogs). Modals are separate windows
  * on Android, so this uses React Native's own view, which handles them.
  */
 export function ModalKeyboardScreen(props: Omit<KeyboardAvoidingViewProps, 'behavior'>) {

@@ -31,7 +31,7 @@ interface MenuProps {
 
 /**
  * A small menu that opens next to the button that opened it (a popover),
- * for a few short actions. Longer choices, and confirmations, use a drawer.
+ * for a few short actions. Longer choices use a Dialog; confirmations, ConfirmDialog.
  * Built on @rn-primitives' dropdown menu: placement, flipping at the screen
  * edge, closing on an outside tap and screen reader roles come from there.
  */
