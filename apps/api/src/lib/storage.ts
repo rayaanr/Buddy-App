@@ -20,6 +20,8 @@ export interface Storage {
   stat(key: string): Promise<StoredObject | null>;
   /** Deletes these objects; missing ones are ignored. */
   remove(keys: string[]): Promise<void>;
+  /** Everything stored under `prefix`, a page at a time. */
+  list(prefix: string): AsyncIterable<{ key: string; uploadedAt: Date }>;
 }
 
 const UPLOAD_TTL_SECONDS = 5 * 60;
@@ -77,6 +79,26 @@ export function createStorage(env: Env): Storage | null {
       };
     },
 
+    async *list(prefix) {
+      let token: string | null = null;
+      do {
+        const url = new URL(endpoint);
+        url.searchParams.set('list-type', '2');
+        url.searchParams.set('prefix', prefix);
+        if (token) url.searchParams.set('continuation-token', token);
+        const res = await client.fetch(url.toString());
+        if (!res.ok) throw new Error(`R2 list answered ${res.status}`);
+        const xml = await res.text();
+        for (const [, body] of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
+          const key = /<Key>([^<]+)<\/Key>/.exec(body!)?.[1];
+          const at = /<LastModified>([^<]+)<\/LastModified>/.exec(body!)?.[1];
+          if (key && at) yield { key: unescapeXml(key), uploadedAt: new Date(at) };
+        }
+        const next = /<NextContinuationToken>([^<]+)<\/NextContinuationToken>/.exec(xml)?.[1];
+        token = /<IsTruncated>true<\/IsTruncated>/.test(xml) && next ? unescapeXml(next) : null;
+      } while (token);
+    },
+
     async remove(keys) {
       await Promise.all(
         keys.map(async (key) => {
@@ -87,3 +109,11 @@ export function createStorage(env: Env): Storage | null {
     },
   };
 }
+
+const unescapeXml = (s: string) =>
+  s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');

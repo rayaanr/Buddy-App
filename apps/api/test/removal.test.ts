@@ -105,3 +105,56 @@ describe('removing a guest', () => {
     expect((await remove(guest.userId, host.headers, 'rude')).status).toBe(400);
   });
 });
+
+describe('blocking a guest', () => {
+  it('takes them out of the upcoming activities you host, and keeps them out', async () => {
+    const { host, guest, padel } = await setup();
+    toUsers.length = 0;
+    const res = await t.call(`/v1/users/${guest.userId}/block`, {
+      method: 'POST',
+      headers: host.headers,
+    });
+    expect(res.status).toBe(204);
+
+    // Gone from the padel game, and told so.
+    const seen = await t.call(`/v1/activities/${padel.id}`, { headers: guest.headers });
+    expect(seen.status).toBe(404);
+    const [removal] = await t.deps.db
+      .select()
+      .from(activityRemovals)
+      .where(
+        and(eq(activityRemovals.activityId, padel.id), eq(activityRemovals.userId, guest.userId)),
+      );
+    expect(removal).toBeTruthy();
+    expect(toUsers).toContainEqual(
+      expect.objectContaining({
+        userIds: [guest.userId],
+        message: expect.objectContaining({ title: `You’re no longer going to ${padel.title}` }),
+      }),
+    );
+
+    // Unblocking doesn't put them back.
+    await t.call(`/v1/users/${guest.userId}/block`, { method: 'DELETE', headers: host.headers });
+    const rejoin = await t.call(`/v1/activities/${padel.id}/membership`, {
+      method: 'POST',
+      headers: guest.headers,
+    });
+    expect(rejoin.status).toBe(404);
+  });
+
+  it('leaves activities someone else hosts alone', async () => {
+    const { host, guest, padel } = await setup();
+    // The guest blocks the host: they're the one leaving, by not going, if they want.
+    await t.call(`/v1/users/${host.userId}/block`, { method: 'POST', headers: guest.headers });
+    const [member] = await t.deps.db
+      .select({ id: activities.id })
+      .from(activities)
+      .where(eq(activities.id, padel.id));
+    expect(member).toBeTruthy();
+    const removals = await t.deps.db
+      .select()
+      .from(activityRemovals)
+      .where(eq(activityRemovals.activityId, padel.id));
+    expect(removals).toEqual([]);
+  });
+});

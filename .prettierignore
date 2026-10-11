@@ -9,3 +9,5 @@ package-lock.json
 .claude/
 .agents/
 apps/api/src/brand/fallback-art.ts
+e2e/report/
+e2e/results/

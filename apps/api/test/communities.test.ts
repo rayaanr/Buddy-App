@@ -226,6 +226,18 @@ describe('the creator’s tools', () => {
     ]);
   });
 
+  it('shows the full list to members only; others get the count and a few faces', async () => {
+    const { id } = await withMembers();
+    const outsider = await t.signIn('curious@buddy.test', 'Curious');
+    const list = await t.call(`/v1/communities/${id}/members`, { headers: outsider.headers });
+    expect(list.status).toBe(403);
+    const page = await t.call<CommunityDetail>(`/v1/communities/${id}`, {
+      headers: outsider.headers,
+    });
+    expect(page.body.memberCount).toBe(2);
+    expect(page.body.members.length).toBeGreaterThan(0);
+  });
+
   it('removes a member, who then can’t rejoin; nobody else can remove people', async () => {
     const { maker, member, id } = await withMembers();
     const notYours = await t.call(`/v1/communities/${id}/members/${maker.userId}`, {

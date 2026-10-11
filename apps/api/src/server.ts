@@ -8,6 +8,7 @@ import { fillMissingPictures } from './jobs/pictures';
 import { startReminders } from './jobs/reminders';
 import { startRetention } from './jobs/retention';
 import { startSeries } from './jobs/series';
+import { startUploadSweep } from './jobs/uploads';
 import { flushSentry, startSentry } from './lib/sentry';
 import { WS_MAX_BYTES } from './realtime/hub';
 
@@ -22,6 +23,7 @@ void fillMissingPictures(deps.db, deps.urls)
 const stopReminders = startReminders(deps);
 const stopSeries = startSeries(deps);
 const stopRetention = startRetention(deps);
+const stopUploadSweep = startUploadSweep(deps);
 
 // Chat sockets share the HTTP port; Hono routes upgrade requests to this server.
 const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_BYTES });
@@ -36,6 +38,7 @@ const shutdown = (signal: string) => {
   stopReminders();
   stopSeries();
   stopRetention();
+  stopUploadSweep();
   wss.close();
   server.close(() => {
     // Send any crash reports still queued before exiting.

@@ -157,17 +157,24 @@ export default function CommunityScreen() {
               accessibilityLabel={m.name}
             />
           ))}
-          <Pressable
-            onPress={() => router.push(`/community/${c.id}/members`)}
-            accessibilityRole="button"
-            hitSlop={8}
-            className="ml-[18px] active:opacity-70"
-          >
-            <Text className="font-sans text-label text-muted">
-              {others > 0 ? `+${others} member${others === 1 ? '' : 's'} · ` : ''}
-              <Text className="font-sans-medium text-lime">See all</Text>
+          {/* The full list is for members; others see the count. */}
+          {c.joined ? (
+            <Pressable
+              onPress={() => router.push(`/community/${c.id}/members`)}
+              accessibilityRole="button"
+              hitSlop={8}
+              className="ml-[18px] active:opacity-70"
+            >
+              <Text className="font-sans text-label text-muted">
+                {others > 0 ? `+${others} member${others === 1 ? '' : 's'} · ` : ''}
+                <Text className="font-sans-medium text-lime">See all</Text>
+              </Text>
+            </Pressable>
+          ) : others > 0 ? (
+            <Text className="ml-[18px] font-sans text-label text-muted">
+              +{others} member{others === 1 ? '' : 's'}
             </Text>
-          </Pressable>
+          ) : null}
         </View>
 
         <View className="mb-2.5 mt-[26px] flex-row items-baseline justify-between">

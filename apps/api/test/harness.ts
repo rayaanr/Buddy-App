@@ -36,7 +36,7 @@ function captureMailer() {
  * to the signed URL; keys never uploaded read as missing, like R2.
  */
 export function memoryStorage() {
-  const objects = new Map<string, StoredObject>();
+  const objects = new Map<string, StoredObject & { uploadedAt: Date }>();
   const removed: string[] = [];
   const storage: Storage = {
     async presignPut(key, contentType, size) {
@@ -55,9 +55,14 @@ export function memoryStorage() {
         removed.push(key);
       }
     },
+    async *list(prefix) {
+      for (const [key, { uploadedAt }] of objects) {
+        if (key.startsWith(prefix)) yield { key, uploadedAt };
+      }
+    },
   };
-  const upload = (key: string, contentType = 'image/jpeg') =>
-    objects.set(key, { contentType, size: 1000 });
+  const upload = (key: string, contentType = 'image/jpeg', uploadedAt = new Date()) =>
+    objects.set(key, { contentType, size: 1000, uploadedAt });
   return { storage, objects, removed, upload };
 }
 

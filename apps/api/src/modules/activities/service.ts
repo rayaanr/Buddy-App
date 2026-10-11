@@ -21,7 +21,7 @@ import {
 } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
 import {
@@ -117,6 +117,9 @@ export async function getActivityDetail(
     rollCall: await rollCallFor(db, summary),
   };
 }
+
+/** People can still join (running late) up to an hour after the start. */
+const LATE_JOIN_MS = 60 * 60 * 1000;
 
 /** Guests can say whether they'd go again once an activity has started, for 30 days. */
 const FEEDBACK_DAYS = 30;
@@ -381,7 +384,7 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
       .for('update');
     if (!activity || activity.hostBlocked || activity.removed) throw notFound('Activity');
     if (activity.cancelled) throw conflict('This activity was cancelled');
-    if (activity.startsAt.getTime() < Date.now() - 60 * 60 * 1000) {
+    if (activity.startsAt.getTime() < Date.now() - LATE_JOIN_MS) {
       throw conflict('This activity has already happened');
     }
 
@@ -395,7 +398,14 @@ export async function joinActivity(db: Db, me: { id: string; name: string }, act
       .select({ n: sql<number>`count(*)::int` })
       .from(activityMembers)
       .where(eq(activityMembers.activityId, activityId));
-    if ((going?.n ?? 0) >= activity.capacity) {
+    // A spot that's free while people are waiting is theirs (it's being
+    // handed over), not the next person to open the app.
+    const [waiting] = await tx
+      .select({ userId: activityWaitlist.userId })
+      .from(activityWaitlist)
+      .where(and(eq(activityWaitlist.activityId, activityId), ne(activityWaitlist.userId, me.id)))
+      .limit(1);
+    if ((going?.n ?? 0) >= activity.capacity || waiting) {
       throw conflict('This activity is full', ERROR_CODES.activityFull);
     }
 
@@ -415,20 +425,22 @@ async function addGuest(tx: Tx, activityId: string, userId: string) {
 
 /**
  * Fills open spots from the waitlist, first in line first. Call with the
- * activity row locked. Does nothing once it has started or been cancelled.
+ * activity row locked. Keeps going while people can still join (up to an
+ * hour after the start), so a spot freed then goes to whoever was waiting,
+ * not a newcomer; does nothing once it's cancelled.
  */
 async function promoteFromWaitlist(tx: Tx, activityId: string) {
   const [activity] = await tx
     .select({
       capacity: activities.capacity,
-      started: sql<boolean>`${activities.startsAt} <= now()`,
+      over: sql<boolean>`${activities.startsAt} < now() - ${`${LATE_JOIN_MS} milliseconds`}::interval`,
       cancelled: sql<boolean>`${activities.cancelledAt} is not null`,
       going: sql<number>`(select count(*)::int from activity_members m where m.activity_id = ${activities.id})`,
     })
     .from(activities)
     .where(eq(activities.id, activityId));
   const open = activity ? activity.capacity - activity.going : 0;
-  if (!activity || activity.started || activity.cancelled || open <= 0) {
+  if (!activity || activity.over || activity.cancelled || open <= 0) {
     return { messages: [], promoted: [] };
   }
 

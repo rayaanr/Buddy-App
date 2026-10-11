@@ -181,4 +181,43 @@ describe('waitlist', () => {
       },
     ]);
   });
+
+  it('after the start, a freed spot still goes to whoever was waiting, not a newcomer', async () => {
+    const waiter = await person(7);
+    const newcomer = await person(8);
+    const { id } = await full(waiter.headers);
+    expect((await wait(id, waiter.headers)).status).toBe(200);
+    // Started ten minutes ago: people can still join for a while.
+    await t.deps.db
+      .update(activities)
+      .set({ startsAt: new Date(Date.now() - 10 * 60_000) })
+      .where(eq(activities.id, id));
+
+    const guest = await aGuest(id);
+    await t.call(`/v1/activities/${id}/membership`, { method: 'DELETE', headers: guest.headers });
+    expect((await detail(id, waiter.headers)).viewer.joined).toBe(true);
+
+    const late = await t.call(`/v1/activities/${id}/membership`, {
+      method: 'POST',
+      headers: newcomer.headers,
+    });
+    expect(late.status).toBe(409);
+  });
+
+  it('refuses joining outright while someone is waiting for a free spot', async () => {
+    const waiter = await person(9);
+    const newcomer = await person(10);
+    const { id, capacity } = await full(waiter.headers);
+    expect((await wait(id, waiter.headers)).status).toBe(200);
+    // A spot opens without the usual hand-over (e.g. changed straight in the database).
+    await t.deps.db
+      .update(activities)
+      .set({ capacity: capacity + 1 })
+      .where(eq(activities.id, id));
+    const res = await t.call(`/v1/activities/${id}/membership`, {
+      method: 'POST',
+      headers: newcomer.headers,
+    });
+    expect(res.status).toBe(409);
+  });
 });

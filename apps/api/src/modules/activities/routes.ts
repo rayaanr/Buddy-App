@@ -28,6 +28,7 @@ import { toChatMessage } from '../chat/service';
 import { communityAudience } from '../communities/service';
 import { originFor } from '../profiles/service';
 import { createAnnouncer } from './announce';
+import { createRemover } from './removal';
 import { picksFor } from './picks';
 import {
   filterCondition,
@@ -48,7 +49,6 @@ import {
   leaveActivity,
   leaveWaitlist,
   myActivities,
-  removeGuest,
   updateActivity,
   giveFeedback,
   getRollCall,
@@ -69,6 +69,7 @@ export function activityRoutes(deps: Deps) {
   const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
 
   const announce = createAnnouncer(deps);
+  const removeGuestAndTell = createRemover(deps);
 
   /**
    * A new activity in a community: its members hear about it. At most a few a
@@ -285,19 +286,7 @@ export function activityRoutes(deps: Deps) {
         async (c) => {
           const me = currentUser(c);
           const { id, userId } = c.req.valid('param');
-          const result = await removeGuest(db, me, id, userId, c.req.valid('json').reason);
-          if (result.wasGoing) hub.disconnect(id, userId);
-          await announce(id, me.id, result);
-          for (const week of result.laterWeeks) {
-            if (week.wasGoing) hub.disconnect(week.id, userId);
-            await announce(week.id, me.id, week);
-          }
-          void push.notifyUsers([userId], {
-            title: `You’re no longer going to ${result.title}`,
-            body: 'The host removed you from this activity.',
-            data: {},
-            channelId: 'reminders',
-          });
+          await removeGuestAndTell(me, id, userId, c.req.valid('json').reason);
           return c.json(await getActivityDetail(db, urls, id, me.id));
         },
       )

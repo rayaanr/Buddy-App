@@ -364,6 +364,13 @@ export async function muteCommunityChat(db: Db, id: string, userId: string, mute
 
 export async function listCommunityMembers(db: Db, urls: Urls, id: string, viewerId: string) {
   await requireCommunity(db, id);
+  // Who's in it says a lot about people (where they live, what they're into):
+  // the full list is for members. Everyone else sees the count and a few faces.
+  const [member] = await db
+    .select({ userId: communityMembers.userId })
+    .from(communityMembers)
+    .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, viewerId)));
+  if (!member) throw forbidden('Join the community to see everyone in it');
   const rows = await db
     .select({
       id: user.id,

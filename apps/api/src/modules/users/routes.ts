@@ -20,12 +20,14 @@ import {
   notCancelled,
   upcoming,
 } from '../activities/queries';
+import { removeBlockedFromHosted } from '../activities/removal';
 import { originFor } from '../profiles/service';
 import { blockUser, unblockUser } from '../safety/service';
 
 const HOSTING_PREVIEW = 10;
 
-export function userRoutes({ db, urls }: Deps) {
+export function userRoutes(deps: Deps) {
+  const { db, urls } = deps;
   return (
     new Hono<AppEnv>()
       .use(requireUser)
@@ -138,7 +140,9 @@ export function userRoutes({ db, urls }: Deps) {
       })
 
       .post('/:id/block', idParam(), async (c) => {
-        await blockUser(db, currentUser(c).id, c.req.param('id'));
+        const me = currentUser(c);
+        await blockUser(db, me.id, c.req.param('id'));
+        await removeBlockedFromHosted(deps, me, c.req.param('id'));
         return c.body(null, 204);
       })
 
