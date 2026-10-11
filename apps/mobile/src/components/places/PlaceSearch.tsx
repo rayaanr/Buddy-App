@@ -143,7 +143,7 @@ export function PlacePickerSheet({
   title: string;
 }) {
   return (
-    <Dialog position="top" open={open} onClose={onClose}>
+    <Dialog position="search" open={open} onClose={onClose}>
       <View className="px-edge">
         <Text className="mb-3 font-sans-semibold text-title3 text-ink">{title}</Text>
         <PlaceSearch

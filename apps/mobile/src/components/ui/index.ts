@@ -7,6 +7,7 @@ export * from './CountBadge';
 export * from './Card';
 export * from './ConfirmDialog';
 export * from './Dialog';
+export * from './Drawer';
 export * from './IconButton';
 export * from './EmptyState';
 export * from './Footer';

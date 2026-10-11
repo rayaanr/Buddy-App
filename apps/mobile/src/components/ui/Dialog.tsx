@@ -1,7 +1,13 @@
 import { useEffect, useEffectEvent, useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useKeyboardState } from 'react-native-keyboard-controller';
+import {
+  LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -20,10 +26,11 @@ interface DialogProps {
   /** Runs once the dialog has finished fading away (e.g. navigate after it's gone). */
   onClosed?: () => void;
   /**
-   * Where the card sits. `top` for dialogs whose content grows as you type
-   * (search results), so the field under your finger doesn't move.
+   * Where the card sits. `search` for dialogs whose content grows as you
+   * type (search results): centred, then at the top while the keyboard is
+   * open, so the field under your finger doesn't move as results come in.
    */
-  position?: 'center' | 'top';
+  position?: 'center' | 'search';
   children: ReactNode;
 }
 
@@ -34,6 +41,8 @@ interface DialogProps {
  */
 export function Dialog({ open, onClose, onClosed, position = 'center', children }: DialogProps) {
   const insets = useSafeAreaInsets();
+  const typing = useKeyboardState((k) => k.isVisible);
+  const atTop = position === 'search' && typing;
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
 
@@ -75,7 +84,7 @@ export function Dialog({ open, onClose, onClosed, position = 'center', children 
         <ModalKeyboardScreen
           style={[
             styles.fill,
-            position === 'top' ? styles.top : styles.center,
+            atTop ? styles.top : styles.center,
             { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 },
           ]}
         >
@@ -87,7 +96,14 @@ export function Dialog({ open, onClose, onClosed, position = 'center', children 
               accessibilityLabel="Close"
             />
           </AnimatedView>
-          <AnimatedView style={[styles.card, cardStyle]} accessibilityViewIsModal>
+          <AnimatedView
+            style={[styles.card, cardStyle]}
+            // Glides to the top and back as the keyboard comes and goes.
+            layout={
+              position === 'search' ? LinearTransition.duration(220).easing(ease.out) : undefined
+            }
+            accessibilityViewIsModal
+          >
             <ScrollView
               style={styles.scroll}
               contentContainerStyle={styles.content}

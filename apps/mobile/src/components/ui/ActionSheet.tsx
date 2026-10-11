@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 import { Card } from './Card';
 import { Button } from './Button';
 import { CONTROL_FONT_SCALE } from '@/theme';
-import { Dialog } from './Dialog';
+import { Drawer } from './Drawer';
 
 export interface SheetAction {
   label: string;
@@ -26,7 +26,7 @@ interface ActionSheetProps {
 }
 
 /**
- * A dialog of actions with Cancel, for options that shouldn't crowd a screen
+ * A drawer of actions with Cancel, for options that shouldn't crowd a screen
  * (report, block, a reason to pick). The chosen action runs once the dialog
  * has gone, so a follow-up (a confirmation, a new screen) never appears under it.
  */
@@ -48,7 +48,7 @@ export function ActionSheet({
   }
 
   return (
-    <Dialog
+    <Drawer
       open={visible}
       onClose={onClose}
       onClosed={() => {
@@ -106,6 +106,6 @@ export function ActionSheet({
           className="mt-3"
         />
       </View>
-    </Dialog>
+    </Drawer>
   );
 }

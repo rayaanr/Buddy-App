@@ -13,7 +13,7 @@ import {
   Loading,
   PressableScale,
   SectionLabel,
-  Dialog,
+  Drawer,
 } from '@/components/ui';
 import { toast } from '@/store/ui';
 
@@ -106,7 +106,7 @@ export function MembersSheet({
 
   return (
     <>
-      <Dialog
+      <Drawer
         open={open}
         onClose={onClose}
         onClosed={() => {
@@ -150,7 +150,7 @@ export function MembersSheet({
             </>
           ) : null}
         </View>
-      </Dialog>
+      </Drawer>
       <ActionSheet
         visible={!!removing}
         onClose={() => setRemoving(null)}

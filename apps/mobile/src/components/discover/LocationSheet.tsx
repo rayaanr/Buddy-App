@@ -1,11 +1,11 @@
 import { DISCOVER_RADII, placeLabel } from '@buddy/shared';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
 import { PlaceRow, PlaceSearch } from '@/components/places/PlaceSearch';
 import { Chip, LocateIcon, MapPinIcon, SectionLabel, Dialog } from '@/components/ui';
 import { useLocate } from '@/hooks/useLocate';
 import { useDiscoverStore } from '@/store/discover';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 interface LocationSheetProps {
   open: boolean;
@@ -29,7 +29,7 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
   });
 
   return (
-    <Dialog position="top" open={open} onClose={onClose}>
+    <Dialog position="search" open={open} onClose={onClose}>
       <View className="px-edge">
         <Text className="mb-3 font-sans-semibold text-title3 text-ink">Show activities near</Text>
         <PlaceSearch
@@ -63,7 +63,13 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
         </PlaceSearch>
 
         <SectionLabel className="mb-2.5 mt-5">How far</SectionLabel>
-        <View className="flex-row gap-2">
+        {/* Scrolls sideways when the chips don't fit, up to the dialog's edges. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ marginHorizontal: -spacing.edge }}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.edge }}
+        >
           {DISCOVER_RADII.map((km) => (
             <Chip
               key={km}
@@ -72,7 +78,7 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
               onPress={() => setRadius(km)}
             />
           ))}
-        </View>
+        </ScrollView>
         <Text className="mt-2.5 font-sans text-footnote leading-footnote text-muted">
           If there’s nothing that close, Discover looks further and tells you.
         </Text>
