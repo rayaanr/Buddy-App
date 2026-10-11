@@ -73,6 +73,13 @@
           "writeOnlyAccess": true,
           "writeOnlyCalendarPermission": "Buddy adds activities you choose to your calendar."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#c9f53f"
+        }
       ]
     ],
     "scheme": "buddy",

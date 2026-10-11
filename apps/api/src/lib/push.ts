@@ -42,7 +42,16 @@ export function createPushSender(db: Db, logger: Logger, accessToken?: string): 
           'content-type': 'application/json',
           ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify(batch.map((to) => ({ to, sound: 'default', ...message }))),
+        body: JSON.stringify(
+          batch.map((to) => ({
+            to,
+            sound: 'default',
+            // High priority, so Android delivers chats and reminders right away
+            // instead of holding them while the phone is idle.
+            priority: message.channelId === 'communities' ? 'normal' : 'high',
+            ...message,
+          })),
+        ),
       });
       if (!res.ok) {
         logger.warn({ status: res.status }, 'Expo push request failed');

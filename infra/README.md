@@ -118,6 +118,21 @@ npx eas-cli@latest update:configure
 
 It adds the update URL and runtime version to `app.json` and a channel to each build profile in `eas.json`. Commit what it changes. Builds made before this can never receive updates. Afterwards, JavaScript-only fixes ship with `eas update --channel production --environment production --message "…"`; anything native still needs a new build.
 
+### Android push notifications (free)
+
+Push goes through Expo's push service, which hands Android messages to Firebase Cloud Messaging. Once:
+
+1. [Firebase console](https://console.firebase.google.com) → Add project (Analytics not needed) → Add app → Android, package `com.buddyapp.mobile` → download `google-services.json`.
+2. Give the build the file. From `apps/mobile`:
+   ```bash
+   npx eas-cli@latest env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment development --environment preview --environment production --visibility secret
+   ```
+   For a local build instead, leave `google-services.json` in `apps/mobile` (git-ignored).
+3. Let Expo send through it: Firebase → Project settings → Service accounts → Generate new private key, then `npx eas-cli@latest credentials -p android` → your build profile → Google Service Account → FCM V1 → upload that key.
+4. Build again (`eas build --profile preview --platform android`). The file only takes effect in a new build, not an over-the-air update.
+
+Without the file the app still works; Android phones just don't get a push token. iPhones need a paid Apple Developer account for push.
+
 ### Development builds
 
 The `development` profile builds a dev client (`expo-dev-client`): it loads JavaScript from `bun run dev` on your machine and finds the API there too, so it has no API URL of its own. Build it once with `eas build --profile development`, and again whenever a native package changes (camera, clipboard and haptics, for example, arrived after the last one).
