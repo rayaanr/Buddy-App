@@ -3,7 +3,7 @@ import { atLocalTime } from '@buddy/shared';
 import { and, desc, eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { messages } from '../src/db/schema';
+import { activities, messages } from '../src/db/schema';
 import type { PushMessage } from '../src/lib/push';
 import { memoryStorage, useTestApp } from './harness';
 
@@ -11,6 +11,7 @@ const pushes: { activityId: string; message: PushMessage; except: string[] }[] =
 const r2 = memoryStorage();
 const t = useTestApp({
   storage: r2.storage,
+  env: { R2_PUBLIC_URL: 'https://img.example.com' },
   push: {
     notifyActivity: async (activityId, message, except) => {
       pushes.push({ activityId, message, except: [...except] });
@@ -114,7 +115,15 @@ describe('cover photos', () => {
 
     const mine = `covers/${host.userId}/0b6c1c44-6a1e-4e2b-9c43-2a3b4c5d6e7f.jpg`;
     r2.upload(mine);
-    expect((await patch(mine)).status).toBe(200);
+    const uploaded = await patch(mine);
+    expect(uploaded.status).toBe(200);
+    // The app gets the R2 URL; the database keeps only the key (no host to migrate).
+    expect(uploaded.body.coverUrl).toBe(`${t.deps.env.R2_PUBLIC_URL}/${mine}`);
+    const [row] = await t.deps.db
+      .select({ coverUrl: activities.coverUrl })
+      .from(activities)
+      .where(eq(activities.id, id));
+    expect(row!.coverUrl).toBe(mine);
     expect((await patch('covers/someone-else/a.jpg')).status).toBe(403);
     // A prefix match isn't enough: no climbing out into someone else's folder.
     expect((await patch(`covers/${host.userId}/../../avatars/x/y.jpg`)).status).toBe(403);

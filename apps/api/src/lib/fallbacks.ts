@@ -138,10 +138,12 @@ function choose(id: string, text: string, preferred: string[], words: Words = {}
 
 const ALL_ACTIVITY_WORDS: Words = Object.assign({}, ...Object.values(ACTIVITY_WORDS));
 
-export function createFallbacks(publicUrl: string) {
-  const url = (tile: string) => `${publicUrl}${fallbackPath(tile)}`;
+/** Each returns the path to store, e.g. `/fallbacks/man-03.svg` (urls.image makes it a URL). */
+export function createFallbacks() {
+  const url = fallbackPath;
   return {
-    url,
+    /** The stored path for a picture someone picked. */
+    path: fallbackPath,
     /** From the set for their gender (men, women, and animals for everyone else). */
     avatar: (userId: string, gender: string | null | undefined) =>
       url(choose(userId, '', avatarArtFor(gender))),

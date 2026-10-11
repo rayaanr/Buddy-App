@@ -149,7 +149,7 @@ export async function findActivitySummaries(
     capacity: r.capacity,
     goingCount: r.goingCount,
     waitingCount: r.waitingCount,
-    coverUrl: r.coverUrl,
+    coverUrl: urls.image(r.coverUrl),
     costLkr: r.costLkr,
     host:
       r.hostId && r.hostName

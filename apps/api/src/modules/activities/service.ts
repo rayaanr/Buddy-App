@@ -61,8 +61,9 @@ const GROUP_CATEGORY: Record<ActivityGroup, string> = {
 };
 
 /**
- * The cover for what the host chose: their own upload, one of our pictures
- * they picked (`art:<id>`), or with neither, ours for this activity.
+ * The cover to store for what the host chose: their own upload (its key),
+ * one of our pictures they picked (`art:<id>`), or with neither, ours for
+ * this activity (its path).
  */
 async function coverFrom(
   { urls, storage }: { urls: Urls; storage: Storage | null },
@@ -73,11 +74,11 @@ async function coverFrom(
   const picked = artFromKey(key);
   if (picked) {
     if (!ALL_ACTIVITY_ART.includes(picked)) throw badRequest('Pick one of the pictures shown');
-    return urls.art.url(picked);
+    return urls.art.path(picked);
   }
   if (key) {
     await requireUpload(storage, key, 'cover', hostId);
-    return urls.fromKey(key);
+    return key;
   }
   return urls.art.activityCover(activity);
 }

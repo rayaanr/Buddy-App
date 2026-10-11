@@ -23,14 +23,13 @@ export function meRoutes(deps: Deps) {
       .patch('/', validate('json', updateMeInput), async (c) => {
         const me = currentUser(c);
         const { replacedPhotos } = await updateMe(db, storage, urls, me.id, c.req.valid('json'));
-        await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, replacedPhotos);
+        await forgetPhotos(deps, replacedPhotos);
         return c.json(await getMe(db, urls, me.id, env.ADMIN_EMAILS));
       })
 
       .delete('/', async (c) => {
         const me = currentUser(c);
         const { cancelled, photoKeys } = await deleteAccount(db, me.id, {
-          publicUrl: deps.env.R2_PUBLIC_URL,
           urls,
         });
         hub.disconnectEverywhere(me.id);

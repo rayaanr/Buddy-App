@@ -69,7 +69,6 @@ export function activityRoutes(deps: Deps) {
   const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
 
   const announce = createAnnouncer(deps);
-  const photoDeps = { ...deps, publicUrl: deps.env.R2_PUBLIC_URL };
 
   /**
    * A new activity in a community: its members hear about it. At most a few a
@@ -243,7 +242,7 @@ export function activityRoutes(deps: Deps) {
         const id = c.req.param('id');
         const result = await updateActivity(db, { urls, storage }, me, id, c.req.valid('json'));
         await announce(id, me.id, result);
-        await forgetPhotos(photoDeps, result.replacedPhotos ?? []);
+        await forgetPhotos(deps, result.replacedPhotos ?? []);
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 

@@ -163,7 +163,7 @@ async function toChatMessages(
   return rows.map((r) => {
     // Deleted: nothing of it is shown (a reported one keeps its content for moderators).
     const gone = !!r.deletedAt;
-    const imageUrl = r.imageKey && !gone ? urls.fromKey(r.imageKey) : null;
+    const imageUrl = r.imageKey && !gone ? urls.image(r.imageKey) : null;
     return {
       id: r.id,
       activityId: r.activityId,

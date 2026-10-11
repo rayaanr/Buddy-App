@@ -43,6 +43,6 @@ export async function requireUpload(
   }
 }
 
-/** The R2 key behind a public URL we built with `urls.fromKey`, if it is one. */
-export const keyFromUrl = (url: string | null, publicUrl: string | undefined) =>
-  url && publicUrl && url.startsWith(`${publicUrl}/`) ? url.slice(publicUrl.length + 1) : null;
+/** A stored image reference that's one of our uploads (an R2 key), not a picture or someone else's URL. */
+export const isUploadKey = (ref: string | null | undefined): ref is string =>
+  !!ref && new RegExp(`^(${Object.values(FOLDER).join('|')})/`).test(ref);

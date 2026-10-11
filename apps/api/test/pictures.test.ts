@@ -116,6 +116,21 @@ describe('group chats', () => {
   });
 });
 
+describe('what the database holds', () => {
+  it('is a path for our pictures, never a host', async () => {
+    const me = await t.signIn();
+    const { body: a } = await host(me.headers, { title: 'Padel doubles' });
+    // The app gets a full URL…
+    expect(a.coverUrl).toBe(`${t.deps.env.BETTER_AUTH_URL}/fallbacks/activity-sports-03.svg`);
+    // …built from what's stored, so moving the API changes nothing in the database.
+    const [row] = await t.deps.db
+      .select({ coverUrl: activities.coverUrl })
+      .from(activities)
+      .where(eq(activities.id, a.id));
+    expect(row!.coverUrl).toBe('/fallbacks/activity-sports-03.svg');
+  });
+});
+
 describe('rows from before', () => {
   it('get a picture when the server starts', async () => {
     const me = await t.signIn();

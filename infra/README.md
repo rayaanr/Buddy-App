@@ -64,6 +64,8 @@ Profile photos, covers, community logos and chat photos live in R2. The API refu
 
 Old chat photos are deleted by the API itself (see `RETENTION` in `packages/shared/src/constants.ts`), so no lifecycle rule is needed.
 
+The database stores photos as R2 keys (`covers/<user>/<id>.jpg`) and Buddy's own pictures as paths (`/fallbacks/<id>.svg`), never with a domain. To move photos to another bucket or domain, copy the objects across and change `R2_PUBLIC_URL`; to move the API, change `BETTER_AUTH_URL`. Nothing in the database needs touching.
+
 ## 2. GitHub secrets
 
 In the repo: Settings → Secrets and variables → Actions → New repository secret.

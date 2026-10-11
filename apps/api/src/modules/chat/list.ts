@@ -96,8 +96,9 @@ export async function listChats(db: Db, urls: Urls, viewerId: string): Promise<C
         title: r.title,
         // A photo of its own, or else a group picture (not the activity's or
         // community's own fallback, which is drawn for a cover, not a chat).
-        imageUrl:
+        imageUrl: urls.image(
           r.image_url && !urls.art.isFallback(r.image_url) ? r.image_url : urls.art.groupChat(r.id),
+        ),
         startsAt: r.starts_at ? iso(r.starts_at) : null,
         cancelled: r.cancelled,
         muted: r.muted,

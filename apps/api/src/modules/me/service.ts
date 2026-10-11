@@ -24,7 +24,7 @@ import {
 } from '../../db/schema';
 import { badRequest, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
-import { keyFromUrl, requireUpload } from '../../lib/upload-keys';
+import { isUploadKey, requireUpload } from '../../lib/upload-keys';
 import type { ChangeResult } from '../activities/announce';
 import { cancelLocked } from '../activities/service';
 import type { Urls } from '../../lib/urls';
@@ -157,7 +157,7 @@ function avatarPatch(
   picked: string | null,
   before: { avatarKey: string | null; avatarUrl: string | null } | undefined,
 ) {
-  if (picked) return { avatarKey: null, avatarUrl: urls.art.url(picked) };
+  if (picked) return { avatarKey: null, avatarUrl: urls.art.path(picked) };
   if (key) return { avatarKey: key, avatarUrl: null };
   if (key === null) return { avatarKey: null, avatarUrl: urls.art.avatar(userId, gender) };
   // Unchanged photo: only one of ours from the wrong set needs replacing.
@@ -183,11 +183,7 @@ function avatarPatch(
 /** Kinds of email code better-auth stores, as "<type>-otp-<email>". */
 const OTP_TYPES = ['sign-in', 'email-verification', 'forget-password', 'change-email'];
 
-export async function deleteAccount(
-  db: Db,
-  userId: string,
-  { publicUrl, urls }: { publicUrl: string | undefined; urls: Urls },
-) {
+export async function deleteAccount(db: Db, userId: string, { urls }: { urls: Urls }) {
   return db.transaction(async (tx) => {
     const [me] = await tx
       .select({ name: user.name, email: user.email, avatarKey: profiles.avatarKey })
@@ -216,9 +212,8 @@ export async function deleteAccount(
         });
       }
       // Their own photo leaves with them; the activity gets one of our pictures.
-      const coverKey = keyFromUrl(row.coverUrl, publicUrl);
-      if (coverKey) {
-        photoKeys.push(coverKey);
+      if (isUploadKey(row.coverUrl)) {
+        photoKeys.push(row.coverUrl);
         await tx
           .update(activities)
           .set({

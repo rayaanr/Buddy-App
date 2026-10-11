@@ -55,6 +55,7 @@ const communityId = sql.raw('"communities"."id"');
  */
 async function findCommunitySummaries(
   db: Db,
+  urls: Urls,
   viewerId: string,
   { id, q }: { id?: string; q?: string } = {},
 ): Promise<CommunitySummary[]> {
@@ -89,14 +90,16 @@ async function findCommunitySummaries(
     .orderBy(distance, asc(communities.name));
   return rows.map(({ place, distanceKm, ...c }) => ({
     ...c,
+    coverUrl: urls.image(c.coverUrl),
+    logoUrl: urls.image(c.logoUrl),
     area: placeLabel(toPlace(place)),
     placeId: place.id,
     distanceKm: Math.round(Number(distanceKm) * 10) / 10,
   }));
 }
 
-export const listCommunities = (db: Db, viewerId: string, q?: string) =>
-  findCommunitySummaries(db, viewerId, { q });
+export const listCommunities = (db: Db, urls: Urls, viewerId: string, q?: string) =>
+  findCommunitySummaries(db, urls, viewerId, { q });
 
 export async function getCommunity(
   db: Db,
@@ -104,7 +107,7 @@ export async function getCommunity(
   id: string,
   viewerId: string,
 ): Promise<CommunityDetail> {
-  const [summary] = await findCommunitySummaries(db, viewerId, { id });
+  const [summary] = await findCommunitySummaries(db, urls, viewerId, { id });
   if (!summary) throw notFound('Community');
 
   const [info] = await db
@@ -192,11 +195,11 @@ async function pictureFrom(
   const set = kind === 'cover' ? FALLBACK_ART.communityCover : FALLBACK_ART.communityLogo;
   if (picked) {
     if (!set.includes(picked)) throw badRequest('Pick one of the pictures shown');
-    return urls.art.url(picked);
+    return urls.art.path(picked);
   }
   if (key) {
     await requireUpload(storage, key, kind, userId);
-    return urls.fromKey(key);
+    return key;
   }
   return kind === 'cover' ? urls.art.communityCover(community) : urls.art.communityLogo(community);
 }
@@ -318,7 +321,7 @@ async function requireCommunity(db: Db, id: string) {
 }
 
 /** Join and leave are idempotent; both return the updated summary. */
-export async function joinCommunity(db: Db, id: string, userId: string) {
+export async function joinCommunity(db: Db, urls: Urls, id: string, userId: string) {
   await requireCommunity(db, id);
   const [removed] = await db
     .select({ userId: communityRemovals.userId })
@@ -326,16 +329,16 @@ export async function joinCommunity(db: Db, id: string, userId: string) {
     .where(and(eq(communityRemovals.communityId, id), eq(communityRemovals.userId, userId)));
   if (removed) throw forbidden('You were removed from this community');
   await db.insert(communityMembers).values({ communityId: id, userId }).onConflictDoNothing();
-  const [summary] = await findCommunitySummaries(db, userId, { id });
+  const [summary] = await findCommunitySummaries(db, urls, userId, { id });
   return summary!;
 }
 
-export async function leaveCommunity(db: Db, id: string, userId: string) {
+export async function leaveCommunity(db: Db, urls: Urls, id: string, userId: string) {
   await requireCommunity(db, id);
   await db
     .delete(communityMembers)
     .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, userId)));
-  const [summary] = await findCommunitySummaries(db, userId, { id });
+  const [summary] = await findCommunitySummaries(db, urls, userId, { id });
   return summary!;
 }
 

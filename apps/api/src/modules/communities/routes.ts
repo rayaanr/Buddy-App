@@ -28,7 +28,6 @@ import {
 
 export function communityRoutes(deps: Deps) {
   const { db, urls, storage, hub } = deps;
-  const photoDeps = { ...deps, publicUrl: deps.env.R2_PUBLIC_URL };
   // Starting communities is rare; a burst of them is spam.
   const starting = limits(deps)({ name: 'communities', limit: 5, windowMs: DAY, by: 'user' });
   return (
@@ -36,7 +35,7 @@ export function communityRoutes(deps: Deps) {
       .use(requireUser)
       .get('/', validate('query', communitiesQuery), async (c) =>
         c.json({
-          communities: await listCommunities(db, currentUser(c).id, c.req.valid('query').q),
+          communities: await listCommunities(db, urls, currentUser(c).id, c.req.valid('query').q),
         }),
       )
       .post('/', starting, validate('json', createCommunityInput), async (c) =>
@@ -53,7 +52,7 @@ export function communityRoutes(deps: Deps) {
           currentUser(c).id,
           c.req.valid('json'),
         );
-        await forgetPhotos(photoDeps, replacedPhotos);
+        await forgetPhotos(deps, replacedPhotos);
         return c.json(community);
       })
       // Community → See all: everything coming up, soonest first.
@@ -66,10 +65,10 @@ export function communityRoutes(deps: Deps) {
         c.json(await getCommunity(db, urls, c.req.param('id'), currentUser(c).id)),
       )
       .post('/:id/membership', idParam(), async (c) =>
-        c.json(await joinCommunity(db, c.req.param('id'), currentUser(c).id)),
+        c.json(await joinCommunity(db, urls, c.req.param('id'), currentUser(c).id)),
       )
       .delete('/:id/membership', idParam(), async (c) => {
-        const result = await leaveCommunity(db, c.req.param('id'), currentUser(c).id);
+        const result = await leaveCommunity(db, urls, c.req.param('id'), currentUser(c).id);
         // Out of its group chat too.
         hub.disconnect(c.req.param('id'), currentUser(c).id);
         return c.json(result);
@@ -82,10 +81,7 @@ export function communityRoutes(deps: Deps) {
         return c.json(await getCommunity(db, urls, id, me.id));
       })
       .delete('/:id', idParam(), async (c) => {
-        await forgetPhotos(
-          photoDeps,
-          await deleteCommunity(db, c.req.param('id'), currentUser(c).id),
-        );
+        await forgetPhotos(deps, await deleteCommunity(db, c.req.param('id'), currentUser(c).id));
         return c.json({ ok: true });
       })
       .get('/:id/members', idParam(), async (c) =>

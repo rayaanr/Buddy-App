@@ -54,8 +54,10 @@ export async function adminStats(db: Db): Promise<AdminStats> {
         (select count(*) from reports where status = 'open')::int as "openReports"`),
     db.execute<{ day: string; signups: number; activities: number }>(sql`
       select to_char(d, 'YYYY-MM-DD') as day,
+        -- Better Auth stores user times without a zone, in UTC: say so before
+        -- converting, or they'd be read as Sri Lanka time (5.5 hours early).
         (select count(*) from "user" u
-          where (u.created_at at time zone ${TZ})::date = d)::int as signups,
+          where (u.created_at at time zone 'UTC' at time zone ${TZ})::date = d)::int as signups,
         (select count(*) from activities a
           where (a.created_at at time zone ${TZ})::date = d)::int as activities
       from generate_series((now() at time zone ${TZ})::date - 13,

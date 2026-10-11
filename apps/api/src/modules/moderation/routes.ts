@@ -33,10 +33,7 @@ export function moderationRoutes(deps: Deps) {
 
   /** After a removal or suspension: tell people, clean up photos, update open chats. */
   const followUp = async (moderatorId: string, done: Awaited<ReturnType<typeof resolveReport>>) => {
-    await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, [
-      ...done.removedPhotos,
-      done.removedMessage?.imageKey,
-    ]);
+    await forgetPhotos(deps, [...done.removedPhotos, done.removedMessage?.imageKey]);
     // Open chat connections were made with the sessions just deleted.
     if (done.suspendedId) hub.disconnectEverywhere(done.suspendedId);
     for (const a of done.cancelled) await announce(a.id, moderatorId, a.result);

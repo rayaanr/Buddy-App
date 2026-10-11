@@ -4,55 +4,42 @@ import type { Db } from '../db/client';
 import { activities, communities, profiles } from '../db/schema';
 import type { Logger } from '../logger';
 import type { Storage } from './storage';
-import { keyFromUrl } from './upload-keys';
+import { isUploadKey } from './upload-keys';
 
 interface PhotoDeps {
   db: Db;
   storage: Storage | null;
   logger: Logger;
-  publicUrl: string | undefined;
 }
 
 /**
  * Deletes uploaded photos nothing points to any more: a replaced cover, logo
- * or profile photo, those of a deleted community, or a removed chat photo. Takes public URLs or
- * storage keys; stock and seed photos (not ours) are skipped. A photo still in
+ * or profile photo, those of a deleted community, or a removed chat photo.
+ * Takes stored references; anything that isn't an upload of ours (Buddy's
+ * pictures, someone else's URL) is skipped. A photo still in
  * use elsewhere stays: weekly activities share one cover between occurrences.
  * Runs after the change is saved, and never throws.
  */
 export async function forgetPhotos(
-  { db, storage, logger, publicUrl }: PhotoDeps,
+  { db, storage, logger }: PhotoDeps,
   refs: (string | null | undefined)[],
 ) {
   if (!storage) return;
-  const keys = [
-    ...new Set(
-      refs
-        .map((r) =>
-          r && /^(avatars|covers|logos|chat)\//.test(r) ? r : keyFromUrl(r ?? null, publicUrl),
-        )
-        .filter((k): k is string => !!k),
-    ),
-  ];
+  const keys = [...new Set(refs.filter(isUploadKey))];
   try {
     const unused: string[] = [];
     for (const key of keys) {
-      const url = publicUrl ? `${publicUrl}/${key}` : null;
       const users = await Promise.all([
-        url
-          ? db
-              .select({ id: activities.id })
-              .from(activities)
-              .where(eq(activities.coverUrl, url))
-              .limit(1)
-          : [],
-        url
-          ? db
-              .select({ id: communities.id })
-              .from(communities)
-              .where(or(eq(communities.coverUrl, url), eq(communities.logoUrl, url)))
-              .limit(1)
-          : [],
+        db
+          .select({ id: activities.id })
+          .from(activities)
+          .where(eq(activities.coverUrl, key))
+          .limit(1),
+        db
+          .select({ id: communities.id })
+          .from(communities)
+          .where(or(eq(communities.coverUrl, key), eq(communities.logoUrl, key)))
+          .limit(1),
         db
           .select({ id: profiles.userId })
           .from(profiles)
