@@ -133,7 +133,9 @@ export function useOpenFromNotifications() {
         if (!id || !UUID_RE.test(id)) return;
         Notifications.clearLastNotificationResponse();
         const chat = data!.screen === 'chat';
-        if (data!.activityId) router.push(chat ? `/activity/${id}/chat` : `/activity/${id}`);
+        if (data!.activityId && data!.screen === 'roll-call') {
+          router.push(`/activity/${id}/roll-call`);
+        } else if (data!.activityId) router.push(chat ? `/activity/${id}/chat` : `/activity/${id}`);
         else router.push(chat ? `/community/${id}/chat` : `/community/${id}`);
       };
       open(Notifications.getLastNotificationResponse());

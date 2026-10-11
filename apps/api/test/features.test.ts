@@ -3,6 +3,7 @@ import type {
   ActivitySummary,
   CommunityDetail,
   CommunitySummary,
+  Me,
   MyActivity,
   Pick,
   PublicProfile,
@@ -301,6 +302,24 @@ describe('picks', () => {
     });
     expect(picks.slice(1, 4).every((p) => p.reason.startsWith('Because you’re into'))).toBe(true);
     expect(picks.some((p) => p.activity.title.startsWith('Padel'))).toBe(false);
+  });
+
+  it('leaves out kinds you said you’re not into, unless from your community', async () => {
+    const { headers } = await t.signIn();
+    const before = (await t.call<{ picks: Pick[] }>('/v1/activities/picks', { headers })).body
+      .picks;
+    const hide = before.find((p) => p.activity.interest && !p.fromYourCommunity)!.activity
+      .interest!;
+    const res = await t.call<Me>('/v1/me', {
+      method: 'PATCH',
+      headers,
+      body: { hiddenInterests: [hide] },
+    });
+    expect(res.body.hiddenInterests).toEqual([hide]);
+    const after = (await t.call<{ picks: Pick[] }>('/v1/activities/picks', { headers })).body.picks;
+    expect(after.some((p) => p.activity.interest === hide && !p.fromYourCommunity)).toBe(false);
+    expect(before[0]!.fromYourCommunity).toBe(true);
+    await t.call('/v1/me', { method: 'PATCH', headers, body: { hiddenInterests: [] } });
   });
 });
 

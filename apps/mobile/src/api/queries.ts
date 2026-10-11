@@ -11,6 +11,7 @@ import type {
   RemovalReason,
   Me,
   ResolveReportInput,
+  RollCallInput,
   UpdateMeInput,
 } from '@buddy/shared';
 import {
@@ -68,6 +69,7 @@ export const keys = {
   mine: (role: 'joined' | 'hosting') => ['activities', 'mine', role] as const,
   history: ['activities', 'history'] as const,
   activity: (id: string) => ['activities', 'detail', id] as const,
+  rollCall: (id: string) => ['activities', 'roll-call', id] as const,
   activities: ['activities'] as const,
   communities: ['communities'] as const,
   community: (id: string) => ['communities', id] as const,
@@ -195,6 +197,17 @@ export function useCommunities(search = '') {
   });
 }
 
+/** People you share a community or an activity with, by name (2+ letters). */
+export function usePeopleSearch(search: string) {
+  const q = search.trim();
+  return useQuery({
+    queryKey: ['people', 'search', q] as const,
+    queryFn: async () => (await unwrap(api.users.search.$get({ query: { q } }))).people,
+    enabled: q.length >= 2,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export const useCommunity = (id: string) =>
   useQuery({
     queryKey: keys.community(id),
@@ -287,6 +300,29 @@ export function useFeedback(activityId: string) {
         api.activities[':id'].feedback.$post({ param: { id: activityId }, json: { wouldGoAgain } }),
       ),
     onSuccess: (detail) => qc.setQueryData(keys.activity(detail.id), detail),
+  });
+}
+
+/** The host's roll call: every guest, and whether they came (null: not marked yet). */
+export const useRollCall = (activityId: string) =>
+  useQuery({
+    queryKey: keys.rollCall(activityId),
+    queryFn: async () =>
+      (await unwrap(api.activities[':id']['roll-call'].$get({ param: { id: activityId } }))).guests,
+  });
+
+/** Saves roll call marks; the activity page's "4 of 5 came" follows. */
+export function useSaveRollCall(activityId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (marks: RollCallInput['marks']) =>
+      unwrap(
+        api.activities[':id']['roll-call'].$put({ param: { id: activityId }, json: { marks } }),
+      ),
+    onSuccess: (detail) => {
+      qc.setQueryData(keys.activity(detail.id), detail);
+      void qc.invalidateQueries({ queryKey: keys.rollCall(detail.id) });
+    },
   });
 }
 
@@ -414,7 +450,7 @@ export function useUpdateMe() {
       qc.setQueryData(keys.me, me);
       // Interests and home town change rankings and distances; a name, bio or
       // notification switch doesn't touch any activity list.
-      if (patch.interests || patch.placeId !== undefined) {
+      if (patch.interests || patch.hiddenInterests || patch.placeId !== undefined) {
         return qc.invalidateQueries({ queryKey: keys.activities });
       }
     },

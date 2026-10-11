@@ -68,8 +68,28 @@ export const activityDetail = activitySummary.extend({
   feedback: z.object({ mine: z.boolean().nullable() }).nullable(),
   /** Who invited you to it, if someone did. */
   invitedBy: userSummary.nullable(),
+  /**
+   * Roll call, for the host once it has started: how many guests are marked
+   * so far and how many came (null: not the host, or not time yet).
+   */
+  rollCall: z
+    .object({ guests: z.number().int(), marked: z.number().int(), came: z.number().int() })
+    .nullable(),
 });
 export type ActivityDetail = z.infer<typeof activityDetail>;
+
+/** A guest on the host's roll call: came (true), didn't (false), or not marked yet (null). */
+export const rollCallGuest = userSummary.extend({ attended: z.boolean().nullable() });
+export type RollCallGuest = z.infer<typeof rollCallGuest>;
+
+/** Marks some guests as there or not (others stay as they were). */
+export const rollCallInput = z.object({
+  marks: z
+    .array(z.object({ userId: z.uuid(), attended: z.boolean() }))
+    .min(1)
+    .max(LIMITS.capacityMax),
+});
+export type RollCallInput = z.infer<typeof rollCallInput>;
 
 /** Everyone going, host first (people you've blocked, or who blocked you, left out). */
 export const activityMember = userSummary.extend({ role: z.enum(['host', 'guest']) });
@@ -178,6 +198,8 @@ export const myActivitiesQuery = z.object({
 export const pick = z.object({
   activity: activitySummary,
   reason: z.string(),
+  /** From a community you're in: always shown, even for kinds you're "not into". */
+  fromYourCommunity: z.boolean(),
 });
 export type Pick = z.infer<typeof pick>;
 

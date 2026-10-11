@@ -11,6 +11,8 @@ import {
   type MyActivity,
   placeLabel,
   type RemovalReason,
+  type RollCallGuest,
+  type RollCallInput,
   type UpdateActivityInput,
 } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
@@ -96,6 +98,7 @@ export async function getActivityDetail(
     },
     feedback: await feedbackFor(db, summary, viewerId),
     invitedBy: await findInviter(db, urls, id, viewerId),
+    rollCall: await rollCallFor(db, summary),
   };
 }
 
@@ -112,18 +115,113 @@ const canGiveFeedback = (a: {
   new Date(a.startsAt).getTime() <= Date.now() &&
   Date.now() - new Date(a.startsAt).getTime() < FEEDBACK_DAYS * 86_400_000;
 
-/** The viewer's "would you go again?" for this activity: null when it isn't theirs to answer. */
+/**
+ * The viewer's "would you go again?" for this activity: null when it isn't
+ * theirs to answer (including when the host's roll call says they didn't come).
+ */
 async function feedbackFor(
   db: Db | Tx,
   a: { id: string; startsAt: string; cancelled: boolean; viewer: { joined: boolean } },
   viewerId: string,
 ) {
   if (!canGiveFeedback(a)) return null;
-  const [row] = await db
-    .select({ wouldGoAgain: activityFeedback.wouldGoAgain })
-    .from(activityFeedback)
-    .where(and(eq(activityFeedback.activityId, a.id), eq(activityFeedback.userId, viewerId)));
+  const [[member], [row]] = await Promise.all([
+    db
+      .select({ attended: activityMembers.attended })
+      .from(activityMembers)
+      .where(and(eq(activityMembers.activityId, a.id), eq(activityMembers.userId, viewerId))),
+    db
+      .select({ wouldGoAgain: activityFeedback.wouldGoAgain })
+      .from(activityFeedback)
+      .where(and(eq(activityFeedback.activityId, a.id), eq(activityFeedback.userId, viewerId))),
+  ]);
+  if (member?.attended === false) return null;
   return { mine: row?.wouldGoAgain ?? null };
+}
+
+/** The host can take roll call from the start until 30 days after, like feedback. */
+const rollCallOpen = (a: { startsAt: string; cancelled: boolean; viewer: { hosting: boolean } }) =>
+  a.viewer.hosting &&
+  !a.cancelled &&
+  new Date(a.startsAt).getTime() <= Date.now() &&
+  Date.now() - new Date(a.startsAt).getTime() < FEEDBACK_DAYS * 86_400_000;
+
+/** For the host's activity page: guests, how many are marked, how many came. */
+async function rollCallFor(
+  db: Db | Tx,
+  a: { id: string; startsAt: string; cancelled: boolean; viewer: { hosting: boolean } },
+) {
+  if (!rollCallOpen(a)) return null;
+  const [row] = await db
+    .select({
+      guests: sql<number>`count(*)::int`,
+      marked: sql<number>`count(${activityMembers.attended})::int`,
+      came: sql<number>`count(*) filter (where ${activityMembers.attended})::int`,
+    })
+    .from(activityMembers)
+    .where(and(eq(activityMembers.activityId, a.id), eq(activityMembers.role, 'guest')));
+  return { guests: row?.guests ?? 0, marked: row?.marked ?? 0, came: row?.came ?? 0 };
+}
+
+async function requireRollCall(db: Db, urls: Urls, activityId: string, viewerId: string) {
+  const detail = await getActivityDetail(db, urls, activityId, viewerId);
+  if (!detail.viewer.hosting) throw forbidden('Only the host takes roll call');
+  if (!detail.rollCall) throw forbidden('Roll call opens once the activity has started');
+}
+
+/** The host's roll call: every guest, with whether they came (null: not marked yet). */
+export async function getRollCall(
+  db: Db,
+  urls: Urls,
+  activityId: string,
+  viewerId: string,
+): Promise<RollCallGuest[]> {
+  await requireRollCall(db, urls, activityId, viewerId);
+  const rows = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      avatarKey: profiles.avatarKey,
+      avatarUrl: profiles.avatarUrl,
+      attended: activityMembers.attended,
+    })
+    .from(activityMembers)
+    .innerJoin(user, eq(user.id, activityMembers.userId))
+    .leftJoin(profiles, eq(profiles.userId, activityMembers.userId))
+    .where(and(eq(activityMembers.activityId, activityId), eq(activityMembers.role, 'guest')))
+    .orderBy(asc(activityMembers.joinedAt));
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    avatarUrl: urls.avatar(r.avatarKey, r.avatarUrl),
+    attended: r.attended,
+  }));
+}
+
+/** Marks guests as there or not; anyone not a guest of this activity is ignored. */
+export async function setRollCall(
+  db: Db,
+  urls: Urls,
+  activityId: string,
+  viewerId: string,
+  input: RollCallInput,
+) {
+  await requireRollCall(db, urls, activityId, viewerId);
+  await db.transaction(async (tx) => {
+    for (const mark of input.marks) {
+      await tx
+        .update(activityMembers)
+        .set({ attended: mark.attended })
+        .where(
+          and(
+            eq(activityMembers.activityId, activityId),
+            eq(activityMembers.userId, mark.userId),
+            eq(activityMembers.role, 'guest'),
+          ),
+        );
+    }
+  });
+  return getActivityDetail(db, urls, activityId, viewerId);
 }
 
 /** Records (or changes) a guest's private "would go again" for an activity's host. */
@@ -519,7 +617,7 @@ export async function updateActivity(
       ...(where && { location: where.location, placeId: where.placeId, area: where.area }),
       startsAt,
       // A new time gets its own reminders.
-      ...(timeChanged && { reminderSentAt: null, followUpSentAt: null }),
+      ...(timeChanged && { dayBeforeSentAt: null, reminderSentAt: null, followUpSentAt: null }),
       ...(groupChanged
         ? {
             group,

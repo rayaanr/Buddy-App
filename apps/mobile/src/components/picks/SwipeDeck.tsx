@@ -14,6 +14,7 @@ import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import { CheckIcon, CloseIcon, Eyebrow, Heading, Photo, Scrim } from '@/components/ui';
 import { availabilityColor, distanceLabel, hueFor, spotsLabel, whenLong } from '@/lib/activity';
+import { cn } from '@/lib/cn';
 import { project } from '@/lib/gestures';
 import { colors, shadows } from '@/theme';
 import { spring } from '@/theme/motion';
@@ -42,9 +43,11 @@ interface SwipeDeckProps {
   /** Changes whenever the top card changes; resets the drag position. */
   index: number;
   onDecide: (like: boolean) => void;
+  /** "Not into board games": skips the card and asks for no more of its kind. */
+  onNotInto?: () => void;
 }
 
-export function SwipeDeck({ top, next, reason, index, onDecide }: SwipeDeckProps) {
+export function SwipeDeck({ top, next, reason, index, onDecide, onNotInto }: SwipeDeckProps) {
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   /** Ignores input while a card is flying off. */
@@ -113,7 +116,12 @@ export function SwipeDeck({ top, next, reason, index, onDecide }: SwipeDeckProps
         </GestureDetector>
       </View>
 
-      <View className="flex-row items-center justify-center gap-[22px] pb-[34px] pt-[22px]">
+      <View
+        className={cn(
+          'flex-row items-center justify-center gap-[22px] pt-[22px]',
+          onNotInto && top.interest ? 'pb-2' : 'pb-[34px]',
+        )}
+      >
         <Pressable
           onPress={() => scheduleOnUI(decide, false)}
           accessibilityRole="button"
@@ -134,6 +142,22 @@ export function SwipeDeck({ top, next, reason, index, onDecide }: SwipeDeckProps
           <CheckIcon />
         </Pressable>
       </View>
+      {onNotInto && top.interest ? (
+        <Pressable
+          onPress={() => {
+            onNotInto();
+            scheduleOnUI(decide, false);
+          }}
+          accessibilityRole="button"
+          accessibilityHint="Skips this and shows no more of its kind in your picks"
+          hitSlop={8}
+          className="mb-5 self-center rounded-full px-4 py-2 active:bg-surface"
+        >
+          <Text className="font-sans-medium text-label text-muted">
+            Not into {top.interest.toLowerCase()}
+          </Text>
+        </Pressable>
+      ) : null}
     </>
   );
 }

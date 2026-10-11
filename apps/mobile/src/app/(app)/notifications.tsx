@@ -78,7 +78,8 @@ function when(iso: string) {
 
 function open(n: AppNotification) {
   const { activityId, communityId, screen } = n.data;
-  if (activityId)
+  if (activityId && screen === 'roll-call') router.push(`/activity/${activityId}/roll-call`);
+  else if (activityId)
     router.push(screen === 'chat' ? `/activity/${activityId}/chat` : `/activity/${activityId}`);
   else if (communityId)
     router.push(screen === 'chat' ? `/community/${communityId}/chat` : `/community/${communityId}`);

@@ -22,6 +22,7 @@ import { AvailabilityChips, InterestGrid } from '@/components/onboarding/Interes
 import {
   Button,
   Chip,
+  CloseIcon,
   Footer,
   KeyboardAwareScrollView,
   KeyboardScreen,
@@ -34,7 +35,7 @@ import { PhotoButton } from '@/components/create/PhotoButton';
 import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { toast } from '@/store/ui';
-import { spacing } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 /**
  * Profile → Edit profile: photo, name, bio, home town, interests, when you're
@@ -52,6 +53,7 @@ interface Saved {
   avatarUrl: string | null;
   place: Place;
   interests: Interest[];
+  hiddenInterests: Interest[];
   availability: Availability[];
   gender: Gender | null;
   birthYear: number | null;
@@ -65,6 +67,9 @@ function EditProfileForm({ me }: { me: Saved }) {
   const uploading = photo.uploading;
   const [town, setTown] = useState(me.place);
   const [interests, setInterests] = useState(me.interests);
+  // Left out of picks ("Not into"); choosing one as an interest brings it back.
+  const [hidden, setHidden] = useState(me.hiddenInterests);
+  const stillHidden = hidden.filter((i) => !interests.includes(i));
   const [availability, setAvailability] = useState(me.availability);
   const [gender, setGender] = useState(me.gender);
   const [year, setYear] = useState(me.birthYear ? String(me.birthYear) : '');
@@ -77,6 +82,7 @@ function EditProfileForm({ me }: { me: Saved }) {
         bio: bio.trim(),
         placeId: town.id,
         interests,
+        hiddenInterests: stillHidden,
         availability,
         ...(gender && { gender }),
         ...(validBirthYear(year) && { birthYear: validBirthYear(year)! }),
@@ -140,6 +146,27 @@ function EditProfileForm({ me }: { me: Saved }) {
 
         <SectionLabel className="mb-3 mt-6">Into</SectionLabel>
         <InterestGrid value={interests} onChange={setInterests} />
+
+        {stillHidden.length ? (
+          <>
+            <SectionLabel className="mb-1 mt-6">Not in your picks</SectionLabel>
+            <Text className="mb-3 font-sans text-footnote leading-footnote text-muted">
+              You said you’re not into these. Tap one to see it in Picked for you again.
+            </Text>
+            <View className="flex-row flex-wrap gap-2">
+              {stillHidden.map((i) => (
+                <Chip
+                  key={i}
+                  label={i}
+                  selected={false}
+                  icon={<CloseIcon size={14} color={colors.muted} />}
+                  accessibilityLabel={`Show ${i} in picks again`}
+                  onPress={() => setHidden((list) => list.filter((x) => x !== i))}
+                />
+              ))}
+            </View>
+          </>
+        ) : null}
 
         <SectionLabel className="mb-3 mt-6">Usually free</SectionLabel>
         <AvailabilityChips value={availability} onChange={setAvailability} />

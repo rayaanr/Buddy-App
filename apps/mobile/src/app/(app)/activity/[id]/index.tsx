@@ -231,6 +231,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             </View>
           ) : null}
           {a.feedback && !isDeletedAccount(a.host) ? <WouldGoAgain activity={a} /> : null}
+          {a.rollCall && a.rollCall.guests > 0 ? <RollCallCard activity={a} /> : null}
           {a.community ? (
             <PressableScale
               onPress={() => router.push(`/community/${a.community!.id}`)}
@@ -452,6 +453,37 @@ function DetailRow({ label, value, divider }: { label: string; value: string; di
 }
 
 /** After the activity: a private "would you go again?" about the host. */
+/** For the host once it has started: take (or change) roll call. */
+function RollCallCard({ activity: a }: { activity: ActivityDetail }) {
+  const { guests, marked, came } = a.rollCall!;
+  const done = marked === guests;
+  return (
+    <PressableScale
+      scale="dim"
+      onPress={() => router.push(`/activity/${a.id}/roll-call`)}
+      accessibilityRole="button"
+      className={cn(
+        'mt-4 flex-row items-center gap-3 rounded-card border p-4',
+        done ? 'border-line bg-surface' : 'border-lime-panel-border bg-lime-panel',
+      )}
+    >
+      <View className="flex-1">
+        <Text className="font-sans-semibold text-body text-ink">
+          {done ? `${came} of ${guests} came` : 'Who came?'}
+        </Text>
+        <Text className="mt-1 font-sans text-label leading-label text-muted">
+          {done
+            ? 'Roll call done. Tap to change it.'
+            : marked
+              ? `${marked} of ${guests} marked. Finish roll call.`
+              : 'Take roll call: only you see it.'}
+        </Text>
+      </View>
+      <ArrowRightIcon size={16} color={done ? colors.muted : colors.lime} />
+    </PressableScale>
+  );
+}
+
 function WouldGoAgain({ activity: a }: { activity: ActivityDetail }) {
   const feedback = useFeedback(a.id);
   const mine = a.feedback?.mine ?? null;

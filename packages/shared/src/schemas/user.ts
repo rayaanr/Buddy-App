@@ -11,7 +11,7 @@ import {
 } from '../constants';
 import { activitySummary } from './activity';
 import { place } from './place';
-import { isoDateTime } from './common';
+import { isoDateTime, userSummary } from './common';
 
 export const interest = z.enum(INTERESTS);
 export const availability = z.enum(AVAILABILITY);
@@ -27,6 +27,8 @@ export const me = z.object({
   bio: z.string(),
   interests: z.array(interest),
   availability: z.array(availability),
+  /** Private: kinds of activity left out of "Picked for you" ("Not into this"). */
+  hiddenInterests: z.array(interest),
   avatarUrl: z.url().nullable(),
   /** False until first-run setup is finished or skipped; the app shows it until then. */
   onboarded: z.boolean(),
@@ -62,6 +64,7 @@ export const updateMeInput = z
     bio: z.string().trim().max(LIMITS.bioMax),
     interests: uniqueList(interest),
     availability: uniqueList(availability),
+    hiddenInterests: uniqueList(interest),
     /** Key returned by the upload endpoint; null removes the photo. */
     avatarKey: z.string().nullable(),
     gender: z.enum(GENDERS),
@@ -120,3 +123,11 @@ export const notificationsQuery = z.object({
   before: isoDateTime.optional(),
   limit: z.coerce.number().int().min(1).max(50).default(30),
 });
+
+/**
+ * People search: someone you share a community or an activity with, by name
+ * (strangers aren't findable). `area` is their home town as shown.
+ */
+export const peopleQuery = z.object({ q: z.string().trim().min(2).max(60) });
+export const personResult = userSummary.extend({ area: z.string() });
+export type PersonResult = z.infer<typeof personResult>;

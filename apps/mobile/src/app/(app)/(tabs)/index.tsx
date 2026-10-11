@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 
 import {
+  useCommunities,
   useFeed,
   useFromCommunities,
+  usePeopleSearch,
   useMe,
   useUnreadMessages,
   useUnreadNotifications,
@@ -40,6 +42,7 @@ import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { ActivityMap } from '@/components/discover/ActivityMap';
 import { LocationSheet } from '@/components/discover/LocationSheet';
+import { SearchMatches } from '@/components/discover/SearchMatches';
 import { cn } from '@/lib/cn';
 import { colors, TAB_BAR_HEIGHT, spacing } from '@/theme';
 import { currentPointIfAllowed } from '@/lib/location';
@@ -60,6 +63,14 @@ export default function DiscoverScreen() {
   const unreadMessages = useUnreadMessages();
   const feed = useFeed(filter, isSearch ? searching : '');
   const fromCommunities = useFromCommunities();
+  // Searching also finds communities and people (the feed covers activities).
+  const communityMatches = useCommunities(isSearch ? searching : '');
+  const peopleMatches = usePeopleSearch(isSearch ? searching : '');
+  const matched = {
+    communities: isSearch ? (communityMatches.data ?? []) : [],
+    people: isSearch ? (peopleMatches.data ?? []) : [],
+  };
+  const matchedOthers = matched.communities.length + matched.people.length > 0;
 
   const results = feed.data?.activities ?? [];
   // Search results are all equal: no big card on top.
@@ -159,7 +170,7 @@ export default function DiscoverScreen() {
           <SearchField
             value={search}
             onChangeText={setSearch}
-            placeholder="Search padel, Galle, food walk…"
+            placeholder="Search activities, groups, people…"
             label="Search activities"
           />
         </View>
@@ -252,6 +263,9 @@ export default function DiscoverScreen() {
       ) : null}
 
       <View className={cn('gap-3 px-edge', view === 'map' && 'hidden')}>
+        {isSearch ? (
+          <SearchMatches communities={matched.communities} people={matched.people} />
+        ) : null}
         {isSearch && feed.data ? (
           <Text className="font-sans text-label text-muted">
             {results.length
@@ -276,7 +290,10 @@ export default function DiscoverScreen() {
             <ActivityRow activity={a} />
           </AnimatedView>
         ))}
-        {isSearch && feed.data && !results.length ? (
+        {isSearch && feed.data && !results.length && matchedOthers ? (
+          <Text className="font-sans text-label text-muted">No activities match.</Text>
+        ) : null}
+        {isSearch && feed.data && !results.length && !matchedOthers ? (
           <EmptyState
             card
             title={`Nothing matches “${searching}”`}

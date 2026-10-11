@@ -1,10 +1,10 @@
-import { firstName } from '@buddy/shared';
-import type { Pick } from '@buddy/shared';
+import { firstName, type Interest, type Pick } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { useMe, usePicks } from '@/api/queries';
+import { errorMessage } from '@/api/client';
+import { useMe, usePicks, useUpdateMe } from '@/api/queries';
 import { SwipeDeck } from '@/components/picks/SwipeDeck';
 import { CloseIcon, EmptyState, Heading, Loading } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -31,8 +31,19 @@ export default function PicksScreen() {
     if (!deck && picks.error) router.back();
   }, [deck, picks.error]);
 
+  // Kinds marked "Not into" this time: the rest of the deck skips them too
+  // (unless they're from a community you're in, like the server does).
+  const [notInto, setNotInto] = useState<Interest[]>([]);
+  const update = useUpdateMe();
+  const skipped = (p: Pick) =>
+    !!p.activity.interest && notInto.includes(p.activity.interest) && !p.fromYourCommunity;
+  const after = (i: number) => {
+    let n = i + 1;
+    while (deck?.[n] && skipped(deck[n]!)) n++;
+    return n;
+  };
   const card = deck?.[index];
-  const next = deck?.[index + 1];
+  const next = deck?.[after(index)];
 
   const onDecide = (like: boolean) => {
     if (!deck || !card) return;
@@ -41,12 +52,30 @@ export default function PicksScreen() {
       router.replace(`/activity/${card.activity.id}`);
       return;
     }
-    if (index + 1 >= deck.length) {
+    const n = after(index);
+    if (n >= deck.length) {
       router.back();
       toast('You’re all caught up.');
       return;
     }
-    setIndex(index + 1);
+    setIndex(n);
+  };
+
+  /** No more of this kind in picks, and it's no longer one of your interests. */
+  const hideKind = (kind: Interest) => {
+    if (!me.data) return;
+    setNotInto((list) => [...list, kind]);
+    update.mutate(
+      {
+        hiddenInterests: [...new Set([...me.data.hiddenInterests, kind])],
+        interests: me.data.interests.filter((i) => i !== kind),
+      },
+      {
+        onSuccess: () =>
+          toast(`No more ${kind.toLowerCase()} in your picks. Change it in Edit profile.`),
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
   };
 
   return (
@@ -86,6 +115,11 @@ export default function PicksScreen() {
           index={index}
           reason={card.reason}
           onDecide={onDecide}
+          onNotInto={
+            card.activity.interest && !card.fromYourCommunity
+              ? () => hideKind(card.activity.interest!)
+              : undefined
+          }
         />
       ) : null}
       {deck && !deck.length ? (

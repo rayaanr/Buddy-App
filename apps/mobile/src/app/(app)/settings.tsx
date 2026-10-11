@@ -59,7 +59,7 @@ export default function SettingsScreen() {
         <NotificationSwitch
           kind="reminders"
           label="Reminders and changes"
-          sub="Coming up, how was it, new times, cancellations, waitlist spots."
+          sub="A day and an hour before, how was it, new times, cancellations, waitlist spots."
         />
         <NotificationSwitch
           kind="communities"

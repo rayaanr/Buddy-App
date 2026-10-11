@@ -9,6 +9,7 @@ import {
   inviteInput,
   muteInput,
   removeGuestInput,
+  rollCallInput,
   myActivitiesQuery,
   updateActivityInput,
 } from '@buddy/shared';
@@ -50,6 +51,8 @@ import {
   removeGuest,
   updateActivity,
   giveFeedback,
+  getRollCall,
+  setRollCall,
 } from './service';
 import { findInvitees, invite } from './invites';
 
@@ -212,6 +215,16 @@ export function activityRoutes(deps: Deps) {
           waitlist: await findWaitlist(db, urls, id, viewerId),
         });
       })
+
+      // Roll call (host only, once it has started): who came.
+      .get('/:id/roll-call', idParam(), async (c) =>
+        c.json({ guests: await getRollCall(db, urls, c.req.param('id'), currentUser(c).id) }),
+      )
+      .put('/:id/roll-call', hosting, idParam(), validate('json', rollCallInput), async (c) =>
+        c.json(
+          await setRollCall(db, urls, c.req.param('id'), currentUser(c).id, c.req.valid('json')),
+        ),
+      )
 
       .post(
         '/',

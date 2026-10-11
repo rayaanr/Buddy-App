@@ -64,6 +64,7 @@ export async function getMe(
     bio: profile.bio,
     interests: profile.interests as Interest[],
     availability: profile.availability as Availability[],
+    hiddenInterests: profile.hiddenInterests as Interest[],
     avatarUrl: urls.avatar(profile.avatarKey, profile.avatarUrl),
     onboarded: profile.onboardedAt !== null,
     gender: (profile.gender as Gender | null) ?? null,
@@ -107,6 +108,7 @@ export async function updateMe(
       ...(input.bio !== undefined && { bio: input.bio }),
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),
+      ...(input.hiddenInterests !== undefined && { hiddenInterests: input.hiddenInterests }),
       // Uploading or removing a photo also drops the starting one (e.g. from Google).
       ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey, avatarUrl: null }),
       ...(input.gender !== undefined && { gender: input.gender }),

@@ -71,6 +71,11 @@ export const profiles = pgTable('profiles', {
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),
+  /** Interests left out of "Picked for you" ("Not into this"). */
+  hiddenInterests: text()
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   /** R2 object key; the public URL is built from R2_PUBLIC_URL. */
   avatarKey: text(),
   /** External avatar URL (seed data); an uploaded avatarKey takes priority. */
@@ -169,7 +174,11 @@ export const activities = pgTable(
     coverUrl: text(),
     /** Set when the host calls it off. */
     cancelledAt: timestamp({ withTimezone: true }),
-    /** When the "coming up" and "how was it?" notifications went out (see jobs/reminders). */
+    /**
+     * When the reminders went out (see jobs/reminders): the day before, an
+     * hour before ("coming up"), and "how was it?" afterwards.
+     */
+    dayBeforeSentAt: timestamp({ withTimezone: true }),
     reminderSentAt: timestamp({ withTimezone: true }),
     followUpSentAt: timestamp({ withTimezone: true }),
     /** Weekly activities: every occurrence shares a series (see jobs/series). */
@@ -208,6 +217,8 @@ export const activityMembers = pgTable(
     joinedAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
     /** No chat notifications from this activity. */
     chatMuted: boolean().notNull().default(false),
+    /** Roll call: the host marked them as there (true) or not (false); null until then. */
+    attended: boolean(),
   },
   (t) => [
     primaryKey({ columns: [t.activityId, t.userId] }),

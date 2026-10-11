@@ -274,6 +274,13 @@ export async function countWouldGoAgain(db: Db | Tx, hostId: string) {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(activityFeedback)
-    .where(and(eq(activityFeedback.hostId, hostId), eq(activityFeedback.wouldGoAgain, true)));
+    .where(
+      and(
+        eq(activityFeedback.hostId, hostId),
+        eq(activityFeedback.wouldGoAgain, true),
+        // Someone the host's roll call says didn't come doesn't count.
+        sql`not exists (select 1 from activity_members m where m.activity_id = ${activityFeedback.activityId} and m.user_id = ${activityFeedback.userId} and m.attended = false)`,
+      ),
+    );
   return row?.n ?? 0;
 }

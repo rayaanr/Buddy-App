@@ -6,18 +6,20 @@ import { sendReminders } from '../src/jobs/reminders';
 import type { PushMessage } from '../src/lib/push';
 import { useTestApp } from './harness';
 
-const sent: { activityId: string; message: PushMessage }[] = [];
+const sent: { activityId: string; message: PushMessage; except?: string[]; to?: string[] }[] = [];
 const push = {
-  notifyActivity: async (activityId: string, message: PushMessage) => {
-    sent.push({ activityId, message });
+  notifyActivity: async (activityId: string, message: PushMessage, except: string[]) => {
+    sent.push({ activityId, message, except });
   },
-  notifyUsers: async () => {},
+  notifyUsers: async (to: string[], message: PushMessage) => {
+    sent.push({ activityId: String(message.data?.activityId), message, to });
+  },
 };
 const t = useTestApp({ push });
 const run = () => sendReminders({ db: t.deps.db, push });
 
-/** An activity starting `startsIn` from now (SQL interval), created an hour ago. */
-async function activity(title: string, startsIn: string, guests = 1) {
+/** An activity starting `startsIn` from now (SQL interval), created `createdAgo` ago. */
+async function activity(title: string, startsIn: string, guests = 1, createdAgo = '1 hour') {
   const { db } = t.deps;
   const people = await db
     .select({ id: user.id })
@@ -36,7 +38,7 @@ async function activity(title: string, startsIn: string, guests = 1) {
       placeId: 1838, // Colombo 3
       location: { lat: 6.8985, lng: 79.8555 },
       capacity: 6,
-      createdAt: sql`now() - interval '1 hour'`,
+      createdAt: sql`now() - ${sql.raw(`interval '${createdAgo}'`)}`,
     })
     .returning({ id: activities.id });
   await db.insert(activityMembers).values(
@@ -51,11 +53,11 @@ async function activity(title: string, startsIn: string, guests = 1) {
 const forActivity = (id: string) => sent.filter((s) => s.activityId === id);
 
 describe('reminders', () => {
-  it('sends "coming up" once, two hours ahead, and not for cancelled activities', async () => {
+  it('sends "starting in an hour" once, and not for cancelled activities', async () => {
     sent.length = 0;
-    const soon = await activity('Sunset swim', '90 minutes');
-    const later = await activity('Late swim', '5 hours');
-    const cancelled = await activity('Called off', '1 hour');
+    const soon = await activity('Sunset swim', '50 minutes');
+    const later = await activity('Late swim', '90 minutes');
+    const cancelled = await activity('Called off', '30 minutes');
     await t.deps.db
       .update(activities)
       .set({ cancelledAt: new Date() })
@@ -65,12 +67,29 @@ describe('reminders', () => {
     await run();
     expect(forActivity(soon)).toHaveLength(1);
     expect(forActivity(soon)[0]!.message).toMatchObject({
-      title: 'Coming up: Sunset swim',
+      title: 'Starting in an hour: Sunset swim',
       body: expect.stringMatching(/^\d\d:\d\d at Barefoot Café\./),
       data: { activityId: soon, screen: 'chat' },
     });
     expect(forActivity(later)).toHaveLength(0);
     expect(forActivity(cancelled)).toHaveLength(0);
+  });
+
+  it('reminds the day before, only for activities posted a day or more ahead', async () => {
+    sent.length = 0;
+    const planned = await activity('Hike', '23 hours', 1, '3 days');
+    const lastMinute = await activity('Pickup game', '20 hours', 1, '2 hours');
+    const farOff = await activity('Next week', '3 days', 1, '3 days');
+    await run();
+    await run();
+    expect(forActivity(planned)).toHaveLength(1);
+    expect(forActivity(planned)[0]!.message).toMatchObject({
+      title: 'Tomorrow: Hike',
+      body: expect.stringMatching(/^\d\d:\d\d at Barefoot Café\. Still coming\?/),
+      data: { activityId: planned },
+    });
+    expect(forActivity(lastMinute)).toHaveLength(0);
+    expect(forActivity(farOff)).toHaveLength(0);
   });
 
   it('waits until an activity has been up for 15 minutes', async () => {
@@ -90,14 +109,22 @@ describe('reminders', () => {
     const alone = await activity('Solo sketch', '-4 hours', 0);
     const stale = await activity('Last week', '-3 days');
     await run();
-    expect(forActivity(done).map((s) => s.message.title)).toEqual(['How was Morning run?']);
+    // Guests are asked how it was; the host is asked to take roll call.
+    const [guests, host] = forActivity(done);
+    expect(guests!.message.title).toBe('How was Morning run?');
+    expect(guests!.except).toHaveLength(1);
+    expect(host!.message).toMatchObject({
+      title: 'Who came to Morning run?',
+      data: { activityId: done, screen: 'roll-call' },
+    });
+    expect(host!.to).toEqual(guests!.except);
     expect(forActivity(alone)).toHaveLength(0);
     expect(forActivity(stale)).toHaveLength(0);
   });
 
   it('reminds again when the host moves the time', async () => {
     sent.length = 0;
-    const id = await activity('Padel', '1 hour');
+    const id = await activity('Padel', '45 minutes');
     await run();
     const [{ hostId }] = (await t.deps.db
       .select({ hostId: activities.hostId })
@@ -108,10 +135,12 @@ describe('reminders', () => {
     const res = await t.call(`/v1/activities/${id}`, {
       method: 'PATCH',
       headers,
-      body: { startsAt: new Date(Date.now() + 100 * 60_000).toISOString() },
+      body: { startsAt: new Date(Date.now() + 50 * 60_000).toISOString() },
     });
     expect(res.status).toBe(200);
     await run();
-    expect(forActivity(id).filter((s) => s.message.title.startsWith('Coming up'))).toHaveLength(2);
+    expect(
+      forActivity(id).filter((s) => s.message.title.startsWith('Starting in an hour')),
+    ).toHaveLength(2);
   });
 });

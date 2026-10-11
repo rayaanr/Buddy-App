@@ -98,6 +98,10 @@ export default function AppLayout() {
         options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
       />
       <Stack.Screen
+        name="activity/[id]/roll-call"
+        options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
+      />
+      <Stack.Screen
         name="activity/[id]/invite"
         options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
       />

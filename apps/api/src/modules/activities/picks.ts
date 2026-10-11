@@ -13,11 +13,15 @@ const WIDER_KM = [100, 450];
 
 /**
  * "Picked for you": open activities nearby that you're not part of, ranked by
- * joined community (+2), matching interest (+1), then start time.
+ * joined community (+2), matching interest (+1), then start time. Kinds you
+ * said you're not into stay out (except from your communities).
  */
 export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick[]> {
   const [[profile], joinedComms, near] = await Promise.all([
-    db.select({ interests: profiles.interests }).from(profiles).where(eq(profiles.userId, userId)),
+    db
+      .select({ interests: profiles.interests, hidden: profiles.hiddenInterests })
+      .from(profiles)
+      .where(eq(profiles.userId, userId)),
     db
       .select({ id: communities.id })
       .from(communityMembers)
@@ -26,7 +30,14 @@ export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick
     originFor(db, userId),
   ]);
   const interests = profile?.interests ?? [];
+  const hidden = profile?.hidden ?? [];
   const communityIds = joinedComms.map((c) => c.id);
+  // "Not into this": leave those kinds out, unless they're from a community you joined.
+  const notHidden = hidden.length
+    ? sql`(${activities.interest} is null or ${activities.interest} not in ${hidden}${
+        communityIds.length ? sql` or ${activities.communityId} in ${communityIds}` : sql``
+      })`
+    : sql`true`;
 
   const interestScore = interests.length
     ? sql`case when ${activities.interest} in ${interests} then 1 else 0 end`
@@ -44,6 +55,7 @@ export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick
         sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${km * 1000})`,
         sql`not exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${userId})`,
         sql`(select count(*) from activity_members m where m.activity_id = ${activities.id}) < ${activities.capacity}`,
+        notHidden,
       ],
       orderBy: [
         sql`(${communityScore}) + (${interestScore}) desc`,
@@ -64,6 +76,7 @@ export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick
   return candidates.map((activity) => ({
     activity,
     reason: reasonFor(activity, interests, joined),
+    fromYourCommunity: !!activity.community && joined.has(activity.community.id),
   }));
 }
 
