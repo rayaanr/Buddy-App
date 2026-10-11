@@ -7,6 +7,7 @@ import type { Db } from '../../db/client';
 import {
   activities,
   communities,
+  communityMembers,
   messages,
   profiles,
   reports,
@@ -100,6 +101,8 @@ interface Resolved {
   } | null;
   /** A removed community's photos, for the caller to clean up. */
   removedPhotos: string[];
+  /** A removed community, for the caller to tell its members. */
+  removedCommunity: { name: string; memberIds: string[] } | null;
 }
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -129,11 +132,17 @@ async function cancelForRules(tx: Tx, activityId: string, out: Resolved) {
 /** Deletes a community with its chat; its photos are left for the caller to clean up. */
 async function deleteCommunity(tx: Tx, communityId: string, out: Resolved) {
   const chatPhotos = await communityChatPhotos(tx, communityId);
-  const [gone] = await tx
-    .delete(communities)
-    .where(eq(communities.id, communityId))
-    .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
+  const members = await tx
+    .select({ userId: communityMembers.userId })
+    .from(communityMembers)
+    .where(eq(communityMembers.communityId, communityId));
+  const [gone] = await tx.delete(communities).where(eq(communities.id, communityId)).returning({
+    name: communities.name,
+    coverUrl: communities.coverUrl,
+    logoUrl: communities.logoUrl,
+  });
   if (!gone) throw notFound('Community');
+  out.removedCommunity = { name: gone.name, memberIds: members.map((m) => m.userId) };
   out.removedPhotos.push(
     ...[gone.coverUrl, gone.logoUrl, ...chatPhotos].filter((u): u is string => !!u),
   );
@@ -187,7 +196,12 @@ async function closeReports(
     .where(and(eq(reports.status, 'open'), or(...which)));
 }
 
-const nothingYet = (): Resolved => ({ cancelled: [], removedMessage: null, removedPhotos: [] });
+const nothingYet = (): Resolved => ({
+  cancelled: [],
+  removedMessage: null,
+  removedPhotos: [],
+  removedCommunity: null,
+});
 
 /**
  * Acts on a report: removes the content and/or suspends the person, or just

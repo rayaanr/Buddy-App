@@ -38,6 +38,15 @@ export function moderationRoutes(deps: Deps) {
       done.removedMessage?.imageKey,
     ]);
     for (const a of done.cancelled) await announce(a.id, moderatorId, a.result);
+    if (done.removedCommunity) {
+      const { name, memberIds } = done.removedCommunity;
+      void deps.push.notifyUsers(memberIds, {
+        title: `Removed: ${name}`,
+        body: 'Buddy removed this community for breaking the community rules.',
+        data: {},
+        channelId: 'reminders',
+      });
+    }
     if (done.removedMessage) {
       hub.publish(roomOf(done.removedMessage).id, {
         type: 'removed',

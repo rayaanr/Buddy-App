@@ -14,7 +14,16 @@ import { describe, expect, it } from 'vitest';
 import { messages } from '../src/db/schema';
 import { useTestApp } from './harness';
 
-const t = useTestApp({ env: { ADMIN_EMAILS: 'Mod@Buddy.test' } });
+const told: { userIds: string[]; title: string }[] = [];
+const t = useTestApp({
+  env: { ADMIN_EMAILS: 'Mod@Buddy.test' },
+  push: {
+    async notifyActivity() {},
+    notifyUsers: async (userIds, message) => {
+      told.push({ userIds, title: message.title });
+    },
+  },
+});
 type Headers = Record<string, string>;
 
 const moderator = () => t.signIn('mod@buddy.test', 'Moderator');
