@@ -23,6 +23,9 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       selectionColor={colors.lime}
       maxFontSizeMultiplier={CONTROL_FONT_SCALE}
       multiline={multiline}
+      // Android wraps a long placeholder onto a second, clipped line unless
+      // a single-line field says so.
+      numberOfLines={multiline ? undefined : 1}
       className={cn(
         'rounded-2xl border border-field px-4 text-ink',
         size === 'lg' ? 'text-body' : 'text-body',

@@ -139,6 +139,16 @@ export const usePlaceSearch = (q: string) =>
 export const nearestPlace = (point: { lat: number; lng: number }) =>
   unwrap(api.places.nearest.$get({ query: { lat: String(point.lat), lng: String(point.lng) } }));
 
+/** The town you're in, for "Near me" on Discover (null until the phone's position is known). */
+export const useNearestPlace = (point: { lat: number; lng: number } | null) =>
+  useQuery({
+    // About a kilometre: walking around doesn't ask again.
+    queryKey: ['places', 'nearest', point?.lat.toFixed(2), point?.lng.toFixed(2)],
+    queryFn: () => nearestPlace(point!),
+    enabled: !!point,
+    staleTime: Infinity,
+  });
+
 /** Meeting points matching what's typed, near `near` (or your home town). */
 export const useVenueSearch = (q: string, near: { lat: number; lng: number } | null) =>
   useQuery({

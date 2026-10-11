@@ -5,15 +5,7 @@ import Animated from 'react-native-reanimated';
 
 import { useCommunities, useMe } from '@/api/queries';
 import { CommunityCard, CommunityCardSkeleton } from '@/components/community/CommunityCard';
-import {
-  Button,
-  Heading,
-  IconButton,
-  LoadError,
-  PlusIcon,
-  Refresh,
-  SearchField,
-} from '@/components/ui';
+import { Heading, IconButton, LoadError, PlusIcon, Refresh, SearchField } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { colors, spacing } from '@/theme';
@@ -66,7 +58,7 @@ export default function CommunitiesScreen() {
             <SearchField
               value={search}
               onChangeText={setSearch}
-              placeholder="Search runners, Kandy, sketching…"
+              placeholder="Search communities…"
               label="Search communities"
             />
           </View>
@@ -88,28 +80,11 @@ export default function CommunitiesScreen() {
         </View>
       }
       ListFooterComponent={
-        <>
-          {isSearch && communities.data?.length === 0 ? (
-            <Text className="font-sans text-subhead text-muted">
-              No communities match “{searching}”.
-            </Text>
-          ) : null}
-          {communities.data ? (
-            <View className="mt-3 items-center rounded-card border border-dashed border-outline p-5">
-              <Text className="font-sans-medium text-body text-ink">Don’t see your crowd?</Text>
-              <Text className="mt-1 text-center font-sans text-label leading-label text-muted">
-                Start a community for the people you run, play or make things with.
-              </Text>
-              <Button
-                label="Start a community"
-                variant="outline"
-                size="md"
-                onPress={() => router.push('/community/new')}
-                className="mt-4 self-stretch"
-              />
-            </View>
-          ) : null}
-        </>
+        isSearch && communities.data?.length === 0 ? (
+          <Text className="font-sans text-subhead text-muted">
+            No communities match “{searching}”.
+          </Text>
+        ) : null
       }
     />
   );

@@ -1,6 +1,7 @@
 import { DISCOVER_RADII, placeLabel } from '@buddy/shared';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 
+import { useNearestPlace } from '@/api/queries';
 import { PlaceRow, PlaceSearch } from '@/components/places/PlaceSearch';
 import { Chip, LocateIcon, MapPinIcon, SectionLabel, Dialog } from '@/components/ui';
 import { useLocate } from '@/hooks/useLocate';
@@ -21,6 +22,8 @@ interface LocationSheetProps {
 export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
   const origin = useDiscoverStore((s) => s.origin);
   const radiusKm = useDiscoverStore((s) => s.radiusKm);
+  const here = useDiscoverStore((s) => s.here);
+  const hereTown = useNearestPlace(origin.kind === 'here' ? here : null).data;
   const { setOrigin, setRadius, setHere } = useDiscoverStore.getState();
   const { locating, locate: nearMe } = useLocate((point) => {
     setHere(point);
@@ -42,7 +45,7 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
           <PlaceRow
             icon={locating ? <ActivityIndicator color={colors.lime} /> : <LocateIcon />}
             label={locating ? 'Finding you…' : 'Near me'}
-            sub="Where you are right now"
+            sub={hereTown ? `You’re in ${placeLabel(hereTown)}` : 'Where you are right now'}
             onPress={locating ? undefined : nearMe}
             selected={origin.kind === 'here'}
             accent

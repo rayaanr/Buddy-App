@@ -1,6 +1,6 @@
-import { DISCOVER_FILTERS, type DiscoverFilter } from '@buddy/shared';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { DISCOVER_FILTERS, type DiscoverFilter, placeLabel } from '@buddy/shared';
+import { router, useNavigation } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -17,6 +17,7 @@ import {
   useFromCommunities,
   usePeopleSearch,
   useMe,
+  useNearestPlace,
   useUnreadMessages,
   useUnreadNotifications,
 } from '@/api/queries';
@@ -58,6 +59,20 @@ import { useDiscoverStore } from '@/store/discover';
 export default function DiscoverScreen() {
   const { top } = useScreenInsets();
   const [filter, setFilter] = useState<DiscoverFilter>('All');
+  const filters = useRef<ScrollView>(null);
+  // Switching to another tab starts Discover's filter over (back from an
+  // activity opened here, it stays as it was).
+  const navigation = useNavigation();
+  useEffect(
+    () =>
+      navigation.addListener('blur', () => {
+        const tabs = navigation.getState();
+        if (tabs?.routes[tabs.index]?.name === 'index') return;
+        setFilter('All');
+        filters.current?.scrollTo({ x: 0, animated: false });
+      }),
+    [navigation],
+  );
   // The results as a list, or as pins on a map.
   const [view, setView] = useState<'list' | 'map'>('list');
   const { height: windowHeight } = useWindowDimensions();
@@ -87,8 +102,16 @@ export default function DiscoverScreen() {
   const here = useDiscoverStore((s) => s.here);
   const [where, setWhere] = useState({ open: false, key: 0 });
   const homeLabel = me.data?.area ?? '';
+  // "Near me" names the town you're in once the phone's position is known.
+  const hereTown = useNearestPlace(origin.kind === 'here' ? here : null).data;
   const originLabel =
-    origin.kind === 'here' ? 'Near me' : origin.kind === 'town' ? origin.label : homeLabel;
+    origin.kind === 'here'
+      ? hereTown
+        ? placeLabel(hereTown)
+        : 'Near me'
+      : origin.kind === 'town'
+        ? origin.label
+        : homeLabel;
   const widenedTo =
     !isSearch && feed.data && feed.data.radiusKm > radiusKm ? feed.data.radiusKm : null;
   // "Near me" waits for the phone's position: show the skeleton, not "Nothing here".
@@ -121,7 +144,7 @@ export default function DiscoverScreen() {
         <Pressable
           onPress={() => setWhere((w) => ({ open: true, key: w.key + 1 }))}
           accessibilityRole="button"
-          accessibilityLabel={`Showing activities ${origin.kind === 'here' ? 'near you' : `near ${originLabel}`}. Change`}
+          accessibilityLabel={`Showing activities near ${origin.kind === 'here' ? `you${hereTown ? `, in ${originLabel}` : ''}` : originLabel}. Change`}
           hitSlop={8}
           className="min-w-0 flex-1 flex-row items-center gap-1.5 pr-3 active:opacity-70"
         >
@@ -167,7 +190,7 @@ export default function DiscoverScreen() {
           <SearchField
             value={search}
             onChangeText={setSearch}
-            placeholder="Search activities, groups, people…"
+            placeholder="Search activities…"
             label="Search activities"
           />
         </View>
@@ -195,6 +218,7 @@ export default function DiscoverScreen() {
       </View>
 
       <ScrollView
+        ref={filters}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{
