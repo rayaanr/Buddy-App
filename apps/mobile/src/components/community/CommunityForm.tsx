@@ -6,7 +6,7 @@ import { CoverField } from '@/components/create/CoverField';
 import { PhotoButton } from '@/components/create/PhotoButton';
 import { TownField } from '@/components/places/TownField';
 import {
-  BackButton,
+  ScreenHeader,
   Button,
   CloseIcon,
   Footer,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui';
 import { COMMUNITY_HUE } from '@/data/constants';
 import { usePickedImage } from '@/hooks/usePickedImage';
-import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { spacing } from '@/theme';
 
 interface CommunityValues {
   name: string;
@@ -56,7 +56,6 @@ export function CommunityForm({
   pending,
   onSubmit,
 }: CommunityFormProps) {
-  const { top } = useScreenInsets();
   const [name, setName] = useState(initial.name);
   const [about, setAbout] = useState(initial.about);
   const [rules, setRules] = useState(initial.rules);
@@ -91,12 +90,14 @@ export function CommunityForm({
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
-      <View className="px-[18px]" style={{ paddingTop: top(56) }}>
-        <BackButton />
-      </View>
+      <ScreenHeader />
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 24,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <Heading size="page">{heading}</Heading>
@@ -124,13 +125,13 @@ export function CommunityForm({
 
         <SectionLabel className="mb-2 mt-6">Where it meets</SectionLabel>
         <TownField value={town} onChange={setTown} tone="inset" />
-        <Text className="mt-2 font-sans text-[13px] leading-[18px] text-muted">
+        <Text className="mt-2 font-sans text-footnote leading-footnote text-muted">
           People nearby see it first.
         </Text>
 
         <View className="mb-2 mt-6 flex-row items-baseline justify-between">
           <SectionLabel>About</SectionLabel>
-          <Text className="font-mono text-[12px] text-subtle">
+          <Text className="font-mono text-caption text-subtle">
             {about.length}/{LIMITS.communityAboutMax}
           </Text>
         </View>
@@ -143,17 +144,17 @@ export function CommunityForm({
           textAlignVertical="top"
           tone="inset"
           size="md"
-          className="h-28 py-3.5 leading-[22px]"
+          className="h-28 py-3.5 leading-subhead"
         />
 
         <SectionLabel className="mb-1 mt-6">Group rules</SectionLabel>
-        <Text className="mb-2 font-sans text-[13px] leading-[18px] text-muted">
+        <Text className="mb-2 font-sans text-footnote leading-footnote text-muted">
           Optional, up to {LIMITS.communityRulesMax}. Keep them short.
         </Text>
         <View className="gap-2">
           {editable.map((rule, i) => (
             <View key={i} className="flex-row items-center gap-2">
-              <Text className="w-6 font-mono-medium text-[13px] text-muted">
+              <Text className="w-6 font-mono-medium text-footnote text-muted">
                 {String(i + 1).padStart(2, '0')}
               </Text>
               <View className="flex-1">
@@ -193,7 +194,12 @@ export function CommunityForm({
       </KeyboardAwareScrollView>
 
       <Footer>
-        <Button label={pending ? pendingLabel : submitLabel} inactive={!ready} onPress={submit} />
+        <Button
+          label={pending ? pendingLabel : submitLabel}
+          loading={pending}
+          inactive={!ready}
+          onPress={submit}
+        />
       </Footer>
     </KeyboardScreen>
   );

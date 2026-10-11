@@ -6,7 +6,7 @@ import Animated from 'react-native-reanimated';
 import { popIn, popOut } from '@/theme/motion';
 
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, shadows } from '@/theme';
 import { MoreIcon } from './icons';
 
 export interface MenuItem {
@@ -43,7 +43,7 @@ export function Menu({ items, label, trigger, tone = 'solid', align = 'end' }: M
           <View
             className={cn(
               'h-11 w-11 items-center justify-center rounded-full',
-              tone === 'glass' ? 'bg-[rgba(11,12,11,0.6)]' : 'bg-surface',
+              tone === 'glass' ? 'bg-glass' : 'bg-surface',
             )}
           >
             <MoreIcon />
@@ -67,7 +67,7 @@ export function Menu({ items, label, trigger, tone = 'solid', align = 'end' }: M
                   {item.icon ? <View className="w-5 items-center">{item.icon}</View> : null}
                   <Text
                     className={cn(
-                      'font-sans-medium text-[15.5px]',
+                      'font-sans-medium text-body',
                       item.destructive ? 'text-danger' : 'text-ink',
                     )}
                   >
@@ -94,11 +94,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     backgroundColor: colors['surface-raised'],
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    boxShadow: shadows.raised,
   },
   item: {
     minHeight: 48,

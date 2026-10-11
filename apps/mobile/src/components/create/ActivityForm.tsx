@@ -24,6 +24,7 @@ import {
   SectionLabel,
   TextField,
   Toggle,
+  Card,
 } from '@/components/ui';
 import {
   ACTIVITY_TYPES,
@@ -37,7 +38,7 @@ import { usePickedImage } from '@/hooks/usePickedImage';
 import { VenueField, type Pin } from './VenueField';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { presetDay, shortDay } from '@/lib/activity';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export interface Draft {
   title: string;
@@ -221,7 +222,11 @@ export function ActivityForm({
     <KeyboardScreen className="flex-1 bg-bg">
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingTop: top(58),
+          paddingHorizontal: spacing.edge,
+          paddingBottom: 24,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-row items-center">
@@ -231,9 +236,9 @@ export function ActivityForm({
             accessibilityRole="button"
             className="flex-1 py-1.5"
           >
-            <Text className="font-sans text-[16px] text-muted">Cancel</Text>
+            <Text className="font-sans text-body text-muted">Cancel</Text>
           </Pressable>
-          <Text className="font-sans-semibold text-[16px] text-ink">{heading}</Text>
+          <Text className="font-sans-semibold text-body text-ink">{heading}</Text>
           <View className="flex-1" />
         </View>
 
@@ -286,8 +291,8 @@ export function ActivityForm({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          className="-mx-[22px] mt-2"
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 22 }}
+          className="-mx-edge mt-2"
+          contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.edge }}
         >
           <Chip
             label={customTime ? draft.time : 'Other'}
@@ -318,10 +323,10 @@ export function ActivityForm({
           fallback={fallbackPlace}
         />
 
-        <View className="mt-3 flex-row items-center justify-between rounded-2xl bg-surface py-3 pl-4 pr-3">
+        <Card className="mt-3 flex-row items-center justify-between py-3 pl-4 pr-3">
           <View>
-            <Text className="font-sans-semibold text-[15.5px] text-ink">Spots</Text>
-            <Text className="mt-0.5 font-sans text-[13px] text-muted">Including you</Text>
+            <Text className="font-sans-semibold text-body text-ink">Spots</Text>
+            <Text className="mt-0.5 font-sans text-footnote text-muted">Including you</Text>
           </View>
           <View className="flex-row items-center gap-3.5">
             <Stepper
@@ -329,7 +334,7 @@ export function ActivityForm({
               accessibilityLabel="Fewer"
               onPress={() => set({ spots: Math.max(minSpots, draft.spots - 1) })}
             />
-            <Text className="w-[26px] text-center font-mono-medium text-[19px] text-ink">
+            <Text className="w-[26px] text-center font-mono-medium text-title2 text-ink">
               {draft.spots}
             </Text>
             <Stepper
@@ -338,13 +343,13 @@ export function ActivityForm({
               onPress={() => set({ spots: Math.min(LIMITS.capacityMax, draft.spots + 1) })}
             />
           </View>
-        </View>
+        </Card>
 
-        <View className="mt-3 rounded-2xl bg-surface py-3 pl-4 pr-3">
+        <Card className="mt-3 py-3 pl-4 pr-3">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="font-sans-semibold text-[15.5px] text-ink">Cost</Text>
-              <Text className="mt-0.5 font-sans text-[13px] text-muted">Per person</Text>
+              <Text className="font-sans-semibold text-body text-ink">Cost</Text>
+              <Text className="mt-0.5 font-sans text-footnote text-muted">Per person</Text>
             </View>
             <View className="flex-row gap-2">
               {(['free', 'paid'] as const).map((c) => (
@@ -360,7 +365,7 @@ export function ActivityForm({
           </View>
           {draft.cost === 'paid' ? (
             <View className="mt-3 flex-row items-center gap-2 pr-1">
-              <Text className="font-sans-medium text-[15.5px] text-muted">Rs</Text>
+              <Text className="font-sans-medium text-body text-muted">Rs</Text>
               <TextField
                 value={draft.price}
                 onChangeText={(t) => set({ price: t.replace(/[^0-9]/g, '').slice(0, 6) })}
@@ -373,7 +378,7 @@ export function ActivityForm({
               />
             </View>
           ) : null}
-        </View>
+        </Card>
 
         <TextField
           value={draft.bring}
@@ -392,15 +397,15 @@ export function ActivityForm({
           multiline
           textAlignVertical="top"
           size="md"
-          className="mt-3 h-24 py-3.5 leading-[22px]"
+          className="mt-3 h-24 py-3.5 leading-subhead"
         />
 
-        <View className="mt-3 flex-row items-center gap-4 rounded-2xl bg-surface py-3 pl-4 pr-3">
+        <Card className="mt-3 flex-row items-center gap-4 py-3 pl-4 pr-3">
           <View className="flex-1">
-            <Text className="font-sans-semibold text-[15.5px] text-ink">
+            <Text className="font-sans-semibold text-body text-ink">
               Repeat every {weekdayName(startsAt)}
             </Text>
-            <Text className="mt-0.5 font-sans text-[13px] leading-[18px] text-muted">
+            <Text className="mt-0.5 font-sans text-footnote leading-footnote text-muted">
               Next week’s goes up once this one starts, and this group hears about it.
             </Text>
           </View>
@@ -409,12 +414,12 @@ export function ActivityForm({
             onValueChange={(repeat) => set({ repeat })}
             label="Repeat every week"
           />
-        </View>
+        </Card>
 
         {communities.length ? (
           <>
             <SectionLabel className="mb-1 mt-[22px]">Post in a community</SectionLabel>
-            <Text className="mb-2.5 font-sans text-[13px] leading-[18px] text-muted">
+            <Text className="mb-2.5 font-sans text-footnote leading-footnote text-muted">
               Optional. Its members see it on the community’s page.
             </Text>
             <View className="flex-row flex-wrap gap-2">
@@ -463,11 +468,16 @@ export function ActivityForm({
 
       <Footer>
         {inPast ? (
-          <Text className="mb-2.5 text-center font-sans text-[13.5px] text-warning">
+          <Text className="mb-2.5 text-center font-sans text-label text-warning">
             That time has passed. Pick a later time or another day.
           </Text>
         ) : null}
-        <Button label={pending ? pendingLabel : submitLabel} inactive={!ready} onPress={submit} />
+        <Button
+          label={pending ? pendingLabel : submitLabel}
+          loading={pending}
+          inactive={!ready}
+          onPress={submit}
+        />
       </Footer>
     </KeyboardScreen>
   );
@@ -489,7 +499,7 @@ function Stepper({
       accessibilityLabel={accessibilityLabel}
       className="h-11 w-11 items-center justify-center rounded-full border border-outline active:opacity-70"
     >
-      <Text className="font-sans text-[18px] text-ink">{label}</Text>
+      <Text className="font-sans text-title3 text-ink">{label}</Text>
     </Pressable>
   );
 }

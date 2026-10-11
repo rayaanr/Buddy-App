@@ -27,12 +27,12 @@ export default function ActivityChatScreen() {
           <View className="mb-2">
             <Pressable
               onPress={() => router.dismissTo(`/activity/${a.id}`)}
-              className="flex-row justify-between rounded-[14px] border border-lime-panel-border bg-lime-panel px-4 py-3.5 active:opacity-80"
+              className="flex-row justify-between rounded-tile border border-lime-panel-border bg-lime-panel px-4 py-3.5 active:opacity-80"
             >
-              <Text className="font-sans-medium text-[14.5px] text-lime">{whenLong(a)}</Text>
-              <Text className="font-sans-medium text-[14.5px] text-ink-soft">{a.place}</Text>
+              <Text className="font-sans-medium text-subhead text-lime">{whenLong(a)}</Text>
+              <Text className="font-sans-medium text-subhead text-ink-soft">{a.place}</Text>
             </Pressable>
-            <Text className="mt-2.5 text-center font-sans text-[12.5px] text-subtle">
+            <Text className="mt-2.5 text-center font-sans text-footnote text-subtle">
               Messages are kept until {RETENTION.activityChatDays} days after the activity.
             </Text>
           </View>

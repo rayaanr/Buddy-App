@@ -25,7 +25,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       multiline={multiline}
       className={cn(
         'rounded-2xl border border-field px-4 text-ink',
-        size === 'lg' ? 'text-[16px]' : 'text-[15.5px]',
+        size === 'lg' ? 'text-body' : 'text-body',
         // Multiline fields set their own height.
         !multiline && (size === 'lg' ? 'h-[54px]' : 'h-[52px]'),
         tone === 'sunken' ? 'bg-surface-sunken' : 'bg-bg',

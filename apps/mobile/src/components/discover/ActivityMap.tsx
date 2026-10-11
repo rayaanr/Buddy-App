@@ -12,7 +12,7 @@ import { MAP_ATTRIBUTION, MAP_BACKGROUND } from '@/config';
 import { availabilityColor } from '@/lib/activity';
 import { project } from '@/lib/gestures';
 import { fitPoints, fromWorldPixel, tilesAround, worldPixel } from '@/lib/maps';
-import { colors } from '@/theme';
+import { colors, shadows } from '@/theme';
 import { ease } from '@/theme/motion';
 
 const MIN_ZOOM = 7;
@@ -256,7 +256,7 @@ export function ActivityMap({
         </Text>
         {!activities.length ? (
           <View pointerEvents="none" style={styles.empty}>
-            <Text className="font-sans-medium text-[14px] text-ink">Nothing on the map here</Text>
+            <Text className="font-sans-medium text-label text-ink">Nothing on the map here</Text>
           </View>
         ) : null}
       </View>
@@ -290,11 +290,7 @@ const styles = StyleSheet.create({
     borderColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    boxShadow: shadows.float,
   },
   pinDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.bg },
   full: { borderRadius: 0 },
@@ -307,8 +303,8 @@ const styles = StyleSheet.create({
     left: 10,
     bottom: 6,
     fontSize: 9.5,
-    color: 'rgba(0,0,0,0.6)',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    color: colors['map-credit'],
+    backgroundColor: colors['map-credit-bg'],
     paddingHorizontal: 4,
     borderRadius: 4,
     overflow: 'hidden',
@@ -320,6 +316,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 14,
-    backgroundColor: 'rgba(11,12,11,0.7)',
+    backgroundColor: colors['glass-strong'],
   },
 });

@@ -30,8 +30,8 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
 
   return (
     <Dialog position="top" open={open} onClose={onClose}>
-      <View className="px-[22px]">
-        <Text className="mb-3 font-sans-semibold text-[18px] text-ink">Show activities near</Text>
+      <View className="px-edge">
+        <Text className="mb-3 font-sans-semibold text-title3 text-ink">Show activities near</Text>
         <PlaceSearch
           currentLocation={false}
           onPick={(p) => {
@@ -73,7 +73,7 @@ export function LocationSheet({ open, onClose, home }: LocationSheetProps) {
             />
           ))}
         </View>
-        <Text className="mt-2.5 font-sans text-[13px] leading-[18px] text-muted">
+        <Text className="mt-2.5 font-sans text-footnote leading-footnote text-muted">
           If there’s nothing that close, Discover looks further and tells you.
         </Text>
       </View>

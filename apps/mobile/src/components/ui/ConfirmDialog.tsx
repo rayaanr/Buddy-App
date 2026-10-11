@@ -43,7 +43,7 @@ export function ConfirmDialog({
       style={StyleSheet.flatten([styles.button, styles.cancel, !stacked && styles.half])}
       className="active:opacity-80"
     >
-      <Text className="font-sans-semibold text-[15.5px] text-ink">{cancelLabel}</Text>
+      <Text className="font-sans-semibold text-body text-ink">{cancelLabel}</Text>
     </AlertDialog.Cancel>
   );
 
@@ -55,11 +55,11 @@ export function ConfirmDialog({
             <AlertDialog.Content style={styles.content}>
               <Animated.View entering={popIn} style={styles.card}>
                 <AlertDialog.Title asChild>
-                  <Text className="font-display text-[20px] leading-[25px] text-ink">{title}</Text>
+                  <Text className="font-display text-title2 leading-title2 text-ink">{title}</Text>
                 </AlertDialog.Title>
                 {message ? (
                   <AlertDialog.Description asChild>
-                    <Text className="mt-2 font-sans text-[14.5px] leading-[21px] text-muted">
+                    <Text className="mt-2 font-sans text-subhead leading-subhead text-muted">
                       {message}
                     </Text>
                   </AlertDialog.Description>
@@ -79,7 +79,7 @@ export function ConfirmDialog({
                     >
                       <Text
                         className={cn(
-                          'text-center font-sans-semibold text-[15.5px]',
+                          'text-center font-sans-semibold text-body',
                           a.destructive ? 'text-ink' : 'text-bg',
                         )}
                       >
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   backdrop: {
     position: 'absolute',
     inset: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.scrim,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,

@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { justifyContent: 'center', paddingHorizontal: 16 },
   top: { justifyContent: 'flex-start', paddingHorizontal: 16 },
-  backdrop: { backgroundColor: 'rgba(0,0,0,0.6)' },
+  backdrop: { backgroundColor: colors.scrim },
   // Never taller than the room it has; content scrolls inside.
   card: {
     flexShrink: 1,

@@ -50,19 +50,17 @@ export function GoogleSignIn({ className }: { className?: string }) {
         <GoogleG />
         <Text
           maxFontSizeMultiplier={CONTROL_FONT_SCALE}
-          className="font-sans-semibold text-[15.5px] text-ink"
+          className="font-sans-semibold text-body text-ink"
         >
           {google.isPending ? 'Opening Google…' : 'Continue with Google'}
         </Text>
       </PressableScale>
       {google.error ? (
-        <Text className="mt-2 font-sans text-[13.5px] text-danger">
-          {errorMessage(google.error)}
-        </Text>
+        <Text className="mt-2 font-sans text-label text-danger">{errorMessage(google.error)}</Text>
       ) : null}
       <View className="mt-6 flex-row items-center gap-3">
         <View className="h-px flex-1 bg-outline" />
-        <Text className="font-sans text-[13px] text-subtle">or use your email</Text>
+        <Text className="font-sans text-footnote text-subtle">or use your email</Text>
         <View className="h-px flex-1 bg-outline" />
       </View>
     </View>

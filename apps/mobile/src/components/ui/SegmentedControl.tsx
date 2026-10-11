@@ -77,7 +77,7 @@ export function SegmentedControl<T extends string>({
           >
             <Text
               maxFontSizeMultiplier={CONTROL_FONT_SCALE}
-              className={cn('font-sans-semibold text-[14.5px]', active ? 'text-ink' : 'text-muted')}
+              className={cn('font-sans-semibold text-subhead', active ? 'text-ink' : 'text-muted')}
             >
               {s.label}
             </Text>

@@ -14,7 +14,7 @@ import {
   ScreenHeader,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 /** Discover → bell: reminders, changes and community news, newest first. */
 export default function NotificationsScreen() {
@@ -36,7 +36,11 @@ export default function NotificationsScreen() {
         data={list.data?.notifications ?? []}
         keyExtractor={(n) => n.id}
         renderItem={({ item }) => <Row notification={item} />}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 30,
+        }}
         refreshControl={
           <Refresh refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />
         }
@@ -102,12 +106,12 @@ function Row({ notification: n }: { notification: AppNotification }) {
       </View>
       <View className="flex-1">
         <View className="flex-row items-baseline justify-between gap-2">
-          <Text className="flex-1 font-sans-semibold text-[15px] text-ink" numberOfLines={1}>
+          <Text className="flex-1 font-sans-semibold text-subhead text-ink" numberOfLines={1}>
             {n.title}
           </Text>
-          <Text className="font-sans text-[12.5px] text-subtle">{when(n.createdAt)}</Text>
+          <Text className="font-sans text-footnote text-subtle">{when(n.createdAt)}</Text>
         </View>
-        <Text className="mt-0.5 font-sans text-[14px] leading-[20px] text-muted" numberOfLines={3}>
+        <Text className="mt-0.5 font-sans text-label leading-label text-muted" numberOfLines={3}>
           {n.body}
         </Text>
       </View>

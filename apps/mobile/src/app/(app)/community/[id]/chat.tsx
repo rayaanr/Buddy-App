@@ -24,8 +24,8 @@ export default function CommunityChatScreen() {
       muted={c?.joined ? c.chatMuted : undefined}
       banner={
         c ? (
-          <View className="mb-2 rounded-[14px] border border-lime-panel-border bg-lime-panel px-4 py-3.5">
-            <Text className="font-sans-medium text-[14.5px] leading-[20px] text-ink-soft">
+          <View className="mb-2 rounded-tile border border-lime-panel-border bg-lime-panel px-4 py-3.5">
+            <Text className="font-sans-medium text-subhead leading-label text-ink-soft">
               The group chat for everyone in {c.name}. Plan meetups, swap tips, say hi. Messages are
               kept for {RETENTION.communityChatDays} days.
             </Text>

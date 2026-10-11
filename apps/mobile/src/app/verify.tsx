@@ -74,14 +74,14 @@ export default function VerifyScreen() {
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
-      <View className="flex-1 px-[22px]" style={{ paddingTop: top(56), paddingBottom: bottom(34) }}>
+      <View className="flex-1 px-edge" style={{ paddingTop: top(56), paddingBottom: bottom(34) }}>
         <BackButton
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/sign-in'))}
         />
         <Heading size="hero" className="mt-6">
           Check your email
         </Heading>
-        <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
+        <Text className="mt-3 font-sans text-body leading-body text-muted">
           We sent a 6-digit code to <Text className="text-ink">{email}</Text>. It expires in 5
           minutes.
         </Text>
@@ -114,11 +114,12 @@ export default function VerifyScreen() {
           accessibilityLabel="Sign-in code"
           style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }}
         />
-        {error ? <Text className="mt-3 font-sans text-[13.5px] text-danger">{error}</Text> : null}
+        {error ? <Text className="mt-3 font-sans text-label text-danger">{error}</Text> : null}
 
         <View className="flex-1" />
         <Button
           label={busy ? 'Checking…' : 'Continue'}
+          loading={busy}
           inactive={code.length < CODE_LENGTH || busy}
           onPress={() => code.length === CODE_LENGTH && verify(code)}
         />

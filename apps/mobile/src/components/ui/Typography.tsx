@@ -43,7 +43,7 @@ export function SectionLabel({
   return (
     <Text
       className={cn(
-        'font-mono-medium text-[12px] uppercase tracking-[1.44px]',
+        'font-mono-medium text-caption uppercase tracking-[1.44px]',
         tone === 'lime' ? 'text-lime' : 'text-muted',
         className,
       )}
@@ -56,7 +56,7 @@ export function SectionLabel({
 export function Eyebrow({ className, ...rest }: TextProps & { className?: string }) {
   return (
     <Text
-      className={cn('font-mono-medium text-[12.5px] tracking-[1.25px] text-lime', className)}
+      className={cn('font-mono-medium text-footnote tracking-[1.25px] text-lime', className)}
       {...rest}
     />
   );

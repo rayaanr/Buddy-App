@@ -13,7 +13,7 @@ export function Footer({ children, className }: { children: ReactNode; className
     // On the keyboard, the room kept for the home indicator isn't needed.
     <KeyboardFooter openedOffset={padding - 12}>
       <View
-        className={cn('border-t border-line bg-bg px-[22px] pt-3', className)}
+        className={cn('border-t border-line bg-bg px-edge pt-3', className)}
         style={{ paddingBottom: padding }}
       >
         {children}

@@ -27,7 +27,7 @@ import { whenLong } from '@/lib/activity';
 import { cn } from '@/lib/cn';
 import { shareActivity } from '@/lib/share';
 import { toast } from '@/store/ui';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 /**
  * Invite people you've been at an activity with: each gets a notification
@@ -84,30 +84,34 @@ function Invite({ activity: a }: { activity: ActivityDetail }) {
     <KeyboardScreen className="flex-1 bg-bg">
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingTop: top(58),
+          paddingHorizontal: spacing.edge,
+          paddingBottom: 24,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable onPress={() => router.back()} hitSlop={8} className="self-start py-1.5">
-          <Text className="font-sans text-[16px] text-muted">Cancel</Text>
+          <Text className="font-sans text-body text-muted">Cancel</Text>
         </Pressable>
         <Heading size="page" className="mt-4">
           Invite friends
         </Heading>
-        <Text className="mt-2 font-sans text-[15px] leading-[22px] text-muted">
+        <Text className="mt-2 font-sans text-subhead leading-subhead text-muted">
           {a.title}, {whenLong(a)}. They’ll get a notification from you.
         </Text>
 
         <Pressable
           onPress={() => void shareActivity(a)}
           accessibilityRole="button"
-          className="mt-5 flex-row items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 active:opacity-80"
+          className="mt-5 flex-row items-center gap-3 rounded-card bg-surface px-4 py-3.5 active:opacity-80"
         >
-          <View className="h-9 w-9 items-center justify-center rounded-full bg-lime-tint">
+          <View className="h-10 w-10 items-center justify-center rounded-xl bg-lime-deep">
             <ShareIcon size={17} color={colors.lime} />
           </View>
           <View className="flex-1">
-            <Text className="font-sans-semibold text-[15.5px] text-ink">Share a link</Text>
-            <Text className="mt-0.5 font-sans text-[13.5px] text-muted">
+            <Text className="font-sans-semibold text-body text-ink">Share a link</Text>
+            <Text className="mt-0.5 font-sans text-label text-muted">
               For anyone, on WhatsApp or anywhere else
             </Text>
           </View>
@@ -145,10 +149,10 @@ function Invite({ activity: a }: { activity: ActivityDetail }) {
                 >
                   <Avatar uri={p.avatarUrl ?? undefined} name={p.name} size={42} />
                   <View className="flex-1">
-                    <Text className="font-sans-medium text-[15.5px] text-ink" numberOfLines={1}>
+                    <Text className="font-sans-medium text-body text-ink" numberOfLines={1}>
                       {p.name}
                     </Text>
-                    <Text className="mt-0.5 font-sans text-[13.5px] text-muted" numberOfLines={1}>
+                    <Text className="mt-0.5 font-sans text-label text-muted" numberOfLines={1}>
                       {p.invited ? 'Invited' : `Met at ${p.met}`}
                     </Text>
                   </View>

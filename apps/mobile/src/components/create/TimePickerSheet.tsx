@@ -27,12 +27,12 @@ export function TimePickerSheet({ open, onClose, value, onChange }: TimePickerSh
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <View className="px-[22px]">
-        <Text className="text-center font-sans-semibold text-[17px] text-ink">Start time</Text>
+      <View className="px-edge">
+        <Text className="text-center font-sans-semibold text-headline text-ink">Start time</Text>
 
         <View className="mt-4 flex-row items-center justify-center gap-2">
           <Wheel values={HOURS} index={hour} onChange={setHour} label="Hour" />
-          <Text className="pb-1 font-mono-medium text-[26px] text-ink">:</Text>
+          <Text className="pb-1 font-mono-medium text-numeral text-ink">:</Text>
           <Wheel values={MINUTES} index={minute} onChange={setMinute} label="Minutes" />
         </View>
 

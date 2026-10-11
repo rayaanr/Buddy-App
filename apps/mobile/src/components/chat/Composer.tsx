@@ -152,49 +152,25 @@ export function Composer({
   return (
     <View className="border-t border-line">
       {editing ? (
-        <View className="flex-row items-center gap-3 border-b border-line bg-surface px-[18px] py-2.5">
-          <PencilIcon size={17} color={colors.lime} />
-          <View className="min-w-0 flex-1 border-l-[3px] border-lime pl-2.5">
-            <Text className="font-sans-semibold text-[13px] text-lime">Editing message</Text>
-            <Text className="font-sans text-[13px] text-muted" numberOfLines={1}>
-              {editing.body}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => {
-              onCancelEdit();
-              reset();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel editing"
-            hitSlop={8}
-            className="h-8 w-8 items-center justify-center rounded-full active:bg-surface-raised"
-          >
-            <CloseIcon color={colors.muted} />
-          </Pressable>
-        </View>
+        <ContextBar
+          icon={<PencilIcon size={17} color={colors.lime} />}
+          title="Editing message"
+          summary={editing.body}
+          cancelLabel="Cancel editing"
+          onCancel={() => {
+            onCancelEdit();
+            reset();
+          }}
+        />
       ) : null}
       {replyTo && !editing ? (
-        <View className="flex-row items-center gap-3 border-b border-line bg-surface px-[18px] py-2.5">
-          <ReplyIcon size={18} color={colors.lime} />
-          <View className="min-w-0 flex-1 border-l-[3px] border-lime pl-2.5">
-            <Text className="font-sans-semibold text-[13px] text-lime" numberOfLines={1}>
-              Replying to {replyTo.senderName ?? 'Deleted account'}
-            </Text>
-            <Text className="font-sans text-[13px] text-muted" numberOfLines={1}>
-              {replyTo.summary}
-            </Text>
-          </View>
-          <Pressable
-            onPress={onCancelReply}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel reply"
-            hitSlop={8}
-            className="h-8 w-8 items-center justify-center rounded-full active:bg-surface-raised"
-          >
-            <CloseIcon color={colors.muted} />
-          </Pressable>
-        </View>
+        <ContextBar
+          icon={<ReplyIcon size={18} color={colors.lime} />}
+          title={`Replying to ${replyTo.senderName ?? 'Deleted account'}`}
+          summary={replyTo.summary}
+          cancelLabel="Cancel reply"
+          onCancel={onCancelReply}
+        />
       ) : null}
       {suggestions.length ? (
         <View className="border-b border-line bg-surface px-3.5 py-1.5">
@@ -207,7 +183,7 @@ export function Composer({
               className="flex-row items-center gap-3 rounded-xl px-2 py-2 active:bg-surface-raised"
             >
               <Avatar uri={p.avatarUrl ?? undefined} name={p.name} size={30} />
-              <Text className="font-sans-medium text-[15px] text-ink">{p.name}</Text>
+              <Text className="font-sans-medium text-subhead text-ink">{p.name}</Text>
             </Pressable>
           ))}
         </View>
@@ -259,7 +235,7 @@ export function Composer({
           placeholder="Message the group"
           placeholderTextColor={colors.subtle}
           selectionColor={colors.lime}
-          className="h-[50px] min-w-0 flex-1 rounded-[25px] border border-field bg-surface px-5 font-sans text-[15.5px] text-ink"
+          className="h-[50px] min-w-0 flex-1 rounded-full border border-field bg-surface px-5 font-sans text-body text-ink"
         />
         <PressableScale
           onPress={send}
@@ -269,12 +245,12 @@ export function Composer({
           accessibilityRole="button"
           accessibilityLabel="Send"
           className={cn(
-            'h-[50px] items-center justify-center rounded-[25px] px-5',
+            'h-[50px] items-center justify-center rounded-full px-5',
             canSend ? 'bg-lime' : 'bg-disabled',
           )}
         >
           <Text
-            className={cn('font-sans-semibold text-[15px]', canSend ? 'text-bg' : 'text-muted')}
+            className={cn('font-sans-semibold text-subhead', canSend ? 'text-bg' : 'text-muted')}
           >
             {editing ? 'Save' : 'Send'}
           </Text>
@@ -314,6 +290,44 @@ export function Composer({
   );
 }
 
+/** What the next send does to another message (edit it, reply to it), with ✕ to drop that. */
+function ContextBar({
+  icon,
+  title,
+  summary,
+  cancelLabel,
+  onCancel,
+}: {
+  icon: ReactNode;
+  title: string;
+  summary: string;
+  cancelLabel: string;
+  onCancel: () => void;
+}) {
+  return (
+    <View className="flex-row items-center gap-3 border-b border-line bg-surface px-header py-2.5">
+      {icon}
+      <View className="min-w-0 flex-1 border-l-[3px] border-lime pl-2.5">
+        <Text className="font-sans-semibold text-footnote text-lime" numberOfLines={1}>
+          {title}
+        </Text>
+        <Text className="font-sans text-footnote text-muted" numberOfLines={1}>
+          {summary}
+        </Text>
+      </View>
+      <Pressable
+        onPress={onCancel}
+        accessibilityRole="button"
+        accessibilityLabel={cancelLabel}
+        hitSlop={8}
+        className="h-8 w-8 items-center justify-center rounded-full active:bg-surface-raised"
+      >
+        <CloseIcon color={colors.muted} />
+      </Pressable>
+    </View>
+  );
+}
+
 /** One choice in the attachment panel: a card like the app's other tiles. */
 function AttachTile({
   label,
@@ -334,11 +348,11 @@ function AttachTile({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={hint}
-      className="flex-1 items-center rounded-[18px] bg-surface px-2 pb-3.5 pt-3.5"
+      className="flex-1 items-center rounded-card bg-surface px-2 pb-3.5 pt-3.5"
     >
       <View className="h-10 w-10 items-center justify-center rounded-xl bg-lime-deep">{icon}</View>
-      <Text className="mt-3 text-center font-sans-semibold text-[15px] text-ink">{label}</Text>
-      <Text className="mt-0.5 text-center font-sans text-[12.5px] text-muted" numberOfLines={1}>
+      <Text className="mt-3 text-center font-sans-semibold text-subhead text-ink">{label}</Text>
+      <Text className="mt-0.5 text-center font-sans text-footnote text-muted" numberOfLines={1}>
         {hint}
       </Text>
     </PressableScale>

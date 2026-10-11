@@ -2,7 +2,7 @@ import type { CommunitySummary } from '@buddy/shared';
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
 
-import { Avatar, Photo, PressableScale, Skeleton } from '@/components/ui';
+import { Avatar, Photo, PressableScale, Skeleton, Card } from '@/components/ui';
 import { COMMUNITY_HUE } from '@/data/constants';
 import { useCommunityToggle } from '@/hooks/useCommunityToggle';
 import { cn } from '@/lib/cn';
@@ -30,7 +30,7 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
         onPress={() => router.push(`/community/${c.id}`)}
         accessibilityRole="button"
         accessibilityLabel={`${c.name}, ${communityMeta(c)}`}
-        className="overflow-hidden rounded-[22px] bg-surface"
+        className="overflow-hidden rounded-hero bg-surface"
       >
         <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }} />
         {/* The logo hangs over the cover's bottom-left edge, above the name. */}
@@ -49,10 +49,10 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
           />
         </View>
         <View className="pb-4 pl-[18px] pr-[120px]" style={{ paddingTop: LOGO_OVERHANG + 10 }}>
-          <Text className="font-sans-semibold text-[17.5px] text-ink" numberOfLines={2}>
+          <Text className="font-sans-semibold text-title3 text-ink" numberOfLines={2}>
             {c.name}
           </Text>
-          <Text className="mt-1 font-sans text-[14px] leading-[19px] text-muted">
+          <Text className="mt-1 font-sans text-label leading-label text-muted">
             {communityMeta(c)}
           </Text>
         </View>
@@ -70,12 +70,12 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
           accessibilityLabel={`${c.joined ? 'Joined' : 'Join'} ${c.name}`}
           accessibilityState={{ selected: c.joined, busy: pending }}
           className={cn(
-            'h-11 items-center justify-center rounded-[22px] border px-5',
+            'h-11 items-center justify-center rounded-hero border px-5',
             c.joined ? 'border-lime-outline bg-transparent' : 'border-lime bg-lime',
           )}
         >
           <Text
-            className={cn('font-sans-semibold text-[15px]', c.joined ? 'text-lime' : 'text-bg')}
+            className={cn('font-sans-semibold text-subhead', c.joined ? 'text-lime' : 'text-bg')}
           >
             {c.joined ? 'Joined' : 'Join'}
           </Text>
@@ -87,15 +87,15 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
 
 export function CommunityCardSkeleton() {
   return (
-    <View className="overflow-hidden rounded-[22px] bg-surface">
+    <Card radius="hero" className="overflow-hidden">
       <Skeleton className="h-[124px] rounded-none" />
       <View className="flex-row items-center gap-3 py-4 pl-[18px] pr-4">
         <View className="flex-1 gap-2">
           <Skeleton className="h-4 w-3/5" />
           <Skeleton className="h-3 w-4/5" />
         </View>
-        <Skeleton className="h-11 w-[86px] rounded-[22px]" />
+        <Skeleton className="h-11 w-[86px] rounded-hero" />
       </View>
-    </View>
+    </Card>
   );
 }

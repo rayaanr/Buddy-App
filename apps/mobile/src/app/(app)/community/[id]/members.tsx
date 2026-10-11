@@ -15,6 +15,7 @@ import {
   ScreenHeader,
 } from '@/components/ui';
 import { toast } from '@/store/ui';
+import { spacing } from '@/theme';
 
 type Member = { id: string; name: string; avatarUrl: string | null; isCreator: boolean };
 
@@ -35,11 +36,15 @@ export default function CommunityMembersScreen() {
         style={styles.fill}
         data={members.data ?? []}
         keyExtractor={(m) => m.id}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 30,
+        }}
         ListHeaderComponent={
           <View className="mb-4">
             {community.data ? (
-              <Text className="font-sans text-[14.5px] text-muted">
+              <Text className="font-sans text-subhead text-muted">
                 {community.data.name} · {community.data.memberCount}
               </Text>
             ) : null}
@@ -63,12 +68,12 @@ export default function CommunityMembersScreen() {
               className="flex-1 flex-row items-center gap-3 py-3 active:opacity-70"
             >
               <Avatar uri={m.avatarUrl ?? undefined} name={m.name} size={40} />
-              <Text className="flex-1 font-sans-medium text-[15.5px] text-ink" numberOfLines={1}>
+              <Text className="flex-1 font-sans-medium text-body text-ink" numberOfLines={1}>
                 {m.name}
                 {m.id === me.data?.id ? <Text className="text-muted"> (you)</Text> : null}
               </Text>
               {m.isCreator ? (
-                <Text className="font-mono-medium text-[11px] uppercase tracking-[1px] text-lime">
+                <Text className="font-mono-medium text-micro uppercase tracking-[1px] text-lime">
                   Started it
                 </Text>
               ) : null}

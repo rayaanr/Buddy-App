@@ -43,7 +43,7 @@ function WelcomeBack() {
 
   return (
     <View
-      className="flex-1 bg-bg px-[22px]"
+      className="flex-1 bg-bg px-edge"
       style={{ paddingTop: top(64), paddingBottom: bottom(34) }}
     >
       <BrandMark />
@@ -58,14 +58,19 @@ function WelcomeBack() {
       <Heading size="hero" className="text-center">
         Good to see you, {name}
       </Heading>
-      <Text className="mt-3 text-center font-sans text-[16px] leading-[23px] text-muted">
+      <Text className="mt-3 text-center font-sans text-body leading-body text-muted">
         Signed out on this device.
       </Text>
       {error ? (
-        <Text className="mt-3 text-center font-sans text-[13.5px] text-danger">{error}</Text>
+        <Text className="mt-3 text-center font-sans text-label text-danger">{error}</Text>
       ) : null}
       <Button
-        label={sending ? 'Sending code…' : `Continue as ${name}`}
+        label={
+          sending
+            ? 'Sending code…'
+            : `Continue as ${name}
+          loading={sending}`
+        }
         inactive={sending}
         onPress={() => send(remembered.email)}
         className="mt-7"
@@ -94,14 +99,14 @@ function EmailSignIn() {
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
-      <View className="flex-1 px-[22px]" style={{ paddingTop: top(56), paddingBottom: bottom(34) }}>
+      <View className="flex-1 px-edge" style={{ paddingTop: top(56), paddingBottom: bottom(34) }}>
         <BackButton
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/welcome'))}
         />
         <Heading size="hero" className="mt-6">
           Welcome back
         </Heading>
-        <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
+        <Text className="mt-3 font-sans text-body leading-body text-muted">
           Enter the email you signed up with and we’ll send you a code.
         </Text>
         <GoogleSignIn className="mt-7" />
@@ -117,21 +122,22 @@ function EmailSignIn() {
           autoCorrect={false}
           onSubmitEditing={() => valid && send(email)}
         />
-        {error ? <Text className="mt-2 font-sans text-[13.5px] text-danger">{error}</Text> : null}
+        {error ? <Text className="mt-2 font-sans text-label text-danger">{error}</Text> : null}
         <View className="flex-1" />
         <Button
           label={sending ? 'Sending code…' : 'Send code'}
+          loading={sending}
           inactive={!valid || sending}
           onPress={() => valid && send(email)}
         />
         <View className="mt-3.5 flex-row justify-center gap-1.5">
-          <Text className="font-sans text-[14.5px] text-muted">New to Buddy?</Text>
+          <Text className="font-sans text-subhead text-muted">New to Buddy?</Text>
           <Pressable
             onPress={() => router.replace('/sign-up')}
             accessibilityRole="link"
             hitSlop={8}
           >
-            <Text className="font-sans-medium text-[14.5px] text-lime">Create an account</Text>
+            <Text className="font-sans-medium text-subhead text-lime">Create an account</Text>
           </Pressable>
         </View>
       </View>

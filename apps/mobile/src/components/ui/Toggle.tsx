@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
-import { colors } from '@/theme';
+import { colors, shadows } from '@/theme';
 import { spring } from '@/theme/motion';
 import { selectionHaptic } from './Motion';
 
@@ -57,11 +57,7 @@ export function Toggle({ value, onValueChange, label, disabled }: ToggleProps) {
               height: KNOB,
               borderRadius: KNOB / 2,
               backgroundColor: '#ffffff',
-              shadowColor: '#000',
-              shadowOpacity: 0.35,
-              shadowRadius: 3,
-              shadowOffset: { width: 0, height: 1 },
-              elevation: 3,
+              boxShadow: shadows.knob,
             },
             knob,
           ]}

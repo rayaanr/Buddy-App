@@ -35,6 +35,7 @@ import {
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
+import { spacing } from '@/theme';
 
 const STEPS = 4;
 
@@ -137,7 +138,7 @@ function Steps({ me }: { me: Me }) {
         <>
           <SectionLabel className="mb-2 mt-7">Home town</SectionLabel>
           <TownField value={town} onChange={setTown} />
-          <Text className="mt-2 font-sans text-[13.5px] leading-[19px] text-muted">
+          <Text className="mt-2 font-sans text-label leading-label text-muted">
             Skip and we’ll start you in {placeLabel(me.place)}. You can change it any time.
           </Text>
         </>
@@ -163,7 +164,7 @@ function Steps({ me }: { me: Me }) {
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
-      <View className="flex-row items-center gap-4 px-[18px]" style={{ paddingTop: top(56) }}>
+      <View className="flex-row items-center gap-4 px-header" style={{ paddingTop: top(56) }}>
         <BackButton
           onPress={() => setStep(step - 1)}
           disabled={step === 0}
@@ -184,19 +185,21 @@ function Steps({ me }: { me: Me }) {
 
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 20 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 20,
+          paddingBottom: 20,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <AnimatedView style={enter}>
-          <Text className="font-mono-medium text-[12px] tracking-[1.2px] text-subtle">
+          <Text className="font-mono-medium text-caption tracking-[1.2px] text-subtle">
             STEP {step + 1} OF {STEPS}
           </Text>
           <Heading size="hero" className="mt-2.5">
             {current.title}
           </Heading>
-          <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
-            {current.hint}
-          </Text>
+          <Text className="mt-3 font-sans text-body leading-body text-muted">{current.hint}</Text>
           {current.body}
         </AnimatedView>
       </KeyboardAwareScrollView>
@@ -204,6 +207,7 @@ function Steps({ me }: { me: Me }) {
       <Footer>
         <Button
           label={update.isPending ? 'Saving…' : last ? 'Start exploring' : 'Continue'}
+          loading={update.isPending}
           inactive={!current.canContinue || update.isPending}
           onPress={() => current.canContinue && next(current.save())}
         />

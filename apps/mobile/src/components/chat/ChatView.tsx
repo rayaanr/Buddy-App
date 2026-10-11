@@ -59,7 +59,7 @@ import {
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { popIn, popOut } from '@/theme/motion';
 import { type ChatPerson, Composer } from './Composer';
 import { ReactionBar, type SelectedMessage } from './ReactionBar';
@@ -286,7 +286,7 @@ export function ChatView({
   return (
     <KeyboardScreen className="flex-1 bg-bg">
       <View
-        className="flex-row items-center gap-3.5 border-b border-line px-[18px] pb-3"
+        className="flex-row items-center gap-3.5 border-b border-line px-header pb-3"
         style={{ paddingTop: top(56) }}
         onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
@@ -368,12 +368,12 @@ export function ChatView({
                 <Avatar uri={image ?? undefined} name={title} size={40} shape="rounded" />
               ) : null}
               <View className="min-w-0 flex-1">
-                <Text className="font-sans-semibold text-[16.5px] text-ink" numberOfLines={1}>
+                <Text className="font-sans-semibold text-headline text-ink" numberOfLines={1}>
                   {title}
                 </Text>
                 <View className="mt-0.5 flex-row items-center gap-1.5">
                   {muted ? <MutedIcon size={13} accessibilityLabel="Muted" /> : null}
-                  <Text className="flex-1 font-sans text-[13px] text-muted" numberOfLines={1}>
+                  <Text className="flex-1 font-sans text-footnote text-muted" numberOfLines={1}>
                     {subtitle}
                   </Text>
                 </View>
@@ -397,14 +397,14 @@ export function ChatView({
       {chat.isLoading ? (
         <Loading className="flex-1" />
       ) : chat.error && !chat.loaded ? (
-        <View className="flex-1 justify-center px-[18px]">
+        <View className="flex-1 justify-center px-header">
           <LoadError error={chat.error} onRetry={() => void chat.refetch()} />
         </View>
       ) : (
         <View className="flex-1">
           {/* A refresh failed: keep the messages, say so above them. */}
           {chat.error ? (
-            <View className="px-[18px] pt-2">
+            <View className="px-header pt-2">
               <LoadError error={chat.error} onRetry={() => void chat.refetch()} stale />
             </View>
           ) : null}
@@ -416,7 +416,7 @@ export function ChatView({
             renderItem={renderItem}
             // Inverted: paddingTop is the visual bottom.
             contentContainerStyle={{
-              paddingHorizontal: 18,
+              paddingHorizontal: spacing.header,
               paddingTop: 18,
               paddingBottom: 14,
               gap: 6,
@@ -524,7 +524,7 @@ function NewMessages({ count }: { count: number }) {
   return (
     <View className="my-2 flex-row items-center gap-3" accessibilityRole="header">
       <View className="h-px flex-1 bg-lime/30" />
-      <Text className="font-sans-semibold text-[12.5px] text-lime">
+      <Text className="font-sans-semibold text-footnote text-lime">
         {count === 1 ? '1 new message' : `${count} new messages`}
       </Text>
       <View className="h-px flex-1 bg-lime/30" />
@@ -537,8 +537,8 @@ const styles = StyleSheet.create({
   // A message you long-pressed, or a quoted one you jumped to.
   // Full width, past the list's side padding.
   highlight: {
-    backgroundColor: 'rgba(201,245,63,0.12)',
+    backgroundColor: colors['lime-wash'],
     marginHorizontal: -18,
-    paddingHorizontal: 18,
+    paddingHorizontal: spacing.header,
   },
 });

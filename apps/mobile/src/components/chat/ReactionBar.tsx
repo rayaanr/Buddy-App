@@ -7,7 +7,7 @@ import { popIn } from '@/theme/motion';
 import { selectionHaptic } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, shadows } from '@/theme';
 
 export interface SelectedMessage {
   message: ChatMessage;
@@ -105,11 +105,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors['surface-raised'],
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 12,
+    boxShadow: shadows.raised,
   },
   left: { left: 12 },
   right: { right: 12 },

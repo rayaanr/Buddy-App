@@ -12,6 +12,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { ApiRequestError, errorMessage } from '@/api/client';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
+import { Card } from './Card';
 import { Button } from './Button';
 import { NotFound } from './NotFound';
 
@@ -43,8 +44,8 @@ export function LoadError({
 }) {
   if (stale) {
     return (
-      <View className="mb-3 flex-row items-center gap-3 rounded-2xl bg-surface py-2.5 pl-4 pr-2">
-        <Text className="flex-1 font-sans text-[13.5px] text-muted" numberOfLines={2}>
+      <Card className="mb-3 flex-row items-center gap-3 py-2.5 pl-4 pr-2">
+        <Text className="flex-1 font-sans text-label text-muted" numberOfLines={2}>
           Couldn’t refresh. {errorMessage(error)}
         </Text>
         <Pressable
@@ -53,19 +54,19 @@ export function LoadError({
           hitSlop={6}
           className="h-9 justify-center rounded-xl px-3 active:bg-surface-raised"
         >
-          <Text className="font-sans-semibold text-[14px] text-lime">Retry</Text>
+          <Text className="font-sans-semibold text-label text-lime">Retry</Text>
         </Pressable>
-      </View>
+      </Card>
     );
   }
   return (
-    <View className="items-center rounded-[20px] bg-surface px-5 py-10">
-      <Text className="font-sans-semibold text-[17px] text-ink">Couldn’t load this</Text>
-      <Text className="mt-1.5 text-center font-sans text-[14px] leading-5 text-muted">
+    <Card className="items-center px-5 py-10">
+      <Text className="font-sans-semibold text-headline text-ink">Couldn’t load this</Text>
+      <Text className="mt-1.5 text-center font-sans text-label leading-5 text-muted">
         {errorMessage(error)}
       </Text>
       <Button label="Try again" size="sm" variant="outline" onPress={onRetry} className="mt-4" />
-    </View>
+    </Card>
   );
 }
 
@@ -88,7 +89,7 @@ export function QueryFallback({
     return <NotFound message={notFound} />;
   }
   return (
-    <View className="flex-1 justify-center bg-bg px-[22px]">
+    <View className="flex-1 justify-center bg-bg px-edge">
       <LoadError error={query.error} onRetry={() => void query.refetch()} />
     </View>
   );

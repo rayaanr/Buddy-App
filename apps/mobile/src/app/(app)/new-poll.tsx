@@ -21,7 +21,7 @@ import {
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 /**
  * Ask the group something: a question and 2–6 options, sent into the chat.
@@ -70,11 +70,15 @@ export default function NewPollScreen() {
     <KeyboardScreen className="flex-1 bg-bg">
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingTop: top(58),
+          paddingHorizontal: spacing.edge,
+          paddingBottom: 24,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable onPress={() => router.back()} hitSlop={8} className="self-start py-1.5">
-          <Text className="font-sans text-[16px] text-muted">Cancel</Text>
+          <Text className="font-sans text-body text-muted">Cancel</Text>
         </Pressable>
         <Heading size="page" className="mt-4">
           New poll
@@ -126,14 +130,14 @@ export default function NewPollScreen() {
             className="mt-3.5 flex-row items-center gap-2 self-start active:opacity-70"
           >
             <PlusIcon size={17} color={colors.lime} />
-            <Text className="font-sans-medium text-[14.5px] text-lime">Add an option</Text>
+            <Text className="font-sans-medium text-subhead text-lime">Add an option</Text>
           </Pressable>
         ) : null}
 
         <View className="mt-7 flex-row items-center justify-between gap-4">
           <View className="flex-1">
-            <Text className="font-sans text-[15.5px] text-ink">Let people pick more than one</Text>
-            <Text className="mt-0.5 font-sans text-[13px] text-muted">
+            <Text className="font-sans text-body text-ink">Let people pick more than one</Text>
+            <Text className="mt-0.5 font-sans text-footnote text-muted">
               Good for “which days can you make?”
             </Text>
           </View>
@@ -144,6 +148,7 @@ export default function NewPollScreen() {
       <Footer>
         <Button
           label={busy ? 'Sending…' : 'Send poll'}
+          loading={busy}
           inactive={!valid || busy}
           onPress={() => void send()}
         />

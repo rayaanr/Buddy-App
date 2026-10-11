@@ -25,7 +25,7 @@ export function TypingIndicator({ name }: { name: string }) {
         accessibilityLiveRegion="polite"
         accessibilityLabel={`${name} is typing`}
       >
-        <Text className="font-sans text-[13.5px] text-muted">{name} is typing</Text>
+        <Text className="font-sans text-label text-muted">{name} is typing</Text>
         <View className="flex-row items-center gap-[3px] pt-1">
           {Array.from({ length: DOTS }, (_, i) => (
             <Dot key={i} index={i} />

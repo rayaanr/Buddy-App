@@ -33,7 +33,7 @@ import {
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 /** Every group chat you're in: activities you're going to and your communities. */
 const FILTERS = [
@@ -69,13 +69,13 @@ export default function ChatsScreen() {
   return (
     <View className="flex-1 bg-bg">
       {selected ? (
-        <View className="flex-row items-center gap-3 px-[18px]" style={{ paddingTop: top(56) }}>
+        <View className="flex-row items-center gap-3 px-header" style={{ paddingTop: top(56) }}>
           <IconButton
             icon={<CloseIcon />}
             label="Done with this chat"
             onPress={() => setSelectedId(null)}
           />
-          <Text numberOfLines={1} className="flex-1 font-sans-semibold text-[17px] text-ink">
+          <Text numberOfLines={1} className="flex-1 font-sans-semibold text-headline text-ink">
             {selected.title}
           </Text>
           <IconButton
@@ -96,7 +96,11 @@ export default function ChatsScreen() {
         data={shown}
         keyExtractor={(c) => c.id}
         extraData={selectedId}
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 30,
+        }}
         refreshControl={
           <Refresh refreshing={chats.isRefetching} onRefresh={() => void chats.refetch()} />
         }
@@ -105,8 +109,8 @@ export default function ChatsScreen() {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              className="-mx-[22px] mb-1"
-              contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingBottom: 6 }}
+              className="-mx-edge mb-1"
+              contentContainerStyle={{ gap: 8, paddingHorizontal: spacing.edge, paddingBottom: 6 }}
             >
               {FILTERS.map((f) => (
                 <Chip
@@ -138,7 +142,7 @@ export default function ChatsScreen() {
               onPress={() => router.navigate('/')}
             />
           ) : chats.data ? (
-            <Text className="py-10 text-center font-sans text-[14.5px] text-muted">
+            <Text className="py-10 text-center font-sans text-subhead text-muted">
               {filter === 'unread' ? 'You’re all caught up.' : 'No chats here yet.'}
             </Text>
           ) : null
@@ -201,7 +205,7 @@ function Row({
       accessibilityLabel={`${c.title}. ${c.muted ? 'Muted. ' : ''}${unread ? `${c.unread} new. ` : ''}${preview(c)}`}
       accessibilityHint="Hold for options"
       className={cn(
-        '-mx-[22px] flex-row items-center gap-3.5 border-b border-divider px-[22px] py-3.5 active:opacity-80',
+        '-mx-edge flex-row items-center gap-3.5 border-b border-divider px-edge py-3.5 active:opacity-80',
         selected && 'bg-surface',
       )}
     >
@@ -221,21 +225,21 @@ function Row({
       </View>
       <View className="min-w-0 flex-1">
         <View className="flex-row items-baseline gap-2">
-          <Text className="flex-1 font-sans-semibold text-[15.5px] text-ink" numberOfLines={1}>
+          <Text className="flex-1 font-sans-semibold text-body text-ink" numberOfLines={1}>
             {c.title}
           </Text>
           {c.lastMessage ? (
-            <Text className={cn('font-sans text-[12.5px]', unread ? 'text-lime' : 'text-subtle')}>
+            <Text className={cn('font-sans text-footnote', unread ? 'text-lime' : 'text-subtle')}>
               {when(c.lastMessage.createdAt)}
             </Text>
           ) : null}
         </View>
         <View className="mt-1 flex-row items-center gap-2">
           {c.cancelled ? (
-            <Text className="font-sans-medium text-[13.5px] text-danger">Cancelled ·</Text>
+            <Text className="font-sans-medium text-label text-danger">Cancelled ·</Text>
           ) : null}
           <Text
-            className={cn('flex-1 font-sans text-[14px]', unread ? 'text-ink-soft' : 'text-muted')}
+            className={cn('flex-1 font-sans text-label', unread ? 'text-ink-soft' : 'text-muted')}
             numberOfLines={1}
           >
             {preview(c)}

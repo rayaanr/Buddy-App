@@ -23,7 +23,7 @@ interface PhotoButtonProps {
  * one or removing it.
  */
 export function PhotoButton({ image, name, shape, size, noun, emptyHint }: PhotoButtonProps) {
-  const radius = shape === 'circle' ? 'rounded-full' : 'rounded-[24px]';
+  const radius = shape === 'circle' ? 'rounded-full' : 'rounded-hero';
   const face = (
     <View>
       <Avatar uri={image.uri ?? undefined} name={name} shape={shape} size={size} />
@@ -60,7 +60,7 @@ export function PhotoButton({ image, name, shape, size, noun, emptyHint }: Photo
           {face}
         </PressableScale>
       )}
-      <Text className="mt-2.5 text-center font-sans text-[13.5px] text-muted">
+      <Text className="mt-2.5 text-center font-sans text-label text-muted">
         {image.uploading
           ? 'Uploading…'
           : image.uri

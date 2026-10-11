@@ -18,9 +18,10 @@ import {
   SectionLabel,
   StatTile,
   Tag,
+  Card,
 } from '@/components/ui';
 import { toast } from '@/store/ui';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,7 +39,11 @@ export default function UserProfileScreen() {
       <ScreenHeader right={me.data && !isMe ? <SafetyMenu person={u} /> : null} />
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 30 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 8,
+          paddingBottom: 30,
+        }}
       >
         <Avatar
           uri={u.avatarUrl ?? undefined}
@@ -52,13 +57,13 @@ export default function UserProfileScreen() {
           {u.name}
         </Heading>
         {u.area ? (
-          <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">{u.area}</Text>
+          <Text className="mt-1.5 text-center font-sans text-subhead text-muted">{u.area}</Text>
         ) : null}
-        <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
+        <Text className="mt-0.5 text-center font-sans text-footnote text-subtle">
           On Buddy since {monthYear(new Date(u.memberSince))}
         </Text>
         {u.bio ? (
-          <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-[15px] leading-[22.5px] text-ink-dim">
+          <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-subhead leading-subhead text-ink-dim">
             {u.bio}
           </Text>
         ) : null}
@@ -150,9 +155,9 @@ function SafetyMenu({ person }: { person: PublicProfile }) {
 function BlockedNotice({ person }: { person: PublicProfile }) {
   const { update, pending, name } = useBlockToggle(person);
   return (
-    <View className="mt-8 rounded-[18px] bg-surface px-[18px] py-4">
-      <Text className="font-sans-semibold text-[16px] text-ink">You blocked {name}</Text>
-      <Text className="mt-1.5 font-sans text-[14.5px] leading-[21px] text-muted">
+    <Card className="mt-8 px-[18px] py-4">
+      <Text className="font-sans-semibold text-body text-ink">You blocked {name}</Text>
+      <Text className="mt-1.5 font-sans text-subhead leading-subhead text-muted">
         You won’t see each other’s activities or messages.
       </Text>
       <Button
@@ -163,6 +168,6 @@ function BlockedNotice({ person }: { person: PublicProfile }) {
         onPress={() => update(false)}
         className="mt-4"
       />
-    </View>
+    </Card>
   );
 }

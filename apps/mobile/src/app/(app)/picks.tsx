@@ -52,11 +52,11 @@ export default function PicksScreen() {
   return (
     <View className="flex-1 bg-bg">
       <View
-        className="flex-row items-start justify-between px-[22px]"
+        className="flex-row items-start justify-between px-edge"
         style={{ paddingTop: top(60) }}
       >
         <View className="flex-1">
-          <Text className="font-mono-medium text-[12px] tracking-[1.44px] text-lime">
+          <Text className="font-mono-medium text-caption tracking-[1.44px] text-lime">
             PICKED FOR YOU{deck ? ` · ${Math.min(index + 1, deck.length)} OF ${deck.length}` : ''}
           </Text>
           <Heading size="section" className="mt-2">
@@ -64,7 +64,7 @@ export default function PicksScreen() {
               ? 'Worth a look'
               : `Welcome back${me.data ? `, ${firstName(me.data.name)}` : ''}`}
           </Heading>
-          <Text className="mt-1.5 font-sans text-[14.5px] text-muted">
+          <Text className="mt-1.5 font-sans text-subhead text-muted">
             Near {me.data?.area ?? 'you'}, based on what you’re into.
           </Text>
         </View>
@@ -89,7 +89,7 @@ export default function PicksScreen() {
         />
       ) : null}
       {deck && !deck.length ? (
-        <View className="flex-1 justify-center px-[22px]">
+        <View className="flex-1 justify-center px-edge">
           <EmptyState
             card
             title="Nothing new right now"

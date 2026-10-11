@@ -19,6 +19,7 @@ import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useSendCode } from '@/hooks/useSendCode';
 import { useAccountStore } from '@/store/account';
+import { spacing } from '@/theme';
 
 /** Just an email: name, town and interests come after the code, and can be skipped. */
 export default function SignUpScreen() {
@@ -46,14 +47,18 @@ export default function SignUpScreen() {
     <KeyboardScreen className="flex-1 bg-bg">
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: top(56), paddingHorizontal: 22, paddingBottom: 20 }}
+        contentContainerStyle={{
+          paddingTop: top(56),
+          paddingHorizontal: spacing.edge,
+          paddingBottom: 20,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <BackButton onPress={leave} />
         <Heading size="hero" className="mt-6">
           Create your account
         </Heading>
-        <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
+        <Text className="mt-3 font-sans text-body leading-body text-muted">
           Just your email for now. You can add your name, town and interests next.
         </Text>
 
@@ -72,16 +77,16 @@ export default function SignUpScreen() {
           onSubmitEditing={submit}
         />
         {tried && !emailValid ? (
-          <Text className="mt-2 font-sans text-[13.5px] text-danger">
+          <Text className="mt-2 font-sans text-label text-danger">
             Enter a valid email address.
           </Text>
         ) : null}
-        <Text className="mt-2 font-sans text-[13.5px] leading-[19px] text-muted">
+        <Text className="mt-2 font-sans text-label leading-label text-muted">
           We’ll email you a 6-digit code. No password needed.
         </Text>
 
-        {error ? <Text className="mt-4 font-sans text-[13.5px] text-danger">{error}</Text> : null}
-        <Text className="mt-6 font-sans text-[13px] leading-[19px] text-subtle">
+        {error ? <Text className="mt-4 font-sans text-label text-danger">{error}</Text> : null}
+        <Text className="mt-6 font-sans text-footnote leading-label text-subtle">
           By creating an account you agree to the{' '}
           <Text
             className="text-ink-dim underline"
@@ -105,17 +110,18 @@ export default function SignUpScreen() {
       <Footer>
         <Button
           label={sending ? 'Sending code…' : 'Create account'}
+          loading={sending}
           inactive={!emailValid || sending}
           onPress={submit}
         />
         <View className="mt-3.5 flex-row justify-center gap-1.5">
-          <Text className="font-sans text-[14.5px] text-muted">Already on Buddy?</Text>
+          <Text className="font-sans text-subhead text-muted">Already on Buddy?</Text>
           <Pressable
             onPress={() => router.replace('/sign-in')}
             accessibilityRole="link"
             hitSlop={8}
           >
-            <Text className="font-sans-medium text-[14.5px] text-lime">Sign in</Text>
+            <Text className="font-sans-medium text-subhead text-lime">Sign in</Text>
           </Pressable>
         </View>
       </Footer>

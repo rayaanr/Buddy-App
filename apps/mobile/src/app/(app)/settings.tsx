@@ -16,6 +16,7 @@ import {
 import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
+import { spacing } from '@/theme';
 
 /** Profile → Settings: account details and the less common account actions. */
 export default function SettingsScreen() {
@@ -35,12 +36,16 @@ export default function SettingsScreen() {
       <ScreenHeader title="Settings" />
       <ScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 30,
+        }}
       >
         <SectionLabel className="mb-1 mt-2">Account</SectionLabel>
         <View className="flex-row items-center justify-between border-b border-divider py-3.5">
-          <Text className="font-sans text-[15.5px] text-ink">Email</Text>
-          <Text className="font-sans text-[15px] text-muted" numberOfLines={1}>
+          <Text className="font-sans text-body text-ink">Email</Text>
+          <Text className="font-sans text-subhead text-muted" numberOfLines={1}>
             {me.data?.email ?? ''}
           </Text>
         </View>
@@ -109,8 +114,8 @@ function NotificationSwitch({
   return (
     <View className="flex-row items-center gap-4 border-b border-divider py-3.5">
       <View className="flex-1">
-        <Text className="font-sans text-[15.5px] text-ink">{label}</Text>
-        <Text className="mt-0.5 font-sans text-[13px] leading-[18px] text-muted">{sub}</Text>
+        <Text className="font-sans text-body text-ink">{label}</Text>
+        <Text className="mt-0.5 font-sans text-footnote leading-footnote text-muted">{sub}</Text>
       </View>
       <Toggle
         value={value}
@@ -133,7 +138,7 @@ function Row({ label, danger, onPress }: { label: string; danger?: boolean; onPr
       accessibilityRole="button"
       className="flex-row items-center justify-between border-b border-divider py-3.5 active:opacity-80"
     >
-      <Text className={cn('font-sans text-[15.5px]', danger ? 'text-danger' : 'text-ink')}>
+      <Text className={cn('font-sans text-body', danger ? 'text-danger' : 'text-ink')}>
         {label}
       </Text>
       <ChevronRightIcon />

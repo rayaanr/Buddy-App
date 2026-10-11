@@ -50,6 +50,7 @@ import {
   ShareIcon,
   successHaptic,
   useEnterOnChange,
+  Card,
 } from '@/components/ui';
 import { MAP_ACTION, MeetingMap } from '@/components/activity/MeetingMap';
 import { MembersSheet } from '@/components/activity/MembersSheet';
@@ -217,12 +218,12 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           </Photo>
         </AnimatedView>
 
-        <View className="bg-bg px-[22px] pb-6 pt-3">
+        <View className="bg-bg px-edge pb-6 pt-3">
           <Heading size="page">{a.title}</Heading>
           {a.cancelled ? (
             <View className="mt-3 rounded-2xl border border-danger/40 bg-danger/10 px-4 py-3">
-              <Text className="font-sans-semibold text-[15px] text-danger">Cancelled</Text>
-              <Text className="mt-0.5 font-sans text-[14px] leading-[20px] text-ink-dim">
+              <Text className="font-sans-semibold text-subhead text-danger">Cancelled</Text>
+              <Text className="mt-0.5 font-sans text-label leading-label text-ink-dim">
                 {a.viewer.hosting
                   ? 'You called this off. The group chat stays open.'
                   : `${firstName(a.host.name)} called this off. The group chat stays open.`}
@@ -233,10 +234,13 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           {a.community ? (
             <PressableScale
               onPress={() => router.push(`/community/${a.community!.id}`)}
+              accessibilityRole="link"
+              // 32pt tall: reach 44 for a fingertip.
+              hitSlop={6}
               className="mt-3 h-8 flex-row items-center gap-1.5 self-start rounded-2xl border border-outline px-[13px]"
             >
-              <Text className="font-sans-medium text-[13.5px] text-muted">Part of</Text>
-              <Text className="font-sans-medium text-[13.5px] text-ink">{a.community.name}</Text>
+              <Text className="font-sans-medium text-label text-muted">Part of</Text>
+              <Text className="font-sans-medium text-label text-ink">{a.community.name}</Text>
               <ArrowRightIcon size={14} />
             </PressableScale>
           ) : null}
@@ -244,7 +248,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           {a.invitedBy && !isIn && !a.cancelled ? (
             <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-lime-panel-border bg-lime-panel px-3.5 py-3">
               <Avatar uri={a.invitedBy.avatarUrl ?? undefined} name={a.invitedBy.name} size={36} />
-              <Text className="flex-1 font-sans text-[14.5px] leading-[20px] text-ink-soft">
+              <Text className="flex-1 font-sans text-subhead leading-label text-ink-soft">
                 <Text className="font-sans-semibold text-lime">{firstName(a.invitedBy.name)}</Text>{' '}
                 invited you. Join below if you’re in.
               </Text>
@@ -267,20 +271,20 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
                 className={cn('flex-1', MAP_ACTION)}
               >
                 <CalendarIcon size={18} color={colors.lime} />
-                <Text className="font-sans-semibold text-[14.5px] text-ink">Add to calendar</Text>
+                <Text className="font-sans-semibold text-subhead text-ink">Add to calendar</Text>
               </Pressable>
             ) : null}
           </MeetingMap>
 
           {costLabel(a) || a.bring ? (
-            <View className="mt-2.5 rounded-[18px] bg-surface px-4 py-1">
+            <Card className="mt-2.5 px-4 py-1">
               {costLabel(a) ? (
                 <DetailRow label="Cost" value={a.costLkr ? `${costLabel(a)} per person` : 'Free'} />
               ) : null}
               {a.bring ? (
                 <DetailRow label="Bring" value={a.bring} divider={!!costLabel(a)} />
               ) : null}
-            </View>
+            </Card>
           ) : null}
 
           <Attendance activity={a} canRemove={canManage} />
@@ -291,7 +295,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               className="mt-2.5 h-12 flex-row items-center justify-center gap-2 rounded-2xl border border-outline"
             >
               <PeopleIcon size={18} color={colors.lime} />
-              <Text className="font-sans-semibold text-[15px] text-ink">Invite friends</Text>
+              <Text className="font-sans-semibold text-subhead text-ink">Invite friends</Text>
             </PressableScale>
           ) : null}
 
@@ -304,15 +308,15 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           >
             <Avatar uri={a.host.avatarUrl ?? undefined} name={a.host.name} size={46} />
             <View>
-              <Text className="font-sans-semibold text-[16px] text-ink">
+              <Text className="font-sans-semibold text-body text-ink">
                 Hosted by {a.viewer.hosting ? 'you' : a.host.name}
               </Text>
-              <Text className="mt-[3px] font-sans text-[13.5px] text-muted">{hostMeta}</Text>
+              <Text className="mt-[3px] font-sans text-label text-muted">{hostMeta}</Text>
             </View>
           </PressableScale>
 
           {a.description ? (
-            <Text className="mt-5 font-sans text-[15px] leading-[22.5px] text-ink-dim">
+            <Text className="mt-5 font-sans text-subhead leading-subhead text-ink-dim">
               {a.description}
             </Text>
           ) : null}
@@ -323,13 +327,13 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
       <View className="absolute inset-x-0 top-0" pointerEvents="box-none">
         <AnimatedView pointerEvents="none" style={[styles.bar, barStyle]} />
         <View
-          className="flex-row items-center gap-3 px-[18px] pb-2.5"
+          className="flex-row items-center gap-3 px-header pb-2.5"
           style={{ paddingTop: top(56) }}
           pointerEvents="box-none"
         >
           <BackButton tone="glass" />
           <AnimatedView style={[styles.flex, barStyle]} pointerEvents="none">
-            <Text className="font-sans-semibold text-[16px] text-ink" numberOfLines={1}>
+            <Text className="font-sans-semibold text-body text-ink" numberOfLines={1}>
               {a.title}
             </Text>
           </AnimatedView>
@@ -350,6 +354,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           {!isIn && left > 0 ? (
             <Button
               label={join.isPending ? 'Joining…' : 'Join activity'}
+              loading={join.isPending}
               inactive={busy}
               onPress={onJoin}
               className="flex-1"
@@ -358,15 +363,16 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           {!isIn && left <= 0 && position ? (
             <>
               <View className="flex-1 justify-center">
-                <Text className="font-sans-semibold text-[16px] text-ink">
+                <Text className="font-sans-semibold text-body text-ink">
                   You’re {ordinal(position)} in line
                 </Text>
-                <Text className="mt-0.5 font-sans text-[13px] text-muted">
+                <Text className="mt-0.5 font-sans text-footnote text-muted">
                   We’ll move you in if a spot opens.
                 </Text>
               </View>
               <Button
                 label={waitlist.isPending ? 'Leaving…' : 'Leave waitlist'}
+                loading={waitlist.isPending}
                 variant="outline"
                 disabled={busy}
                 onPress={onWaitlist}
@@ -377,6 +383,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           {!isIn && left <= 0 && !position && canWait ? (
             <Button
               label={waitlist.isPending ? 'Joining…' : 'Join waitlist'}
+              loading={waitlist.isPending}
               variant="outline"
               disabled={busy}
               onPress={onWaitlist}
@@ -396,6 +403,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               {a.viewer.joined ? (
                 <Button
                   label={leave.isPending ? 'Leaving…' : 'Leave'}
+                  loading={leave.isPending}
                   variant="outline"
                   disabled={busy}
                   onPress={onLeave}
@@ -437,8 +445,8 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
 function DetailRow({ label, value, divider }: { label: string; value: string; divider?: boolean }) {
   return (
     <View className={cn('flex-row gap-4 py-3', divider && 'border-t border-divider')}>
-      <Text className="w-14 font-sans text-[14px] text-muted">{label}</Text>
-      <Text className="flex-1 font-sans-medium text-[15px] leading-[21px] text-ink">{value}</Text>
+      <Text className="w-14 font-sans text-label text-muted">{label}</Text>
+      <Text className="flex-1 font-sans-medium text-subhead leading-subhead text-ink">{value}</Text>
     </View>
   );
 }
@@ -457,16 +465,14 @@ function WouldGoAgain({ activity: a }: { activity: ActivityDetail }) {
       onError: (err) => toast(errorMessage(err)),
     });
   return (
-    <View className="mt-4 rounded-[18px] border border-lime-panel-border bg-lime-panel p-4">
-      <Text className="font-sans-semibold text-[16px] text-ink">
-        Would you go again with {host}?
-      </Text>
-      <Text className="mt-1 font-sans text-[13.5px] leading-[19px] text-muted">
+    <View className="mt-4 rounded-card border border-lime-panel-border bg-lime-panel p-4">
+      <Text className="font-sans-semibold text-body text-ink">Would you go again with {host}?</Text>
+      <Text className="mt-1 font-sans text-label leading-label text-muted">
         Private: {host} only sees how many people said yes, never who.
       </Text>
       <View className="mt-3.5 flex-row gap-2.5">
         {[
-          { yes: true, label: '👍 Yes' },
+          { yes: true, label: 'Yes' },
           { yes: false, label: 'Not really' },
         ].map((o) => (
           <Pressable
@@ -482,7 +488,7 @@ function WouldGoAgain({ activity: a }: { activity: ActivityDetail }) {
           >
             <Text
               className={cn(
-                'font-sans-semibold text-[15px]',
+                'font-sans-semibold text-subhead',
                 mine === o.yes ? 'text-bg' : 'text-ink',
               )}
             >
@@ -497,11 +503,11 @@ function WouldGoAgain({ activity: a }: { activity: ActivityDetail }) {
 
 function InfoTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <View className="flex-1 rounded-2xl bg-surface px-[15px] py-3.5">
-      <Text className="font-sans text-[13px] text-muted">{label}</Text>
-      <Text className="mt-[5px] font-sans-semibold text-[15.5px] text-ink">{value}</Text>
-      {sub ? <Text className="mt-[3px] font-sans text-[13px] text-muted">{sub}</Text> : null}
-    </View>
+    <Card className="flex-1 px-[15px] py-3.5">
+      <Text className="font-sans text-footnote text-muted">{label}</Text>
+      <Text className="mt-[5px] font-sans-semibold text-body text-ink">{value}</Text>
+      {sub ? <Text className="mt-[3px] font-sans text-footnote text-muted">{sub}</Text> : null}
+    </Card>
   );
 }
 
@@ -526,15 +532,15 @@ function Attendance({ activity: a, canRemove }: { activity: ActivityDetail; canR
         onPress={() => setMembersOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={`${going}. See who's going`}
-        className="mt-2.5 rounded-[18px] bg-surface p-4"
+        className="mt-2.5 rounded-card bg-surface p-4"
       >
         <View className="flex-row justify-between">
           <AnimatedView style={countStyle}>
-            <Text className="font-sans-semibold text-[15.5px] text-ink">{going}</Text>
+            <Text className="font-sans-semibold text-body text-ink">{going}</Text>
           </AnimatedView>
-          <Text className="font-sans text-[14px] text-muted">{spotsLabel(a)}</Text>
+          <Text className="font-sans text-label text-muted">{spotsLabel(a)}</Text>
         </View>
-        <View className="mt-3.5 h-1.5 overflow-hidden rounded-[3px] bg-track">
+        <View className="mt-3.5 h-1.5 overflow-hidden rounded-full bg-track">
           <AnimatedView style={[styles.fill, fillStyle]} />
         </View>
         <View className="mt-3.5 flex-row items-center">
@@ -549,10 +555,10 @@ function Attendance({ activity: a, canRemove }: { activity: ActivityDetail; canR
             />
           ))}
           {extra > 0 ? (
-            <Text className="ml-[18px] font-sans text-[14px] text-muted">+{extra} more</Text>
+            <Text className="ml-[18px] font-sans text-label text-muted">+{extra} more</Text>
           ) : null}
           <View className="ml-auto flex-row items-center gap-1">
-            <Text className="font-sans-medium text-[14px] text-lime">See all</Text>
+            <Text className="font-sans-medium text-label text-lime">See all</Text>
             <ArrowRightIcon size={14} />
           </View>
         </View>

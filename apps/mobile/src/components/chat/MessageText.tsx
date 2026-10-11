@@ -20,7 +20,7 @@ export function MessageText({
   mentions: ChatMessage['mentions'];
   mine: boolean;
 }) {
-  const base = cn('font-sans text-[15.5px] leading-[21.5px]', mine ? 'text-bg' : 'text-ink');
+  const base = cn('font-sans text-body leading-subhead', mine ? 'text-bg' : 'text-ink');
   const byName = new Map(mentions.map((m) => [firstName(m.name).toLowerCase(), m]));
   if (!byName.size) return <Text className={base}>{body}</Text>;
 

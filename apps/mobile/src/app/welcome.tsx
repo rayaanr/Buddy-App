@@ -35,7 +35,7 @@ export default function WelcomeScreen() {
   const { top, bottom } = useScreenInsets();
   return (
     <View
-      className="flex-1 bg-bg px-[22px]"
+      className="flex-1 bg-bg px-edge"
       style={{ paddingTop: top(64), paddingBottom: bottom(34) }}
     >
       <BrandMark />
@@ -43,7 +43,7 @@ export default function WelcomeScreen() {
         <CardFan cards={EXAMPLES} badge="Happening near you this week" />
       </View>
       <Heading size="hero">Find people to do things with</Heading>
-      <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
+      <Text className="mt-3 font-sans text-body leading-body text-muted">
         Runs, games, markets and more around Sri Lanka. See who’s going and join in two taps.
       </Text>
       <Button label="Get started" onPress={() => router.push('/sign-up')} className="mt-7" />

@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { locationLabel } from '@/lib/activity';
+import { spacing } from '@/theme';
 
 export default function ProfileScreen() {
   const { top } = useScreenInsets();
@@ -35,7 +36,11 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       className="flex-1 bg-bg"
-      contentContainerStyle={{ paddingTop: top(68), paddingHorizontal: 22, paddingBottom: 24 }}
+      contentContainerStyle={{
+        paddingTop: top(68),
+        paddingHorizontal: spacing.edge,
+        paddingBottom: 24,
+      }}
       refreshControl={
         <Refresh
           refreshing={me.isRefetching}
@@ -61,14 +66,14 @@ export default function ProfileScreen() {
       <Heading size="page" className="mt-4 text-center">
         {name}
       </Heading>
-      <Text className="mt-1.5 text-center font-sans text-[14.5px] text-muted">
+      <Text className="mt-1.5 text-center font-sans text-subhead text-muted">
         {locationLabel(area)}
       </Text>
-      <Text className="mt-0.5 text-center font-sans text-[12.5px] text-subtle">
+      <Text className="mt-0.5 text-center font-sans text-footnote text-subtle">
         On Buddy since {monthYear(new Date(createdAt))}
       </Text>
       {bio ? (
-        <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-[15px] leading-[22.5px] text-ink-dim">
+        <Text className="mt-4 max-w-[300px] self-center text-center font-sans text-subhead leading-subhead text-ink-dim">
           {bio}
         </Text>
       ) : null}
@@ -88,7 +93,7 @@ export default function ProfileScreen() {
 
       <SectionLabel className="mb-1 mt-6">Recent</SectionLabel>
       {history.data?.length === 0 ? (
-        <Text className="py-3.5 font-sans text-[14.5px] text-muted">
+        <Text className="py-3.5 font-sans text-subhead text-muted">
           Activities you’ve been to will show up here.
         </Text>
       ) : null}
@@ -98,10 +103,10 @@ export default function ProfileScreen() {
           onPress={() => router.push(`/activity/${a.id}`)}
           className="flex-row items-center justify-between gap-3 border-b border-divider py-3.5 active:opacity-80"
         >
-          <Text className="flex-1 font-sans text-[15.5px] text-ink" numberOfLines={1}>
+          <Text className="flex-1 font-sans text-body text-ink" numberOfLines={1}>
             {a.title}
           </Text>
-          <Text className="font-sans text-[14px] text-muted">{dayMonth(new Date(a.startsAt))}</Text>
+          <Text className="font-sans text-label text-muted">{dayMonth(new Date(a.startsAt))}</Text>
         </Pressable>
       ))}
     </ScrollView>

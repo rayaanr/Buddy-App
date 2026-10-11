@@ -135,7 +135,7 @@ function Row({ value, i, offset }: { value: string; i: number; offset: SharedVal
       className="items-center justify-center"
     >
       <Animated.View style={style}>
-        <Text className="font-mono-medium text-[26px] text-ink">{value}</Text>
+        <Text className="font-mono-medium text-numeral text-ink">{value}</Text>
       </Animated.View>
     </View>
   );

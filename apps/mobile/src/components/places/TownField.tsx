@@ -38,7 +38,7 @@ export function TownField({ value, onChange, tone = 'sunken', invalid }: TownFie
         <MapPinIcon />
         <Text
           numberOfLines={1}
-          className={cn('flex-1 font-sans text-[16px]', value ? 'text-ink' : 'text-subtle')}
+          className={cn('flex-1 font-sans text-body', value ? 'text-ink' : 'text-subtle')}
         >
           {value ? placeLabel(value) : 'Search your town'}
         </Text>

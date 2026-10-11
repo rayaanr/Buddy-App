@@ -25,10 +25,12 @@ import {
   KeyboardScreen,
   SectionLabel,
   TextField,
+  Card,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
+import { spacing } from '@/theme';
 
 type ReportTarget = 'user' | 'message' | 'activity' | 'community';
 
@@ -105,24 +107,28 @@ export default function ReportScreen() {
     <KeyboardScreen className="flex-1 bg-bg">
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingTop: top(58), paddingHorizontal: 22, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingTop: top(58),
+          paddingHorizontal: spacing.edge,
+          paddingBottom: 24,
+        }}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable onPress={() => router.back()} hitSlop={8} className="self-start py-1.5">
-          <Text className="font-sans text-[16px] text-muted">Cancel</Text>
+          <Text className="font-sans text-body text-muted">Cancel</Text>
         </Pressable>
         <Heading size="page" className="mt-4">
           {title}
         </Heading>
-        <Text className="mt-2 font-sans text-[15px] leading-[22px] text-muted">
+        <Text className="mt-2 font-sans text-subhead leading-subhead text-muted">
           Reports are private. {who ?? 'They'} won’t know you reported them.
         </Text>
         {message ? (
-          <View className="mt-4 rounded-[18px] rounded-bl-md bg-surface px-4 py-3">
-            <Text className="font-sans text-[15px] leading-[21px] text-ink" numberOfLines={4}>
+          <Card className="mt-4 rounded-bl-md px-4 py-3">
+            <Text className="font-sans text-subhead leading-subhead text-ink" numberOfLines={4}>
               {message.body}
             </Text>
-          </View>
+          </Card>
         ) : null}
 
         <SectionLabel className="mb-2.5 mt-6">What’s wrong?</SectionLabel>
@@ -140,7 +146,7 @@ export default function ReportScreen() {
                   selected ? 'border-lime bg-lime-panel' : 'border-field bg-surface-sunken',
                 )}
               >
-                <Text className="font-sans-medium text-[15.5px] text-ink">{label}</Text>
+                <Text className="font-sans-medium text-body text-ink">{label}</Text>
                 <View
                   className={cn(
                     'h-5 w-5 items-center justify-center rounded-full border-2',
@@ -182,8 +188,8 @@ export default function ReportScreen() {
               {alsoBlock ? <CheckIcon size={14} strokeWidth={3} /> : null}
             </View>
             <View className="flex-1">
-              <Text className="font-sans-medium text-[15.5px] text-ink">Also block {who}</Text>
-              <Text className="mt-0.5 font-sans text-[13.5px] text-muted">
+              <Text className="font-sans-medium text-body text-ink">Also block {who}</Text>
+              <Text className="mt-0.5 font-sans text-label text-muted">
                 You won’t see each other’s activities or messages.
               </Text>
             </View>
@@ -194,6 +200,7 @@ export default function ReportScreen() {
       <Footer>
         <Button
           label={busy ? 'Sending…' : 'Send report'}
+          loading={busy}
           inactive={!reason || busy}
           onPress={submit}
         />

@@ -11,14 +11,14 @@ import { useScreenInsets } from '@/hooks/useScreenInsets';
 export default function NotFoundScreen() {
   const { top } = useScreenInsets();
   return (
-    <View className="flex-1 bg-bg px-[22px]" style={{ paddingTop: top(56) }}>
+    <View className="flex-1 bg-bg px-edge" style={{ paddingTop: top(56) }}>
       <Stack.Screen options={{ headerShown: false }} />
       <BackButton />
       <View className="flex-1 items-center justify-center pb-24">
-        <Text className="text-center font-sans-semibold text-[19px] text-ink">
+        <Text className="text-center font-sans-semibold text-title2 text-ink">
           This page doesn’t exist
         </Text>
-        <Text className="mt-2 text-center font-sans text-[14.5px] leading-[21px] text-muted">
+        <Text className="mt-2 text-center font-sans text-subhead leading-subhead text-muted">
           The link may be old, or the activity may have been removed.
         </Text>
         <Button

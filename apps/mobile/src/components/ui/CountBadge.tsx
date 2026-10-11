@@ -24,7 +24,7 @@ export function CountBadge({
     >
       <Text
         allowFontScaling={false}
-        className={cn('font-sans-semibold text-[11.5px]', muted ? 'text-muted' : 'text-bg')}
+        className={cn('font-sans-semibold text-caption', muted ? 'text-muted' : 'text-bg')}
       >
         {count > 99 ? '99+' : count}
       </Text>

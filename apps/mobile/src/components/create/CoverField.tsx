@@ -26,8 +26,8 @@ export function CoverField({ cover, hue, removeLabel, hint }: CoverFieldProps) {
         className="h-[118px] items-center justify-center gap-1.5 rounded-2xl border border-dashed border-outline px-6"
       >
         <ImagePlusIcon />
-        <Text className="font-sans-medium text-[15px] text-ink">Add a cover photo</Text>
-        <Text className="text-center font-sans text-[13px] text-muted">{hint}</Text>
+        <Text className="font-sans-medium text-subhead text-ink">Add a cover photo</Text>
+        <Text className="text-center font-sans text-footnote text-muted">{hint}</Text>
       </PressableScale>
     );
   }

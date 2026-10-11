@@ -13,7 +13,7 @@ import {
   PressableScale,
   selectionHaptic,
 } from '@/components/ui';
-import { colors, TAB_BAR_HEIGHT } from '@/theme';
+import { colors, TAB_BAR_HEIGHT, shadows } from '@/theme';
 
 const TABS: Record<string, { label: string; Icon: ComponentType<{ color?: string }> }> = {
   index: { label: 'Discover', Icon: CompassIcon },
@@ -57,7 +57,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         {/* One line always: shrinks a little rather than wrap ("Communitie/s"),
             e.g. with a larger system text size. */}
         <Text
-          className="font-sans-medium text-[12px]"
+          className="font-sans-medium text-caption"
           style={{ color }}
           numberOfLines={1}
           adjustsFontSizeToFit
@@ -84,13 +84,9 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           accessibilityLabel="New activity"
           haptic="light"
           scale="strong"
-          className="-mt-1.5 h-[58px] w-[58px] items-center justify-center rounded-[19px] bg-lime"
+          className="-mt-1.5 h-[58px] w-[58px] items-center justify-center rounded-card bg-lime"
           style={{
-            shadowColor: colors.lime,
-            shadowOpacity: 0.35,
-            shadowRadius: 11,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 6,
+            boxShadow: shadows.glow,
           }}
         >
           <PlusIcon />

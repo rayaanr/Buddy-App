@@ -1,7 +1,7 @@
 import type { ChatPoll } from '@buddy/shared';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CheckIcon } from '@/components/ui';
+import { CheckIcon, Card } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
@@ -27,12 +27,12 @@ export function PollCard({ poll, myId, onVote }: PollCardProps) {
   };
 
   return (
-    <View className="w-[272px] rounded-[18px] border border-line bg-surface p-3.5">
-      <Text className="font-mono-medium text-[11px] uppercase tracking-[1px] text-lime">Poll</Text>
-      <Text className="mt-1 font-sans-semibold text-[16px] leading-[22px] text-ink">
+    <Card className="w-[272px] border border-line p-3.5">
+      <Text className="font-mono-medium text-micro uppercase tracking-[1px] text-lime">Poll</Text>
+      <Text className="mt-1 font-sans-semibold text-body leading-subhead text-ink">
         {poll.question}
       </Text>
-      <Text className="mb-2.5 mt-0.5 font-sans text-[12.5px] text-muted">
+      <Text className="mb-2.5 mt-0.5 font-sans text-footnote text-muted">
         {poll.multiple ? 'Pick any' : 'Pick one'} · {voters.size}{' '}
         {voters.size === 1 ? 'vote' : 'votes'}
       </Text>
@@ -66,17 +66,13 @@ export function PollCard({ poll, myId, onVote }: PollCardProps) {
               >
                 {picked ? <CheckIcon size={12} strokeWidth={3} /> : null}
               </View>
-              <Text className="flex-1 py-2.5 font-sans-medium text-[14.5px] text-ink">
-                {o.text}
-              </Text>
-              <Text className="font-sans-semibold text-[13.5px] text-muted">
-                {o.voterIds.length}
-              </Text>
+              <Text className="flex-1 py-2.5 font-sans-medium text-subhead text-ink">{o.text}</Text>
+              <Text className="font-sans-semibold text-label text-muted">{o.voterIds.length}</Text>
             </Pressable>
           );
         })}
       </View>
-    </View>
+    </Card>
   );
 }
 

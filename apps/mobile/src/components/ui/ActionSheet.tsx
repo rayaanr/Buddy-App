@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { cn } from '@/lib/cn';
+import { Card } from './Card';
 import { Button } from './Button';
 import { CONTROL_FONT_SCALE } from '@/theme';
 import { Dialog } from './Dialog';
@@ -56,22 +57,22 @@ export function ActionSheet({
         run?.();
       }}
     >
-      <View className="px-[22px]">
+      <View className="px-edge">
         {shown.title || shown.message ? (
           <View className="items-center gap-1 pb-4">
             {shown.title ? (
-              <Text className="text-center font-sans-semibold text-[16px] text-ink">
+              <Text className="text-center font-sans-semibold text-body text-ink">
                 {shown.title}
               </Text>
             ) : null}
             {shown.message ? (
-              <Text className="text-center font-sans text-[14px] leading-[20px] text-muted">
+              <Text className="text-center font-sans text-label leading-label text-muted">
                 {shown.message}
               </Text>
             ) : null}
           </View>
         ) : null}
-        <View className="overflow-hidden rounded-[20px] bg-surface">
+        <Card className="overflow-hidden">
           {actions.map((action, i) => (
             <Pressable
               key={i}
@@ -88,7 +89,7 @@ export function ActionSheet({
               <Text
                 maxFontSizeMultiplier={CONTROL_FONT_SCALE}
                 className={cn(
-                  'font-sans-medium text-[16.5px]',
+                  'font-sans-medium text-headline',
                   action.destructive ? 'text-danger' : 'text-ink',
                 )}
               >
@@ -96,7 +97,7 @@ export function ActionSheet({
               </Text>
             </Pressable>
           ))}
-        </View>
+        </Card>
         <Button
           label={cancelLabel}
           variant="outline"

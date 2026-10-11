@@ -68,7 +68,7 @@ export function MembersSheet({
           className="flex-1 flex-row items-center gap-3.5 py-3"
         >
           <Avatar uri={p.avatarUrl ?? undefined} name={p.name} size={40} />
-          <Text className="flex-1 font-sans-medium text-[16px] text-ink" numberOfLines={1}>
+          <Text className="flex-1 font-sans-medium text-body text-ink" numberOfLines={1}>
             {p.name}
             {isMe ? <Text className="text-muted"> (you)</Text> : null}
           </Text>
@@ -85,7 +85,7 @@ export function MembersSheet({
             accessibilityLabel={`Remove ${p.name}`}
             className="ml-3 rounded-full border border-outline px-3 py-1.5 active:opacity-70"
           >
-            <Text className="font-sans-medium text-[13px] text-muted">Remove</Text>
+            <Text className="font-sans-medium text-footnote text-muted">Remove</Text>
           </Pressable>
         ) : null}
       </View>
@@ -116,8 +116,8 @@ export function MembersSheet({
           if (n && 'remove' in n) setRemoving(n.remove);
         }}
       >
-        <View className="px-[22px]">
-          <Text className="font-sans-semibold text-[18px] text-ink">{title}</Text>
+        <View className="px-edge">
+          <Text className="font-sans-semibold text-title3 text-ink">{title}</Text>
           {people.isLoading ? <Loading className="py-10" /> : null}
           {people.error ? (
             <View className="mt-4">
@@ -133,7 +133,7 @@ export function MembersSheet({
               row(
                 m,
                 m.role === 'host' ? (
-                  <Text className="overflow-hidden rounded-[10px] bg-lime-deep px-2.5 py-1 font-sans-medium text-[12.5px] text-lime">
+                  <Text className="overflow-hidden rounded-tag bg-lime-deep px-2.5 py-1 font-sans-medium text-footnote text-lime">
                     Host
                   </Text>
                 ) : null,
@@ -145,7 +145,7 @@ export function MembersSheet({
             <>
               <SectionLabel className="mb-1 mt-6">Waitlist · {waitlist.length}</SectionLabel>
               {waitlist.map((w, i) =>
-                row(w, <Text className="font-mono text-[13px] text-subtle">#{i + 1}</Text>, true),
+                row(w, <Text className="font-mono text-footnote text-subtle">#{i + 1}</Text>, true),
               )}
             </>
           ) : null}

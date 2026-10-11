@@ -24,6 +24,7 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
+import { spacing } from '@/theme';
 
 type Status = 'open' | 'resolved';
 
@@ -56,7 +57,7 @@ export default function ModerationScreen() {
         data={reports.data ?? []}
         keyExtractor={(r) => r.id}
         contentContainerStyle={{
-          paddingHorizontal: 22,
+          paddingHorizontal: spacing.edge,
           paddingTop: 12,
           paddingBottom: 30,
           gap: 12,
@@ -66,7 +67,7 @@ export default function ModerationScreen() {
         }
         ListHeaderComponent={
           <View className="mb-1">
-            <Text className="font-sans text-[14px] leading-[20px] text-muted">
+            <Text className="font-sans text-label leading-label text-muted">
               Act on reports within 24 hours. Tap one for what you can do.
             </Text>
             <SegmentedControl
@@ -192,13 +193,13 @@ function ReportCard({ report: r, onPress }: { report: AdminReport; onPress?: () 
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      className="rounded-[18px] bg-surface p-4 active:opacity-80"
+      className="rounded-card bg-surface p-4 active:opacity-80"
     >
       <View className="flex-row items-center justify-between">
-        <Text className="font-mono-medium text-[11.5px] uppercase tracking-[1.1px] text-lime">
+        <Text className="font-mono-medium text-caption uppercase tracking-[1.1px] text-lime">
           {REPORT_REASONS[r.reason]}
         </Text>
-        <Text className="font-sans text-[12.5px] text-subtle">
+        <Text className="font-sans text-footnote text-subtle">
           {dayMonth(at)} · {clockLabel(at)}
         </Text>
       </View>
@@ -209,9 +210,9 @@ function ReportCard({ report: r, onPress }: { report: AdminReport; onPress?: () 
           className="mt-3 flex-row items-center gap-2.5 self-start active:opacity-70"
         >
           <Avatar uri={r.person.avatarUrl ?? undefined} name={r.person.name} size={30} />
-          <Text className="font-sans-medium text-[15px] text-ink">{r.person.name}</Text>
+          <Text className="font-sans-medium text-subhead text-ink">{r.person.name}</Text>
           {r.person.suspended ? (
-            <Text className="rounded-full bg-danger/15 px-2 py-0.5 font-sans-medium text-[11.5px] text-danger">
+            <Text className="rounded-full bg-danger/15 px-2 py-0.5 font-sans-medium text-caption text-danger">
               Suspended
             </Text>
           ) : null}
@@ -219,8 +220,8 @@ function ReportCard({ report: r, onPress }: { report: AdminReport; onPress?: () 
       ) : null}
 
       {r.message ? (
-        <View className="mt-3 rounded-[14px] rounded-bl-md bg-bg px-3.5 py-2.5">
-          <Text className="font-sans text-[14.5px] leading-[20px] text-ink" numberOfLines={5}>
+        <View className="mt-3 rounded-tile rounded-bl-md bg-bg px-3.5 py-2.5">
+          <Text className="font-sans text-subhead leading-label text-ink" numberOfLines={5}>
             {r.message.body}
           </Text>
         </View>
@@ -238,21 +239,21 @@ function ReportCard({ report: r, onPress }: { report: AdminReport; onPress?: () 
         />
       ) : null}
       {!r.person && !r.message && !r.activity && !r.community ? (
-        <Text className="mt-3 font-sans text-[14px] text-muted">Since deleted.</Text>
+        <Text className="mt-3 font-sans text-label text-muted">Since deleted.</Text>
       ) : null}
 
       {r.details ? (
-        <Text className="mt-3 font-sans text-[14px] italic leading-[20px] text-ink-dim">
+        <Text className="mt-3 font-sans text-label italic leading-label text-ink-dim">
           “{r.details}”
         </Text>
       ) : null}
-      <Text className="mt-2.5 font-sans text-[12.5px] text-muted">
+      <Text className="mt-2.5 font-sans text-footnote text-muted">
         Reported by {r.reporter?.name ?? 'a deleted account'}
       </Text>
       {r.resolution ? (
         <Text
           className={cn(
-            'mt-1 font-sans-medium text-[12.5px]',
+            'mt-1 font-sans-medium text-footnote',
             r.resolution === 'dismissed' ? 'text-muted' : 'text-lime',
           )}
         >
@@ -266,7 +267,7 @@ function ReportCard({ report: r, onPress }: { report: AdminReport; onPress?: () 
 function Link({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} className="mt-3 self-start active:opacity-70" hitSlop={6}>
-      <Text className="font-sans-medium text-[14.5px] text-ink underline" numberOfLines={2}>
+      <Text className="font-sans-medium text-subhead text-ink underline" numberOfLines={2}>
         {label}
       </Text>
     </Pressable>

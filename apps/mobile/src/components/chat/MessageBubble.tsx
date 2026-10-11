@@ -94,7 +94,7 @@ export const MessageBubble = memo(function MessageBubble({
   const { message: m, mine, status, startsRun, gap, showMeta } = row;
 
   if (m.kind === 'system') {
-    return <Text className="my-1.5 self-center font-sans text-[12.5px] text-subtle">{m.body}</Text>;
+    return <Text className="my-1.5 self-center font-sans text-footnote text-subtle">{m.body}</Text>;
   }
 
   // Only saved messages can be reacted or replied to; deleted ones are just a line.
@@ -147,7 +147,7 @@ export const MessageBubble = memo(function MessageBubble({
                 accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
                 className="ml-1.5 self-start"
               >
-                <Text className="font-sans-medium text-[13px] text-muted">{sender.name}</Text>
+                <Text className="font-sans-medium text-footnote text-muted">{sender.name}</Text>
               </Pressable>
             ) : null}
             <Pressable
@@ -156,7 +156,7 @@ export const MessageBubble = memo(function MessageBubble({
               accessibilityHint="Long press to react, reply or report"
               className={cn(
                 'self-start active:opacity-80',
-                !m.poll && 'overflow-hidden rounded-[18px] rounded-bl-md bg-surface',
+                !m.poll && 'overflow-hidden rounded-card rounded-bl-md bg-surface',
                 !m.poll && !m.image && !m.photoExpired && (m.replyTo ? 'p-1' : 'px-4 py-3'),
               )}
             >
@@ -182,7 +182,7 @@ export const MessageBubble = memo(function MessageBubble({
             status === 'failed' ? 'Sends the message again' : 'Long press to react or reply'
           }
           className={cn(
-            !m.poll && 'overflow-hidden rounded-[18px] rounded-br-md bg-lime',
+            !m.poll && 'overflow-hidden rounded-card rounded-br-md bg-lime',
             !m.poll && !m.image && !m.photoExpired && (m.replyTo ? 'p-1' : 'px-4 py-3'),
           )}
           style={{ opacity: saved ? 1 : 0.6 }}
@@ -218,7 +218,7 @@ function Content({
     return (
       <Text
         className={cn(
-          'font-sans text-[14.5px] italic leading-[20px]',
+          'font-sans text-subhead italic leading-label',
           mine ? 'text-bg/70' : 'text-subtle',
         )}
       >
@@ -255,7 +255,7 @@ function Content({
             mine ? 'bg-black/10' : 'bg-surface-raised',
           )}
         >
-          <Text className={cn('font-sans text-[13px]', mine ? 'text-bg/70' : 'text-subtle')}>
+          <Text className={cn('font-sans text-footnote', mine ? 'text-bg/70' : 'text-subtle')}>
             Photo no longer available
           </Text>
         </View>
@@ -275,7 +275,7 @@ function Content({
           {m.editedAt ? (
             <Text
               className={cn(
-                'mt-0.5 self-end font-sans text-[11px]',
+                'mt-0.5 self-end font-sans text-micro',
                 mine ? 'text-bg/60' : 'text-subtle',
               )}
             >
@@ -310,18 +310,21 @@ function Quote({
     >
       <View
         className={cn(
-          'rounded-[14px] border-l-[4px] px-3 py-2',
+          'rounded-tile border-l-[4px] px-3 py-2',
           mine ? 'border-bg/50 bg-black/10' : 'border-lime bg-surface-raised',
         )}
       >
         <Text
-          className={cn('font-sans-semibold text-[12.5px]', mine ? 'text-bg' : 'text-lime')}
+          className={cn('font-sans-semibold text-footnote', mine ? 'text-bg' : 'text-lime')}
           numberOfLines={1}
         >
           {quote.senderName ?? 'Deleted account'}
         </Text>
         <Text
-          className={cn('font-sans text-[13px] leading-[18px]', mine ? 'text-bg/80' : 'text-muted')}
+          className={cn(
+            'font-sans text-footnote leading-footnote',
+            mine ? 'text-bg/80' : 'text-muted',
+          )}
           numberOfLines={2}
         >
           {quote.summary}
@@ -360,7 +363,7 @@ function Reactions({
           >
             <Text style={styles.reaction}>{r.emoji}</Text>
             {r.userIds.length > 1 ? (
-              <Text className="font-sans-semibold text-[12px] text-ink-soft">
+              <Text className="font-sans-semibold text-caption text-ink-soft">
                 {r.userIds.length}
               </Text>
             ) : null}
@@ -467,7 +470,7 @@ function MessageMeta({ status, createdAt }: { status: MessageStatus; createdAt: 
   return (
     <AnimatedView style={[styles.meta, style]}>
       <Text
-        className="font-sans text-[12px]"
+        className="font-sans text-caption"
         style={{ color: status === 'failed' ? colors.danger : colors.subtle }}
       >
         {meta}

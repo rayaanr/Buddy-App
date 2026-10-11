@@ -42,7 +42,7 @@ export function MeetingMap({ location, place, children }: MeetingMapProps) {
   const directions = (
     <View className={MAP_ACTION}>
       <MapPinIcon color={colors.lime} />
-      <Text className="font-sans-semibold text-[14.5px] text-ink">Directions</Text>
+      <Text className="font-sans-semibold text-subhead text-ink">Directions</Text>
     </View>
   );
 
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(201,245,63,0.18)',
+    backgroundColor: colors['lime-wash'],
   },
   pin: {
     width: PIN,
@@ -144,8 +144,8 @@ const styles = StyleSheet.create({
     right: 8,
     bottom: 6,
     fontSize: 9.5,
-    color: 'rgba(0,0,0,0.6)',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    color: colors['map-credit'],
+    backgroundColor: colors['map-credit-bg'],
     paddingHorizontal: 4,
     borderRadius: 4,
     overflow: 'hidden',

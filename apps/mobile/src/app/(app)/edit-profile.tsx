@@ -34,6 +34,7 @@ import { PhotoButton } from '@/components/create/PhotoButton';
 import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { toast } from '@/store/ui';
+import { spacing } from '@/theme';
 
 /**
  * Profile → Edit profile: photo, name, bio, home town, interests, when you're
@@ -98,7 +99,11 @@ function EditProfileForm({ me }: { me: Saved }) {
       <ScreenHeader title="Edit profile" />
       <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 24,
+        }}
       >
         <PhotoButton image={photo} name={name || me.name} shape="circle" size={96} noun="photo" />
 
@@ -113,7 +118,7 @@ function EditProfileForm({ me }: { me: Saved }) {
 
         <View className="mb-2 mt-6 flex-row items-baseline justify-between">
           <SectionLabel>About you</SectionLabel>
-          <Text className="font-mono text-[12px] text-subtle">
+          <Text className="font-mono text-caption text-subtle">
             {bio.length}/{LIMITS.bioMax}
           </Text>
         </View>
@@ -126,7 +131,7 @@ function EditProfileForm({ me }: { me: Saved }) {
           textAlignVertical="top"
           tone="inset"
           size="md"
-          className="h-24 py-3.5 leading-[22px]"
+          className="h-24 py-3.5 leading-subhead"
         />
 
         {/* Distances are measured from a known town, so this is a choice, not free text. */}
@@ -140,10 +145,10 @@ function EditProfileForm({ me }: { me: Saved }) {
         <AvailabilityChips value={availability} onChange={setAvailability} />
 
         <SectionLabel className="mb-1 mt-8">Just for you</SectionLabel>
-        <Text className="mb-3 font-sans text-[13px] leading-[18px] text-muted">
+        <Text className="mb-3 font-sans text-footnote leading-footnote text-muted">
           Never shown on your profile.
         </Text>
-        <Text className="mb-2 font-sans text-[13.5px] text-muted">Gender</Text>
+        <Text className="mb-2 font-sans text-label text-muted">Gender</Text>
         <View className="flex-row flex-wrap gap-2" role="radiogroup" accessibilityLabel="Gender">
           {GENDERS.map((g) => (
             <Chip
@@ -154,13 +159,14 @@ function EditProfileForm({ me }: { me: Saved }) {
             />
           ))}
         </View>
-        <Text className="mb-2 mt-4 font-sans text-[13.5px] text-muted">Birth year</Text>
+        <Text className="mb-2 mt-4 font-sans text-label text-muted">Birth year</Text>
         <BirthYearField value={year} onChange={setYear} tone="inset" />
       </KeyboardAwareScrollView>
 
       <Footer>
         <Button
           label={update.isPending ? 'Saving…' : 'Save'}
+          loading={update.isPending}
           inactive={update.isPending || uploading || !!birthYearProblem(year)}
           onPress={save}
         />

@@ -21,9 +21,9 @@ interface ChipProps {
 }
 
 const SHAPE = {
-  pill: 'h-[42px] rounded-[21px] px-[17px]',
-  compact: 'h-[38px] rounded-[19px] px-[17px]',
-  tile: 'h-11 flex-1 rounded-[14px]',
+  pill: 'h-[42px] rounded-full px-[17px]',
+  compact: 'h-[38px] rounded-full px-[17px]',
+  tile: 'h-11 flex-1 rounded-tile',
 };
 
 /** Selectable chip: lime when selected, outlined otherwise. */
@@ -61,7 +61,7 @@ export function Chip({
         <Text
           maxFontSizeMultiplier={CONTROL_FONT_SCALE}
           className={cn(
-            mono ? 'font-mono-medium text-[14.5px]' : 'font-sans-medium text-[15px]',
+            mono ? 'font-mono-medium text-subhead' : 'font-sans-medium text-subhead',
             selected ? 'text-bg' : 'text-ink',
           )}
         >
@@ -79,7 +79,7 @@ export function Tag({ label, active = true }: { label: string; active?: boolean 
       maxFontSizeMultiplier={CONTROL_FONT_SCALE}
       className={cn(
         // Grows with larger text instead of clipping inside a fixed height.
-        'min-h-[34px] overflow-hidden rounded-[17px] px-[15px] py-2 font-sans-medium text-[14px] leading-[18px]',
+        'min-h-[34px] overflow-hidden rounded-card px-[15px] py-2 font-sans-medium text-label leading-footnote',
         active ? 'bg-lime-deep text-lime' : 'bg-surface-raised text-ink-dim',
       )}
     >

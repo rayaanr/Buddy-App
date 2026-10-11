@@ -15,7 +15,7 @@ import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 import { CheckIcon, CloseIcon, Eyebrow, Heading, Photo, Scrim } from '@/components/ui';
 import { availabilityColor, distanceLabel, hueFor, spotsLabel, whenLong } from '@/lib/activity';
 import { project } from '@/lib/gestures';
-import { colors } from '@/theme';
+import { colors, shadows } from '@/theme';
 import { spring } from '@/theme/motion';
 
 /**
@@ -106,7 +106,7 @@ export function SwipeDeck({ top, next, reason, index, onDecide }: SwipeDeckProps
 
   return (
     <>
-      <View className="relative mx-[22px] mt-5 flex-1">
+      <View className="relative mx-edge mt-5 flex-1">
         {next ? <BackCard activity={next} tx={tx} /> : null}
         <GestureDetector gesture={pan}>
           <TopCard activity={top} reason={reason} tx={tx} ty={ty} />
@@ -128,11 +128,7 @@ export function SwipeDeck({ top, next, reason, index, onDecide }: SwipeDeckProps
           accessibilityLabel="Interested"
           className="h-[78px] w-[78px] items-center justify-center rounded-full bg-lime active:scale-90"
           style={{
-            shadowColor: colors.lime,
-            shadowOpacity: 0.35,
-            shadowRadius: 13,
-            shadowOffset: { width: 0, height: 0 },
-            elevation: 8,
+            boxShadow: shadows.glow,
           }}
         >
           <CheckIcon />
@@ -152,9 +148,9 @@ function BackCard({ activity, tx }: { activity: Activity; tx: SharedValue<number
       <Photo
         uri={activity.coverUrl ?? undefined}
         hue={hueFor(activity)}
-        className="flex-1 rounded-[28px] border border-line"
+        className="flex-1 rounded-modal border border-line"
       >
-        <View className="absolute inset-0 bg-[rgba(11,12,11,0.45)]" />
+        <View className="absolute inset-0 bg-shade" />
       </Photo>
     </Animated.View>
   );
@@ -188,11 +184,7 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
         StyleSheet.absoluteFill,
         { borderRadius: 28, backgroundColor: hueFor(a) },
         {
-          shadowColor: '#000',
-          shadowOpacity: 0.5,
-          shadowRadius: 25,
-          shadowOffset: { width: 0, height: 20 },
-          elevation: 14,
+          boxShadow: shadows.overlay,
         },
         cardStyle,
       ]}
@@ -200,11 +192,11 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
       <Photo
         uri={a.coverUrl ?? undefined}
         hue={hueFor(a)}
-        className="flex-1 rounded-[28px] border border-[#2a2c29]"
+        className="flex-1 rounded-modal border border-card-edge"
       >
         <Scrim from={0.35} opacity={0.92} />
-        <View className="absolute right-3.5 top-3.5 h-7 justify-center rounded-[14px] bg-lime px-[11px]">
-          <Text className="font-sans-semibold text-[13px] text-bg">{distanceLabel(a)}</Text>
+        <View className="absolute right-3.5 top-3.5 h-7 justify-center rounded-tile bg-lime px-[11px]">
+          <Text className="font-sans-semibold text-footnote text-bg">{distanceLabel(a)}</Text>
         </View>
 
         <Animated.View
@@ -225,18 +217,18 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
         </Animated.View>
 
         <View className="absolute inset-x-5 bottom-5">
-          <View className="h-7 justify-center self-start rounded-[14px] bg-[rgba(201,245,63,0.14)] px-3">
-            <Text className="font-sans-medium text-[13px] text-lime">{reason}</Text>
+          <View className="h-7 justify-center self-start rounded-tile bg-lime-wash px-3">
+            <Text className="font-sans-medium text-footnote text-lime">{reason}</Text>
           </View>
           <Eyebrow className="mt-3">{a.category}</Eyebrow>
           <Heading size="card" className="mt-2">
             {a.title}
           </Heading>
           <View className="mt-3 gap-1">
-            <Text className="font-sans text-[14.5px] text-ink-dim">
+            <Text className="font-sans text-subhead text-ink-dim">
               {whenLong(a)} · {a.place}
             </Text>
-            <Text className="font-sans text-[14.5px]" style={{ color: availabilityColor(a) }}>
+            <Text className="font-sans text-subhead" style={{ color: availabilityColor(a) }}>
               {a.goingCount} going · {spotsLabel(a)}
             </Text>
           </View>
@@ -248,8 +240,8 @@ function TopCard({ activity: a, reason, tx, ty }: TopCardProps) {
 
 function Stamp({ label, color }: { label: string; color: string }) {
   return (
-    <View className="rounded-[10px] border-[3px] px-3.5 py-1.5" style={{ borderColor: color }}>
-      <Text className="font-display-heavy text-[26px] tracking-[1px]" style={{ color }}>
+    <View className="rounded-tag border-[3px] px-3.5 py-1.5" style={{ borderColor: color }}>
+      <Text className="font-display-heavy text-numeral tracking-[1px]" style={{ color }}>
         {label}
       </Text>
     </View>

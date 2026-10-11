@@ -28,12 +28,12 @@ export default function DeleteAccountScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <View className="flex-1 px-[22px]" style={{ paddingTop: top(56) }}>
+      <View className="flex-1 px-edge" style={{ paddingTop: top(56) }}>
         <BackButton />
         <Heading size="page" className="mt-6">
           Delete your account?
         </Heading>
-        <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
+        <Text className="mt-3 font-sans text-body leading-body text-muted">
           This permanently deletes{' '}
           <Text className="text-ink">{me.data?.email ?? 'your account'}</Text> and can’t be undone.
           It removes:
@@ -41,22 +41,23 @@ export default function DeleteAccountScreen() {
         <View className="mt-4 gap-2.5">
           {WHAT_GOES.map((line) => (
             <View key={line} className="flex-row gap-3">
-              <Text className="font-sans text-[15.5px] text-danger">•</Text>
-              <Text className="flex-1 font-sans text-[15.5px] leading-[22px] text-ink-dim">
+              <Text className="font-sans text-body text-danger">•</Text>
+              <Text className="flex-1 font-sans text-body leading-subhead text-ink-dim">
                 {line}
               </Text>
             </View>
           ))}
         </View>
-        <Text className="mt-5 font-sans text-[14.5px] leading-[21px] text-muted">
+        <Text className="mt-5 font-sans text-subhead leading-subhead text-muted">
           Signing up again later with the same email starts a new, empty account.
         </Text>
-        {error ? <Text className="mt-4 font-sans text-[14px] text-danger">{error}</Text> : null}
+        {error ? <Text className="mt-4 font-sans text-label text-danger">{error}</Text> : null}
       </View>
 
       <Footer>
         <Button
           label={deleting ? 'Deleting…' : 'Delete my account'}
+          loading={deleting}
           variant="danger-outline"
           disabled={deleting}
           onPress={() => remove.mutate()}

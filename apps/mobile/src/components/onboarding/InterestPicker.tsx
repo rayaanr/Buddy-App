@@ -67,15 +67,15 @@ function InterestTile({
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
       className={cn(
-        'h-[54px] w-[48.8%] flex-row items-center justify-between rounded-[14px] border pl-4 pr-3.5 active:opacity-80',
+        'h-[54px] w-[48.8%] flex-row items-center justify-between rounded-tile border pl-4 pr-3.5 active:opacity-80',
         selected ? 'border-lime bg-lime-tint' : 'border-surface bg-surface',
       )}
     >
-      <Text className="font-sans-medium text-[15.5px] text-ink">{label}</Text>
+      <Text className="font-sans-medium text-body text-ink">{label}</Text>
       <View
         className={cn(
           'h-5 w-5 rounded-full border-[1.5px]',
-          selected ? 'border-lime bg-lime' : 'border-[#4a4c48] bg-transparent',
+          selected ? 'border-lime bg-lime' : 'border-outline-strong bg-transparent',
         )}
       />
     </Pressable>

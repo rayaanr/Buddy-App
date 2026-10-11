@@ -40,7 +40,7 @@ export function BirthYearField({
         tone={tone}
         accessibilityLabel="Birth year"
       />
-      {problem ? <Text className="mt-2 font-sans text-[13.5px] text-danger">{problem}</Text> : null}
+      {problem ? <Text className="mt-2 font-sans text-label text-danger">{problem}</Text> : null}
     </View>
   );
 }

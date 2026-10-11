@@ -15,7 +15,7 @@ import {
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { whenLabel } from '@/lib/activity';
 import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { layoutItem } from '@/theme/motion';
 
 type Segment = 'joined' | 'hosting';
@@ -45,7 +45,7 @@ export default function ActivitiesScreen() {
       itemLayoutAnimation={layoutItem}
       contentContainerStyle={{
         paddingTop: top(62),
-        paddingHorizontal: 22,
+        paddingHorizontal: spacing.edge,
         paddingBottom: 24,
         gap: 12,
       }}
@@ -71,10 +71,10 @@ export default function ActivitiesScreen() {
           />
 
           {news.length > 0 ? (
-            <View className="mt-4 rounded-[20px] border border-lime-panel-border bg-lime-panel px-4 pb-1.5 pt-3.5">
+            <View className="mt-4 rounded-panel border border-lime-panel-border bg-lime-panel px-4 pb-1.5 pt-3.5">
               <View className="flex-row items-center gap-2">
                 <View className="h-2 w-2 rounded-full bg-lime" />
-                <Text className="font-sans-semibold text-[15px] text-ink">
+                <Text className="font-sans-semibold text-subhead text-ink">
                   {news.length} new from your communities
                 </Text>
               </View>
@@ -88,15 +88,15 @@ export default function ActivitiesScreen() {
                   )}
                 >
                   <View className="min-w-0 flex-1">
-                    <Text className="font-sans-medium text-[15px] text-ink" numberOfLines={1}>
+                    <Text className="font-sans-medium text-subhead text-ink" numberOfLines={1}>
                       {activity.title}
                     </Text>
-                    <Text className="mt-[3px] font-sans text-[13px] text-lime-panel-muted">
+                    <Text className="mt-[3px] font-sans text-footnote text-lime-panel-muted">
                       {activity.community?.name} · {whenLabel(activity)}
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-1 self-center">
-                    <Text className="font-sans-medium text-[14px] text-lime">View</Text>
+                    <Text className="font-sans-medium text-label text-lime">View</Text>
                     <ArrowRightIcon size={14} />
                   </View>
                 </Pressable>

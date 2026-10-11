@@ -78,7 +78,7 @@ export function DatePickerSheet({
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <View className="px-[22px]">
+      <View className="px-edge">
         <View className="flex-row items-center justify-between">
           <IconButton
             icon={<ChevronLeftIcon color={canPrev ? colors.ink : colors.subtle} />}
@@ -86,7 +86,7 @@ export function DatePickerSheet({
             disabled={!canPrev}
             onPress={() => step(-1)}
           />
-          <Text className="font-sans-semibold text-[17px] text-ink">
+          <Text className="font-sans-semibold text-headline text-ink">
             {MONTHS[m - 1]} {y}
           </Text>
           <IconButton
@@ -99,7 +99,7 @@ export function DatePickerSheet({
 
         <View className="mt-4 flex-row">
           {WEEKDAYS.map((d, i) => (
-            <Text key={i} className="flex-1 text-center font-mono text-[12px] text-subtle">
+            <Text key={i} className="flex-1 text-center font-mono text-caption text-subtle">
               {d}
             </Text>
           ))}
@@ -134,7 +134,7 @@ export function DatePickerSheet({
                     >
                       <Text
                         className={cn(
-                          'font-sans-medium text-[15px]',
+                          'font-sans-medium text-subhead',
                           selected ? 'text-bg' : disabled ? 'text-subtle opacity-40' : 'text-ink',
                         )}
                       >

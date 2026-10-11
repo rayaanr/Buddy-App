@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { useVenueSearch } from '@/api/queries';
-import { LocateIcon, MapPinIcon, TextField } from '@/components/ui';
+import { LocateIcon, MapPinIcon, TextField, Card } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useLocate } from '@/hooks/useLocate';
 import { useDiscoverStore } from '@/store/discover';
@@ -65,7 +65,7 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
         accessibilityLabel="Where"
       />
       {suggestions.length ? (
-        <View className="mt-1.5 overflow-hidden rounded-2xl bg-surface">
+        <Card className="mt-1.5 overflow-hidden">
           {suggestions.map((v, i) => (
             <Pressable
               key={`${v.name}-${v.location.lat}-${v.location.lng}`}
@@ -76,11 +76,11 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
             >
               <MapPinIcon />
               <View className="min-w-0 flex-1">
-                <Text numberOfLines={1} className="font-sans-medium text-[15px] text-ink">
+                <Text numberOfLines={1} className="font-sans-medium text-subhead text-ink">
                   {v.name}
                 </Text>
                 {v.address ? (
-                  <Text numberOfLines={1} className="mt-0.5 font-sans text-[13px] text-muted">
+                  <Text numberOfLines={1} className="mt-0.5 font-sans text-footnote text-muted">
                     {v.address}
                   </Text>
                 ) : null}
@@ -88,11 +88,11 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
             </Pressable>
           ))}
           {venues.data?.attribution ? (
-            <Text className="border-t border-divider px-4 py-2 text-right font-sans text-[11.5px] text-subtle">
+            <Text className="border-t border-divider px-4 py-2 text-right font-sans text-caption text-subtle">
               {venues.data.attribution}
             </Text>
           ) : null}
-        </View>
+        </Card>
       ) : null}
 
       <View className="mt-2 flex-row items-center gap-2">
@@ -100,7 +100,7 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
           <MapPinIcon size={14} color={pin ? colors.lime : colors.subtle} />
           <Text
             numberOfLines={2}
-            className="shrink font-sans text-[13px] leading-[18px] text-muted"
+            className="shrink font-sans text-footnote leading-footnote text-muted"
           >
             {pin ? `Pinned: ${pin.label}` : `Not pinned yet, so it’ll show in ${fallback}.`}
           </Text>
@@ -116,7 +116,7 @@ export function VenueField({ where, pin, onChange, fallback }: VenueFieldProps) 
           ) : (
             <LocateIcon size={14} />
           )}
-          <Text className="font-sans-medium text-[13px] text-ink">
+          <Text className="font-sans-medium text-footnote text-ink">
             {locating ? 'Finding you…' : 'Use where I am'}
           </Text>
         </Pressable>

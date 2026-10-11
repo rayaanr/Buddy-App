@@ -78,7 +78,7 @@ export function PlaceSearch({
           ))
         : null}
       {typed && results.data?.length === 0 ? (
-        <Text className="py-4 font-sans text-[14.5px] text-muted">
+        <Text className="py-4 font-sans text-subhead text-muted">
           No towns match “{query.trim()}”. Try a nearby town.
         </Text>
       ) : null}
@@ -114,20 +114,18 @@ export function PlaceRow({
         <Text
           numberOfLines={1}
           className={
-            accent
-              ? 'font-sans-medium text-[15.5px] text-lime'
-              : 'font-sans-medium text-[15.5px] text-ink'
+            accent ? 'font-sans-medium text-body text-lime' : 'font-sans-medium text-body text-ink'
           }
         >
           {label}
         </Text>
         {sub ? (
-          <Text numberOfLines={1} className="mt-0.5 font-sans text-[13px] text-muted">
+          <Text numberOfLines={1} className="mt-0.5 font-sans text-footnote text-muted">
             {sub}
           </Text>
         ) : null}
       </View>
-      {selected ? <Text className="font-sans-medium text-[13px] text-lime">Selected</Text> : null}
+      {selected ? <Text className="font-sans-medium text-footnote text-lime">Selected</Text> : null}
     </Pressable>
   );
 }
@@ -146,8 +144,8 @@ export function PlacePickerSheet({
 }) {
   return (
     <Dialog position="top" open={open} onClose={onClose}>
-      <View className="px-[22px]">
-        <Text className="mb-3 font-sans-semibold text-[18px] text-ink">{title}</Text>
+      <View className="px-edge">
+        <Text className="mb-3 font-sans-semibold text-title3 text-ink">{title}</Text>
         <PlaceSearch
           autoFocus
           onPick={(p) => {

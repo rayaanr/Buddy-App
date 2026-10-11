@@ -41,7 +41,7 @@ import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { ActivityMap } from '@/components/discover/ActivityMap';
 import { LocationSheet } from '@/components/discover/LocationSheet';
 import { cn } from '@/lib/cn';
-import { colors, TAB_BAR_HEIGHT } from '@/theme';
+import { colors, TAB_BAR_HEIGHT, spacing } from '@/theme';
 import { currentPointIfAllowed } from '@/lib/location';
 import { useDiscoverStore } from '@/store/discover';
 import { fadeIn } from '@/theme/motion';
@@ -109,7 +109,7 @@ export default function DiscoverScreen() {
         />
       }
     >
-      <View className="flex-row items-center justify-between px-[22px]">
+      <View className="flex-row items-center justify-between px-edge">
         <Pressable
           onPress={() => setWhere((w) => ({ open: true, key: w.key + 1 }))}
           accessibilityRole="button"
@@ -118,7 +118,7 @@ export default function DiscoverScreen() {
           className="min-w-0 flex-1 flex-row items-center gap-1.5 pr-3 active:opacity-70"
         >
           {origin.kind === 'here' ? <LocateIcon size={15} /> : <MapPinIcon size={15} />}
-          <Text className="shrink font-sans-medium text-[14px] text-muted" numberOfLines={1}>
+          <Text className="shrink font-sans-medium text-label text-muted" numberOfLines={1}>
             {originLabel}
           </Text>
           <ChevronDownIcon size={15} />
@@ -153,8 +153,8 @@ export default function DiscoverScreen() {
           </View>
         </View>
       </View>
-      <Heading className="mt-0.5 px-[22px]">What’s happening</Heading>
-      <View className="mt-3.5 flex-row items-center gap-2.5 px-[22px]">
+      <Heading className="mt-0.5 px-edge">What’s happening</Heading>
+      <View className="mt-3.5 flex-row items-center gap-2.5 px-edge">
         <View className="flex-1">
           <SearchField
             value={search}
@@ -189,7 +189,12 @@ export default function DiscoverScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingTop: 12, paddingBottom: 18 }}
+        contentContainerStyle={{
+          gap: 8,
+          paddingHorizontal: spacing.edge,
+          paddingTop: 12,
+          paddingBottom: 18,
+        }}
       >
         {DISCOVER_FILTERS.map((f) => (
           <Chip
@@ -203,7 +208,7 @@ export default function DiscoverScreen() {
       </ScrollView>
 
       {view === 'map' ? (
-        <View className="px-[22px]">
+        <View className="px-edge">
           {feed.isLoading || locating ? (
             <ActivityRowSkeleton />
           ) : (
@@ -222,16 +227,16 @@ export default function DiscoverScreen() {
 
       {view === 'list' && showCommunityRow ? (
         <>
-          <View className="flex-row items-baseline justify-between px-[22px] pb-2.5">
-            <Text className="font-sans-semibold text-[17px] text-ink">From your communities</Text>
+          <View className="flex-row items-baseline justify-between px-edge pb-2.5">
+            <Text className="font-sans-semibold text-headline text-ink">From your communities</Text>
             <Pressable onPress={() => router.navigate('/communities')} hitSlop={8}>
-              <Text className="font-sans-medium text-[14px] text-lime">See all</Text>
+              <Text className="font-sans-medium text-label text-lime">See all</Text>
             </Pressable>
           </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 10, paddingHorizontal: 22, paddingBottom: 20 }}
+            contentContainerStyle={{ gap: 10, paddingHorizontal: spacing.edge, paddingBottom: 20 }}
           >
             {communityItems.map((activity) => (
               <CommunityPickCard key={activity.id} activity={activity} />
@@ -241,14 +246,14 @@ export default function DiscoverScreen() {
       ) : null}
 
       {view === 'list' && widenedTo ? (
-        <Text className="px-[22px] pb-3 font-sans text-[13.5px] leading-[19px] text-muted">
+        <Text className="px-edge pb-3 font-sans text-label leading-label text-muted">
           Not much within {radiusKm} km, so this shows up to {widenedTo} km away, nearest first.
         </Text>
       ) : null}
 
-      <View className={cn('gap-3 px-[22px]', view === 'map' && 'hidden')}>
+      <View className={cn('gap-3 px-edge', view === 'map' && 'hidden')}>
         {isSearch && feed.data ? (
-          <Text className="font-sans text-[13.5px] text-muted">
+          <Text className="font-sans text-label text-muted">
             {results.length
               ? `${results.length === 50 ? '50+' : results.length} across Sri Lanka, nearest first`
               : ''}

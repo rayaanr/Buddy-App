@@ -2,13 +2,10 @@ import type { ReactNode } from 'react';
 import { Text, View, type ViewStyle } from 'react-native';
 
 import { Photo, Scrim } from '@/components/ui';
+import { shadows } from '@/theme';
 
 const SHADOW = {
-  shadowColor: '#000',
-  shadowOpacity: 0.5,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: 16 },
-  elevation: 12,
+  boxShadow: shadows.overlay,
 };
 
 export interface FanCardData {
@@ -41,17 +38,17 @@ export function CardFan({ cards, badge }: { cards: FanCardData[]; badge?: string
       <FanCard card={front} radius={24} style={{ left: 65, top: 0, width: 170, height: 226 }}>
         <Scrim from={0.4} opacity={0.9} />
         <View className="absolute inset-x-3 bottom-3">
-          <Text className="font-mono-medium text-[10.5px] tracking-[1.05px] text-lime">
+          <Text className="font-mono-medium text-micro tracking-[1.05px] text-lime">
             {front.eyebrow}
           </Text>
-          <Text className="mt-[5px] font-sans-semibold text-[14px] leading-[17.5px] text-ink">
+          <Text className="mt-[5px] font-sans-semibold text-label leading-footnote text-ink">
             {front.title}
           </Text>
         </View>
       </FanCard>
       {badge ? (
         <View className="absolute -bottom-1.5 h-8 justify-center self-center rounded-2xl bg-lime px-3.5">
-          <Text className="font-sans-semibold text-[13.5px] text-bg" numberOfLines={1}>
+          <Text className="font-sans-semibold text-label text-bg" numberOfLines={1}>
             {badge}
           </Text>
         </View>
@@ -81,7 +78,7 @@ function FanCard({ card, style, radius = 22, children }: FanCardProps) {
       <Photo
         uri={card.coverUrl ?? undefined}
         hue={card.hue}
-        className="flex-1 border border-[#2a2c29]"
+        className="flex-1 border border-card-edge"
         style={{ borderRadius: radius }}
       >
         {children}

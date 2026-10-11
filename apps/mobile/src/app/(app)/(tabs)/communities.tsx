@@ -16,7 +16,7 @@ import {
 } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 import { layoutItem } from '@/theme/motion';
 
 export default function CommunitiesScreen() {
@@ -38,7 +38,7 @@ export default function CommunitiesScreen() {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={{
         paddingTop: top(62),
-        paddingHorizontal: 22,
+        paddingHorizontal: spacing.edge,
         paddingBottom: 24,
         gap: 14,
       }}
@@ -58,7 +58,7 @@ export default function CommunitiesScreen() {
               onPress={() => router.push('/community/new')}
             />
           </View>
-          <Text className="mt-1.5 font-sans text-[14.5px] text-muted">
+          <Text className="mt-1.5 font-sans text-subhead text-muted">
             Groups around Sri Lanka that meet regularly
             {me.data ? `, nearest to ${me.data.area} first.` : '.'}
           </Text>
@@ -90,14 +90,14 @@ export default function CommunitiesScreen() {
       ListFooterComponent={
         <>
           {isSearch && communities.data?.length === 0 ? (
-            <Text className="font-sans text-[14.5px] text-muted">
+            <Text className="font-sans text-subhead text-muted">
               No communities match “{searching}”.
             </Text>
           ) : null}
           {communities.data ? (
-            <View className="mt-3 items-center rounded-[18px] border border-dashed border-outline p-5">
-              <Text className="font-sans-medium text-[15.5px] text-ink">Don’t see your crowd?</Text>
-              <Text className="mt-1 text-center font-sans text-[13.5px] leading-[19px] text-muted">
+            <View className="mt-3 items-center rounded-card border border-dashed border-outline p-5">
+              <Text className="font-sans-medium text-body text-ink">Don’t see your crowd?</Text>
+              <Text className="mt-1 text-center font-sans text-label leading-label text-muted">
                 Start a community for the people you run, play or make things with.
               </Text>
               <Button
