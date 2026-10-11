@@ -11,7 +11,7 @@ import { colors } from '@/theme';
 const PHOTO_HEIGHT = 124;
 const LOGO = 72;
 /** How far the logo hangs below the cover; the text starts under it. */
-const LOGO_OVERHANG = 26;
+const LOGO_OVERHANG = 12;
 
 export const communityMeta = (c: CommunitySummary) =>
   `${c.memberCount} member${c.memberCount === 1 ? '' : 's'} · ${c.weeklyActivityCount} ${
