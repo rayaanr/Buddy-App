@@ -5,6 +5,7 @@ import { createApp } from './app';
 import { createDeps } from './deps';
 import { loadEnv } from './env';
 import { startReminders } from './jobs/reminders';
+import { startRetention } from './jobs/retention';
 import { startSeries } from './jobs/series';
 
 const env = loadEnv();
@@ -12,6 +13,7 @@ const { deps, close } = createDeps(env);
 const app = createApp(deps);
 const stopReminders = startReminders(deps);
 const stopSeries = startSeries(deps);
+const stopRetention = startRetention(deps);
 
 // Chat sockets share the HTTP port; Hono routes upgrade requests to this server.
 const wss = new WebSocketServer({ noServer: true });
@@ -25,6 +27,7 @@ const shutdown = (signal: string) => {
   deps.logger.info({ signal }, 'Shutting down');
   stopReminders();
   stopSeries();
+  stopRetention();
   wss.close();
   server.close(() => {
     void close().finally(() => process.exit(0));

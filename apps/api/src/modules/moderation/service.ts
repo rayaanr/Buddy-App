@@ -17,6 +17,7 @@ import { badRequest, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import type { ChangeResult } from '../activities/announce';
 import { cancelLocked } from '../activities/service';
+import { communityChatPhotos } from '../chat/service';
 
 const LIST_MAX = 100;
 
@@ -151,11 +152,14 @@ export async function resolveReport(
           });
         }
       } else if (report.communityId) {
+        const chatPhotos = await communityChatPhotos(tx, report.communityId);
         const [gone] = await tx
           .delete(communities)
           .where(eq(communities.id, report.communityId))
           .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
-        out.removedPhotos = [gone?.coverUrl, gone?.logoUrl].filter((u): u is string => !!u);
+        out.removedPhotos = [gone?.coverUrl, gone?.logoUrl, ...chatPhotos].filter(
+          (u): u is string => !!u,
+        );
       } else {
         throw badRequest('This report is about a person; suspend them instead');
       }

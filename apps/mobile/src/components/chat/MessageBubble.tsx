@@ -102,7 +102,7 @@ export const MessageBubble = memo(function MessageBubble({
             className={cn(
               'active:opacity-80',
               !m.poll && 'overflow-hidden rounded-[18px] rounded-bl-md bg-surface',
-              !m.poll && !m.image && 'px-4 py-3',
+              !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
             )}
           >
             <Content
@@ -124,7 +124,7 @@ export const MessageBubble = memo(function MessageBubble({
     <View
       className={cn(
         !m.poll && 'overflow-hidden rounded-[18px] rounded-br-md bg-lime',
-        !m.poll && !m.image && 'px-4 py-3',
+        !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
       )}
       style={{ opacity: status === 'sending' || status === 'failed' ? 0.6 : 1 }}
     >
@@ -182,8 +182,20 @@ function Content({
   return (
     <>
       {m.image ? <ChatPhoto image={m.image} onOpen={onOpenPhoto} /> : null}
+      {m.photoExpired ? (
+        <View
+          className={cn(
+            'h-[72px] w-[240px] items-center justify-center',
+            mine ? 'bg-black/10' : 'bg-surface-raised',
+          )}
+        >
+          <Text className={cn('font-sans text-[13px]', mine ? 'text-bg/70' : 'text-subtle')}>
+            Photo no longer available
+          </Text>
+        </View>
+      ) : null}
       {m.body ? (
-        <View className={m.image ? 'max-w-[240px] px-3.5 py-2.5' : undefined}>
+        <View className={m.image || m.photoExpired ? 'max-w-[240px] px-3.5 py-2.5' : undefined}>
           <MessageText body={m.body} mentions={m.mentions} mine={mine} />
         </View>
       ) : null}

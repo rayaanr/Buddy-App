@@ -322,6 +322,7 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
         image: draft.photo
           ? { url: draft.photo.uri, width: draft.photo.width, height: draft.photo.height }
           : null,
+        photoExpired: false,
         mentions: draft.mentions ?? [],
         poll: draft.poll
           ? {

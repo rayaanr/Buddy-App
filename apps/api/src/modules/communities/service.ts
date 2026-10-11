@@ -21,6 +21,7 @@ import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
+import { communityChatPhotos } from '../chat/service';
 import { findActivitySummaries, notCancelled, pointSql, upcoming } from '../activities/queries';
 import { homePlace, originFor, requirePlace, toPlace } from '../profiles/service';
 import { notBlockedBetween } from '../safety/blocks';
@@ -350,12 +351,13 @@ export async function removeCommunityMember(
 /** The creator deletes it. Its activities go on without a community. */
 export async function deleteCommunity(db: Db, id: string, creatorId: string) {
   await requireCreator(db, id, creatorId);
+  const chatPhotos = await communityChatPhotos(db, id);
   const [gone] = await db
     .delete(communities)
     .where(eq(communities.id, id))
     .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
-  // Its photos, for the caller to clean up.
-  return [gone?.coverUrl, gone?.logoUrl].filter((u): u is string => !!u);
+  // Its photos, chat ones included, for the caller to clean up.
+  return [gone?.coverUrl, gone?.logoUrl, ...chatPhotos].filter((u): u is string => !!u);
 }
 
 /** Members to tell about a new activity: everyone but the host and anyone blocked either way. */

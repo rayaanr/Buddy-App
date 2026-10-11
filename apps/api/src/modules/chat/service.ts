@@ -6,7 +6,7 @@ import {
 } from '@buddy/shared';
 import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 
-import type { Db } from '../../db/client';
+import type { Db, Tx } from '../../db/client';
 import {
   activities,
   activityMembers,
@@ -126,6 +126,8 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
       image: imageUrl
         ? { url: imageUrl, width: r.imageWidth ?? 1, height: r.imageHeight ?? 1 }
         : null,
+      // The size stays when the photo is deleted for age.
+      photoExpired: !r.imageKey && r.imageWidth !== null,
       mentions: r.mentions.flatMap((id) => {
         const person = byId.get(id);
         return person ? [{ id, name: person.name }] : [];
@@ -378,4 +380,13 @@ export async function markRead(db: Db, room: Room, userId: string, messageId: st
     })
     .returning({ lastReadAt: chatReads.lastReadAt });
   return row!.lastReadAt.toISOString();
+}
+
+/** A community's chat photos (R2 keys), to delete along with the community. */
+export async function communityChatPhotos(db: Db | Tx, communityId: string) {
+  const rows = await db
+    .select({ key: messages.imageKey })
+    .from(messages)
+    .where(and(eq(messages.communityId, communityId), sql`${messages.imageKey} is not null`));
+  return rows.map((r) => r.key!);
 }

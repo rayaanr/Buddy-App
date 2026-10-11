@@ -43,6 +43,21 @@ export type DiscoverFilter = (typeof DISCOVER_FILTERS)[number];
 export const DISCOVER_RADII = [5, 10, 25, 50] as const;
 export const DEFAULT_RADIUS_KM = 25;
 
+/**
+ * How long chats are kept (see the API's jobs/retention.ts). Messages someone
+ * reported stay until a moderator has dealt with them.
+ */
+export const RETENTION = {
+  /** An activity's chat is deleted this many days after the activity. */
+  activityChatDays: 30,
+  /** Community chats keep this many days of messages… */
+  communityChatDays: 90,
+  /** …or at least this many recent messages, whichever is more. */
+  communityChatKeep: 1000,
+  /** Chat photos are deleted after this many days (the message stays). */
+  chatPhotoDays: 30,
+} as const;
+
 export const LIMITS = {
   /** People who can wait for a spot on a full activity. */
   waitlistMax: 10,

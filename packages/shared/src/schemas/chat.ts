@@ -27,6 +27,8 @@ export const chatMessage = z.object({
   image: z
     .object({ url: z.string(), width: z.number().int(), height: z.number().int() })
     .nullable(),
+  /** Its photo was deleted after RETENTION.chatPhotoDays. */
+  photoExpired: z.boolean(),
   /** People tagged as @FirstName in the text. */
   mentions: z.array(z.object({ id: z.string(), name: z.string() })),
   poll: chatPoll.nullable(),

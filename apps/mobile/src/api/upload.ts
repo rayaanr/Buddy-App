@@ -4,7 +4,9 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { api, ApiRequestError, unwrap } from './client';
 
 /** Longest edge kept: covers fill the screen width at 3x; avatars and logos are small. */
-const MAX_EDGE: Record<UploadKind, number> = { avatar: 800, cover: 1600, logo: 600, chat: 1600 };
+const MAX_EDGE: Record<UploadKind, number> = { avatar: 800, cover: 1600, logo: 600, chat: 1280 };
+/** JPEG quality: chat photos are seen once on a phone screen, so they can be lighter. */
+const QUALITY: Record<UploadKind, number> = { avatar: 0.8, cover: 0.8, logo: 0.8, chat: 0.72 };
 
 /**
  * Phone photos are often 4000px and several MB. Scaled down and re-saved as
@@ -20,7 +22,7 @@ async function shrink(kind: UploadKind, image: { uri: string; width?: number; he
   }
   const rendered = await context.renderAsync();
   try {
-    const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
+    const saved = await rendered.saveAsync({ compress: QUALITY[kind], format: SaveFormat.JPEG });
     return { uri: saved.uri, mimeType: 'image/jpeg', width: saved.width, height: saved.height };
   } finally {
     rendered.release();

@@ -1,3 +1,5 @@
+import { RETENTION } from '@buddy/shared';
+
 /**
  * DRAFT privacy policy, written from what the code actually collects.
  * Have it reviewed, replace CONTACT_EMAIL and the effective date, then ship.
@@ -28,6 +30,9 @@ export const privacyHtml = (contact: string) => `
   <li>Expo, Apple and Google, to deliver push notifications.</li>
   <li>OpenStreetMap (via Photon) or Google Places, to search for meeting points.</li>
 </ul>
+
+<h2>How long we keep messages</h2>
+<p>Group chat messages are stored on our servers so everyone in the chat can read them, and so reported messages can be reviewed. An activity’s chat is deleted ${RETENTION.activityChatDays} days after the activity. Community chats keep the last ${RETENTION.communityChatDays} days of messages (or the last ${RETENTION.communityChatKeep.toLocaleString('en')}, if that’s more). Photos in chats are deleted after ${RETENTION.chatPhotoDays} days. Messages someone has reported are kept until a moderator has reviewed them.</p>
 
 <h2>Moderation</h2>
 <p>Reports go to our moderators, who review them within 24 hours and may remove content or accounts that break the rules.</p>
