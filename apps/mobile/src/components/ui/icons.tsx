@@ -14,6 +14,8 @@ import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Clock from 'lucide-react-native/icons/clock';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
+import Images from 'lucide-react-native/icons/images';
+import ChartBar from 'lucide-react-native/icons/chart-bar';
 import List from 'lucide-react-native/icons/list';
 import LocateFixed from 'lucide-react-native/icons/locate-fixed';
 import MapIconSvg from 'lucide-react-native/icons/map';
@@ -135,6 +137,16 @@ export const ArrowDownIcon = icon(
 );
 export const ListIcon = icon(List, { size: 18, color: colors.ink, strokeWidth: 2 }, 'ListIcon');
 export const MapIcon = icon(MapIconSvg, { size: 18, color: colors.ink, strokeWidth: 2 }, 'MapIcon');
+export const ImagesIcon = icon(
+  Images,
+  { size: 24, color: colors.ink, strokeWidth: 1.9 },
+  'ImagesIcon',
+);
+export const PollIcon = icon(
+  ChartBar,
+  { size: 24, color: colors.ink, strokeWidth: 1.9 },
+  'PollIcon',
+);
 export const BellOffIcon = icon(
   BellOff,
   { size: 14, color: colors.subtle, strokeWidth: 2 },

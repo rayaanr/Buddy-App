@@ -1,14 +1,17 @@
 import { type ChatMessage, firstName } from '@buddy/shared';
-import { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import type { ChatDraft } from '@/api/chat';
 import {
   Avatar,
+  CameraIcon,
   CloseIcon,
-  Menu,
+  ImagesIcon,
   PencilIcon,
   PlusIcon,
+  PollIcon,
   PressableScale,
   ReplyIcon,
 } from '@/components/ui';
@@ -31,7 +34,11 @@ interface ComposerProps {
   onSend: (draft: ChatDraft) => void;
   onTyping: () => void;
   /** Picks a photo and sends it with this caption; resolves true if one was sent. */
-  onPhoto: (caption: string, mentions: ChatDraft['mentions']) => Promise<boolean>;
+  onPhoto: (
+    source: 'library' | 'camera',
+    caption: string,
+    mentions: ChatDraft['mentions'],
+  ) => Promise<boolean>;
   onPoll: () => void;
   /** Your message being edited: its text fills the box, and Send saves it. */
   editing: ChatMessage | null;
@@ -134,8 +141,12 @@ export function Composer({
     reset();
   };
 
-  const photo = async () => {
-    if (await onPhoto(text.trim(), mentions())) reset();
+  const [attach, setAttach] = useState(false);
+  const photo = async (source: 'library' | 'camera') => {
+    if (await onPhoto(source, text.trim(), mentions())) {
+      reset();
+      setAttach(false);
+    }
   };
 
   return (
@@ -202,21 +213,32 @@ export function Composer({
         </View>
       ) : null}
 
-      <View className="flex-row gap-2 px-3.5 pt-3" style={{ paddingBottom: bottom(28) }}>
+      <View
+        className="flex-row gap-2 px-3.5 pt-3"
+        style={{ paddingBottom: attach ? 12 : bottom(28) }}
+      >
         {editing ? null : (
-          <Menu
-            label="Add a photo or a poll"
-            align="start"
-            trigger={
-              <View className="h-[50px] w-[50px] items-center justify-center rounded-full bg-surface">
-                <PlusIcon color={colors.ink} size={22} />
-              </View>
-            }
-            items={[
-              { label: 'Photo', onPress: () => void photo() },
-              { label: 'Poll', onPress: onPoll },
-            ]}
-          />
+          <PressableScale
+            onPress={() => {
+              // The panel takes the keyboard's place.
+              if (!attach) Keyboard.dismiss();
+              setAttach((a) => !a);
+            }}
+            scale="strong"
+            accessibilityRole="button"
+            accessibilityLabel={attach ? 'Close attachments' : 'Add a photo or a poll'}
+            accessibilityState={{ expanded: attach }}
+            className={cn(
+              'h-[50px] w-[50px] items-center justify-center rounded-full',
+              attach ? 'bg-surface-raised' : 'bg-surface',
+            )}
+          >
+            {attach ? (
+              <CloseIcon color={colors.ink} size={20} />
+            ) : (
+              <PlusIcon color={colors.ink} size={22} />
+            )}
+          </PressableScale>
         )}
         <TextInput
           value={text}
@@ -225,6 +247,7 @@ export function Composer({
             if (t) onTyping();
           }}
           ref={input}
+          onFocus={() => setAttach(false)}
           selection={selection}
           onSelectionChange={(e) => {
             setCursor(e.nativeEvent.selection.end);
@@ -257,6 +280,78 @@ export function Composer({
           </Text>
         </PressableScale>
       </View>
+
+      {attach && !editing ? (
+        // Style objects on the animated view: NativeWind doesn't style Reanimated views.
+        <Animated.View
+          entering={FadeInDown.duration(180)}
+          style={[styles.panel, { paddingBottom: bottom(28) + 8 }]}
+        >
+          <AttachTile
+            label="Gallery"
+            tint="#a9d2ff"
+            icon={<ImagesIcon color="#a9d2ff" />}
+            onPress={() => void photo('library')}
+          />
+          <AttachTile
+            label="Camera"
+            tint="#ffb3c0"
+            icon={<CameraIcon color="#ffb3c0" size={24} />}
+            onPress={() => void photo('camera')}
+          />
+          <AttachTile
+            label="Poll"
+            tint={colors.lime}
+            icon={<PollIcon color={colors.lime} />}
+            onPress={() => {
+              setAttach(false);
+              onPoll();
+            }}
+          />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
+
+/** One choice in the attachment panel: a round tile and its name. */
+function AttachTile({
+  label,
+  tint,
+  icon,
+  onPress,
+}: {
+  label: string;
+  tint: string;
+  icon: ReactNode;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale
+      onPress={onPress}
+      haptic="light"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="items-center gap-2"
+    >
+      <View
+        className="h-[62px] w-[62px] items-center justify-center rounded-full border"
+        style={{ borderColor: `${tint}55`, backgroundColor: `${tint}1f` }}
+      >
+        {icon}
+      </View>
+      <Text className="font-sans-medium text-[13.5px] text-ink-soft">{label}</Text>
+    </PressableScale>
+  );
+}
+
+const styles = StyleSheet.create({
+  panel: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+  },
+});

@@ -1,23 +1,41 @@
 import { type ChatPreview, clockLabel, dayMonth, firstName, localDay } from '@buddy/shared';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useChats } from '@/api/queries';
 import {
   Avatar,
   BellOffIcon,
+  CalendarIcon,
+  Chip,
   CountBadge,
   EmptyState,
   LoadError,
   Loading,
+  PeopleIcon,
   Refresh,
   ScreenHeader,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { colors } from '@/theme';
 
 /** Every group chat you're in: activities you're going to and your communities. */
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'unread', label: 'Unread' },
+  { key: 'activity', label: 'Activities' },
+  { key: 'community', label: 'Communities' },
+] as const;
+type Filter = (typeof FILTERS)[number]['key'];
+
+const matches = (c: ChatPreview, f: Filter) =>
+  f === 'all' ? true : f === 'unread' ? c.unread > 0 : c.kind === f;
+
 export default function ChatsScreen() {
   const chats = useChats();
+  const [filter, setFilter] = useState<Filter>('all');
+  const shown = chats.data?.filter((c) => matches(c, filter)) ?? [];
 
   return (
     <View className="flex-1 bg-bg">
@@ -29,6 +47,22 @@ export default function ChatsScreen() {
           <Refresh refreshing={chats.isRefetching} onRefresh={() => void chats.refetch()} />
         }
       >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="-mx-[22px] mb-1"
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 22, paddingBottom: 6 }}
+        >
+          {FILTERS.map((f) => (
+            <Chip
+              key={f.key}
+              label={f.label}
+              shape="compact"
+              selected={filter === f.key}
+              onPress={() => setFilter(f.key)}
+            />
+          ))}
+        </ScrollView>
         <View>
           {chats.isLoading ? <Loading className="py-10" /> : null}
           {chats.error ? (
@@ -43,7 +77,12 @@ export default function ChatsScreen() {
               onPress={() => router.navigate('/')}
             />
           ) : null}
-          {chats.data?.map((c) => (
+          {chats.data?.length && !shown.length ? (
+            <Text className="py-10 text-center font-sans text-[14.5px] text-muted">
+              {filter === 'unread' ? 'You’re all caught up.' : 'No chats here yet.'}
+            </Text>
+          ) : null}
+          {shown.map((c) => (
             <Row key={c.id} chat={c} />
           ))}
         </View>
@@ -80,7 +119,20 @@ function Row({ chat: c }: { chat: ChatPreview }) {
       accessibilityLabel={`${c.title}. ${unread ? `${c.unread} new. ` : ''}${preview(c)}`}
       className="flex-row items-center gap-3.5 border-b border-divider py-3.5 active:opacity-80"
     >
-      <Avatar uri={c.imageUrl ?? undefined} name={c.title} size={50} shape="rounded" />
+      <View>
+        <Avatar uri={c.imageUrl ?? undefined} name={c.title} size={50} shape="rounded" />
+        {/* Which kind of chat, at a glance. */}
+        <View
+          className="absolute -bottom-1 -right-1 h-[24px] w-[24px] items-center justify-center rounded-full border-2 border-bg bg-lime-deep"
+          accessibilityLabel={c.kind === 'community' ? 'Community chat' : 'Activity chat'}
+        >
+          {c.kind === 'community' ? (
+            <PeopleIcon size={13} color={colors.lime} />
+          ) : (
+            <CalendarIcon size={13} color={colors.lime} />
+          )}
+        </View>
+      </View>
       <View className="min-w-0 flex-1">
         <View className="flex-row items-baseline gap-2">
           <Text className="flex-1 font-sans-semibold text-[15.5px] text-ink" numberOfLines={1}>

@@ -17,12 +17,15 @@ export default function ActivityChatScreen() {
       title={a?.title ?? ''}
       subtitle={a ? `${a.goingCount} of ${a.capacity} going` : ''}
       membersOnly="Join this activity to see its chat."
+      image={a?.coverUrl}
+      // Back to the activity if that's where you came from, else open it.
+      onTitlePress={() => router.dismissTo(`/activity/${id}`)}
       people={people}
       banner={
         a ? (
           <View className="mb-2">
             <Pressable
-              onPress={() => router.push(`/activity/${a.id}`)}
+              onPress={() => router.dismissTo(`/activity/${a.id}`)}
               className="flex-row justify-between rounded-[14px] border border-lime-panel-border bg-lime-panel px-4 py-3.5 active:opacity-80"
             >
               <Text className="font-sans-medium text-[14.5px] text-lime">{whenLong(a)}</Text>

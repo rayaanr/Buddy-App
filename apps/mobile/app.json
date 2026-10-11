@@ -51,8 +51,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Buddy uses your photos so you can add a profile picture.",
-          "cameraPermission": false,
+          "photosPermission": "Buddy uses your photos so you can add them to your profile, activities and chats.",
+          "cameraPermission": "Buddy uses your camera so you can take photos for your chats.",
           "microphonePermission": false
         }
       ],

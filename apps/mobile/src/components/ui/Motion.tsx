@@ -78,6 +78,11 @@ export function PressableScale({
 /** Light haptic tick for selection changes (chips, tabs, segments). */
 export const selectionHaptic = () => playHaptic('selection');
 
+/** A firm tap when a long-press takes hold, e.g. selecting a chat message. */
+export const holdHaptic = () => {
+  if (Platform.OS !== 'web') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+};
+
 /** Success buzz for moments like joining an activity. */
 export const successHaptic = () => {
   if (Platform.OS !== 'web') {

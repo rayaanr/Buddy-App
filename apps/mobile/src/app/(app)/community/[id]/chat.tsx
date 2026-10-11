@@ -16,7 +16,9 @@ export default function CommunityChatScreen() {
       room={{ kind: 'community', id }}
       title={c?.name ?? ''}
       subtitle={members}
-      onTitlePress={() => router.back()}
+      image={c?.logoUrl}
+      // Back to the community if that's where you came from, else open it.
+      onTitlePress={() => router.dismissTo(`/community/${id}`)}
       membersOnly="Join this community to see its chat."
       people={people}
       banner={

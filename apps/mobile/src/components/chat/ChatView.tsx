@@ -35,9 +35,11 @@ import {
   AnimatedView,
   BackButton,
   ArrowDownIcon,
+  Avatar,
   CloseIcon,
   ConfirmDialog,
   CopyIcon,
+  holdHaptic,
   IconButton,
   KeyboardScreen,
   LoadError,
@@ -74,8 +76,10 @@ interface ChatViewProps {
   banner?: ReactElement | null;
   /** What someone who isn't a member sees instead. */
   membersOnly: string;
-  /** Tapping the title, e.g. back to the activity. */
+  /** Tapping the title: the activity's or community's page. */
   onTitlePress?: () => void;
+  /** The activity's cover or the community's logo, beside the title. */
+  image?: string | null;
   /** Who can be @mentioned. */
   people: ChatPerson[];
 }
@@ -88,6 +92,7 @@ export function ChatView({
   banner,
   membersOnly,
   onTitlePress,
+  image,
   people,
 }: ChatViewProps) {
   const me = useMe();
@@ -157,11 +162,10 @@ export function ChatView({
       void react(messageId, emoji).catch((err: unknown) => toast(errorMessage(err))),
     [react],
   );
-  const onActions = useCallback(
-    (message: ChatMessage, mine: boolean, y: number) =>
-      setSelected({ message, mine, y, at: Date.now() }),
-    [],
-  );
+  const onActions = useCallback((message: ChatMessage, mine: boolean, y: number) => {
+    holdHaptic();
+    setSelected({ message, mine, y, at: Date.now() });
+  }, []);
   const onReply = useCallback(
     (m: ChatMessage) =>
       setReplyTo({
@@ -241,12 +245,24 @@ export function ChatView({
     ],
   );
 
-  /** Picks a photo from the library and sends it, with the typed text as its caption. */
-  const sendPhoto = async (caption: string, mentions: ChatDraft['mentions']) => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
+  /** Picks a photo (library or camera) and sends it, with the typed text as its caption. */
+  const sendPhoto = async (
+    source: 'library' | 'camera',
+    caption: string,
+    mentions: ChatDraft['mentions'],
+  ) => {
+    if (source === 'camera') {
+      const allowed = await ImagePicker.requestCameraPermissionsAsync();
+      if (!allowed.granted) {
+        toast('Allow camera access in Settings to take photos for chats.');
+        return false;
+      }
+    }
+    const options = { mediaTypes: ['images'] as ImagePicker.MediaType[], quality: 0.8 };
+    const result =
+      source === 'camera'
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
     const asset = result.canceled ? null : result.assets[0];
     if (!asset) return false;
     send({
@@ -345,14 +361,21 @@ export function ChatView({
               onPress={onTitlePress}
               disabled={!onTitlePress}
               scale="dim"
-              className="min-w-0 flex-1"
+              accessibilityRole={onTitlePress ? 'button' : undefined}
+              accessibilityHint={onTitlePress ? 'Opens its details' : undefined}
+              className="min-w-0 flex-1 flex-row items-center gap-3"
             >
-              <Text className="font-sans-semibold text-[16.5px] text-ink" numberOfLines={1}>
-                {title}
-              </Text>
-              <Text className="mt-0.5 font-sans text-[13px] text-muted" numberOfLines={1}>
-                {subtitle}
-              </Text>
+              {title ? (
+                <Avatar uri={image ?? undefined} name={title} size={40} shape="rounded" />
+              ) : null}
+              <View className="min-w-0 flex-1">
+                <Text className="font-sans-semibold text-[16.5px] text-ink" numberOfLines={1}>
+                  {title}
+                </Text>
+                <Text className="mt-0.5 font-sans text-[13px] text-muted" numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              </View>
             </PressableScale>
           </>
         )}
