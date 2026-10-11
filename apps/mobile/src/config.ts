@@ -40,10 +40,11 @@ export const TERMS_URL = `${API_URL}/terms`;
 
 /**
  * Map tiles for meeting-point previews: any {z}/{x}/{y} raster tile URL.
- * Defaults to CARTO's dark basemap (OpenStreetMap data), which matches the
- * app. CARTO's free tier is for low traffic: before launch, set
- * EXPO_PUBLIC_MAP_TILES to a paid or self-hosted source (MapTiler, Stadia…)
- * and EXPO_PUBLIC_MAP_ATTRIBUTION to its credit line.
+ * CARTO's dark basemap (OpenStreetMap data) matches the app, but CARTO now
+ * needs an API key (`?key=…`; free up to 1M tiles a month for commercial
+ * use) or every tile reads "API key required". Set EXPO_PUBLIC_MAP_TILES to
+ * the keyed URL: on EAS for builds, in apps/mobile/.env.local for local runs.
+ * Another source works too, with EXPO_PUBLIC_MAP_ATTRIBUTION as its credit.
  */
 export const MAP_TILES =
   process.env.EXPO_PUBLIC_MAP_TILES ?? 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png';
