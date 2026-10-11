@@ -3,6 +3,7 @@ export * from './BackButton';
 export * from './BrandMark';
 export * from './Button';
 export * from './Chip';
+export * from './ConfirmDialog';
 export * from './EmptyState';
 export * from './Footer';
 export * from './icons';

@@ -7,10 +7,10 @@ import { useCommunity, useDeleteCommunity } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
-  ActionSheet,
   Avatar,
   BackButton,
   Button,
+  ConfirmDialog,
   Heading,
   Menu,
   Photo,
@@ -187,7 +187,7 @@ export default function CommunityScreen() {
         ) : null}
       </View>
 
-      <ActionSheet
+      <ConfirmDialog
         visible={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         title={`Delete ${c.name}?`}

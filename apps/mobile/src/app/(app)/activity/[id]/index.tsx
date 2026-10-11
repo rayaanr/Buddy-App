@@ -28,12 +28,12 @@ import {
   useWaitlist,
 } from '@/api/queries';
 import {
-  ActionSheet,
   AnimatedView,
   ArrowRightIcon,
   Avatar,
   BackButton,
   Button,
+  ConfirmDialog,
   Eyebrow,
   Footer,
   Heading,
@@ -365,7 +365,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
         </AnimatedView>
       </Footer>
 
-      <ActionSheet
+      <ConfirmDialog
         visible={confirmCancel}
         onClose={() => setConfirmCancel(false)}
         title="Cancel this activity?"

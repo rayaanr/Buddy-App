@@ -7,8 +7,8 @@ import { errorMessage } from '@/api/client';
 import { unregisterPush } from '@/api/push';
 import { signOut, useMe, useUpdateMe } from '@/api/queries';
 import {
-  ActionSheet,
   ChevronRightIcon,
+  ConfirmDialog,
   Heading,
   ScreenHeader,
   SectionLabel,
@@ -83,7 +83,7 @@ export default function SettingsScreen() {
         </View>
       </ScrollView>
 
-      <ActionSheet
+      <ConfirmDialog
         visible={confirmLogOut}
         onClose={() => setConfirmLogOut(false)}
         title="Log out of Buddy?"

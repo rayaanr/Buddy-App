@@ -6,8 +6,8 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { errorMessage } from '@/api/client';
 import { useCommunity, useCommunityMembers, useMe, useRemoveCommunityMember } from '@/api/queries';
 import {
-  ActionSheet,
   Avatar,
+  ConfirmDialog,
   Heading,
   LoadError,
   Loading,
@@ -88,10 +88,10 @@ export default function CommunityMembersScreen() {
         </View>
       </ScrollView>
 
-      <ActionSheet
+      <ConfirmDialog
         visible={!!removing}
         onClose={() => setRemoving(null)}
-        title={removing ? `Remove ${firstName(removing.name)}?` : undefined}
+        title={removing ? `Remove ${firstName(removing.name)}?` : ''}
         message="They leave the community and can’t join again. Activities they host stay up."
         actions={[
           {

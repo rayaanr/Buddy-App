@@ -9,9 +9,9 @@ import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
 const PHOTO_HEIGHT = 124;
-const LOGO = 58;
-/** How far the logo hangs below the cover. */
-const LOGO_OVERHANG = 12;
+const LOGO = 72;
+/** How far the logo hangs below the cover; the text starts under it. */
+const LOGO_OVERHANG = 26;
 
 export const communityMeta = (c: CommunitySummary) =>
   `${c.memberCount} member${c.memberCount === 1 ? '' : 's'} · ${c.weeklyActivityCount} ${
@@ -32,10 +32,10 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
         className="overflow-hidden rounded-[22px] bg-surface"
       >
         <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }} />
-        {/* The logo hangs over the cover's bottom-right edge, leaving the text its full width. */}
+        {/* The logo hangs over the cover's bottom-left edge, above the name. */}
         <View
           pointerEvents="none"
-          className="absolute right-4"
+          className="absolute left-4"
           style={{ top: PHOTO_HEIGHT - LOGO + LOGO_OVERHANG }}
         >
           <Avatar
@@ -47,7 +47,7 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
             ringWidth={3}
           />
         </View>
-        <View className="py-4 pl-[18px] pr-[120px]">
+        <View className="pb-4 pl-[18px] pr-[120px]" style={{ paddingTop: LOGO_OVERHANG + 10 }}>
           <Text className="font-sans-semibold text-[17.5px] text-ink" numberOfLines={2}>
             {c.name}
           </Text>

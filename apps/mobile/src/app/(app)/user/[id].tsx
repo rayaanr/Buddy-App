@@ -8,9 +8,9 @@ import { errorMessage } from '@/api/client';
 import { useMe, useSetBlocked, useUser } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import {
-  ActionSheet,
   Avatar,
   Button,
+  ConfirmDialog,
   Heading,
   Menu,
   QueryFallback,
@@ -135,7 +135,7 @@ function SafetyMenu({ person }: { person: PublicProfile }) {
             : { label: `Block ${name}`, destructive: true, onPress: () => setConfirmBlock(true) },
         ]}
       />
-      <ActionSheet
+      <ConfirmDialog
         visible={confirmBlock}
         onClose={() => setConfirmBlock(false)}
         title={`Block ${name}?`}
