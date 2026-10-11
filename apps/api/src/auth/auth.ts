@@ -1,5 +1,5 @@
 import { expo } from '@better-auth/expo';
-import { ERROR_CODES } from '@buddy/shared';
+import { ERROR_CODES, LIMITS } from '@buddy/shared';
 import { betterAuth } from 'better-auth';
 import { APIError } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
@@ -39,9 +39,9 @@ function nameFromEmail(email: string) {
 }
 
 /**
- * Email one-time-code sign-in. The first successful sign-in creates the
- * account; a profile row is created alongside it so the app can route the
- * new user to onboarding.
+ * Email one-time-code sign-in, plus Google when it's configured. The first
+ * successful sign-in creates the account; a profile row is created alongside
+ * it so the app can route the new user to onboarding.
  */
 export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
   return betterAuth({
@@ -54,6 +54,23 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
       ...(env.NODE_ENV === 'development' ? ['exp://'] : []),
       ...env.WEB_ORIGINS,
     ],
+    socialProviders:
+      env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+        ? {
+            google: {
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET,
+              // Always show the account chooser, so a shared phone can switch.
+              prompt: 'select_account',
+            },
+          }
+        : undefined,
+    account: {
+      // Google only hands over addresses it has verified, so signing in with
+      // Google as someone who signed up by email code is the same person:
+      // attach it to their account instead of failing.
+      accountLinking: { enabled: true, trustedProviders: ['google'] },
+    },
     session: {
       // Phones stay signed in; activity extends the session.
       expiresIn: 30 * DAY_SECONDS,
@@ -100,10 +117,17 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
         create: {
           // Sign-up asks only for an email; the name is an optional next step.
           before: async (user) => ({
-            data: { ...user, name: user.name?.trim() || nameFromEmail(user.email) },
+            data: {
+              ...user,
+              name: (user.name?.trim() || nameFromEmail(user.email)).slice(0, LIMITS.nameMax),
+            },
           }),
           after: async (user) => {
-            await db.insert(schema.profiles).values({ userId: user.id }).onConflictDoNothing();
+            // Google sign-ups start with their Google photo until they upload one.
+            await db
+              .insert(schema.profiles)
+              .values({ userId: user.id, avatarUrl: user.image ?? null })
+              .onConflictDoNothing();
           },
         },
       },

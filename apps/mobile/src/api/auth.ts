@@ -37,3 +37,22 @@ export async function verifySignInCode(email: string, otp: string) {
 }
 
 export const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+
+/**
+ * Google sign-in in a browser sheet. A new Google account gets a Buddy account
+ * (and onboarding); an address that already signed up by code gets its own
+ * account back. Resolves with `false` if the person closes the sheet.
+ */
+export async function signInWithGoogle() {
+  const { data, error } = await authClient.signIn.social({ provider: 'google', callbackURL: '/' });
+  if (error) {
+    throw new ApiRequestError(
+      error.status ?? 0,
+      error.code ?? 'google_failed',
+      error.status === 429
+        ? 'Too many attempts. Wait a minute and try again.'
+        : 'Couldn’t sign in with Google. Try again, or use your email.',
+    );
+  }
+  return !!data;
+}

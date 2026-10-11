@@ -14,6 +14,7 @@ import {
   SectionLabel,
   TextField,
 } from '@/components/ui';
+import { GoogleSignIn } from '@/components/auth/GoogleButton';
 import { PRIVACY_URL, TERMS_URL } from '@/config';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useSendCode } from '@/hooks/useSendCode';
@@ -56,7 +57,8 @@ export default function SignUpScreen() {
           Just your email for now. You can add your name, town and interests next.
         </Text>
 
-        <SectionLabel className="mb-2 mt-7">Email</SectionLabel>
+        <GoogleSignIn className="mt-7" />
+        <SectionLabel className="mb-2 mt-6">Email</SectionLabel>
         <TextField
           value={email}
           onChangeText={setEmail}

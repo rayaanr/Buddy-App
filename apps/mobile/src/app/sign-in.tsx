@@ -14,6 +14,7 @@ import {
   TextField,
 } from '@/components/ui';
 import { CardFan, type FanCardData } from '@/components/auth/CardFan';
+import { GoogleSignIn } from '@/components/auth/GoogleButton';
 import { GROUP_HUES } from '@/data/constants';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useSendCode } from '@/hooks/useSendCode';
@@ -103,7 +104,8 @@ function EmailSignIn() {
         <Text className="mt-3 font-sans text-[16px] leading-[23px] text-muted">
           Enter the email you signed up with and we’ll send you a code.
         </Text>
-        <SectionLabel className="mb-2 mt-7">Email</SectionLabel>
+        <GoogleSignIn className="mt-7" />
+        <SectionLabel className="mb-2 mt-6">Email</SectionLabel>
         <TextField
           value={email}
           onChangeText={setEmail}
@@ -113,7 +115,6 @@ function EmailSignIn() {
           autoComplete="email"
           autoCapitalize="none"
           autoCorrect={false}
-          autoFocus
           onSubmitEditing={() => valid && send(email)}
         />
         {error ? <Text className="mt-2 font-sans text-[13.5px] text-danger">{error}</Text> : null}

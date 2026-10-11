@@ -35,6 +35,13 @@ const schema = z
           : [],
       ),
 
+    /**
+     * Google sign-in (a Web application OAuth client). Off unless both are set;
+     * its redirect URI is <BETTER_AUTH_URL>/api/auth/callback/google.
+     */
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+
     /** Without a key, sign-in codes are written to the log instead (development only). */
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().default('Buddy <hello@example.com>'),
@@ -81,6 +88,10 @@ const schema = z
   .refine((e) => e.VENUE_PROVIDER !== 'google' || !!e.GOOGLE_PLACES_API_KEY, {
     path: ['GOOGLE_PLACES_API_KEY'],
     message: 'Required when VENUE_PROVIDER is google',
+  })
+  .refine((e) => !e.GOOGLE_CLIENT_ID === !e.GOOGLE_CLIENT_SECRET, {
+    path: ['GOOGLE_CLIENT_SECRET'],
+    message: 'Set both GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, or neither',
   });
 
 export type Env = z.infer<typeof schema>;

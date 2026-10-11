@@ -107,7 +107,8 @@ export async function updateMe(
       ...(input.bio !== undefined && { bio: input.bio }),
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),
-      ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey }),
+      // Uploading or removing a photo also drops the starting one (e.g. from Google).
+      ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey, avatarUrl: null }),
       ...(input.gender !== undefined && { gender: input.gender }),
       ...(input.birthYear !== undefined && { birthYear: input.birthYear }),
       // Only ever set once, so finishing setup again keeps the first date.
