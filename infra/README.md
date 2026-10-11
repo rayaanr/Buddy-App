@@ -52,6 +52,18 @@ ssh-keygen -t ed25519 -f buddy-deploy -N "" -C "github-actions"
 ssh-copy-id -i buddy-deploy.pub deploy@<server-ip>
 ```
 
+### Photo storage (Cloudflare R2)
+
+Profile photos, covers, community logos and chat photos live in R2. The API refuses to start without all five `R2_*` settings, in development too.
+
+1. Cloudflare dashboard → R2 → Create bucket (e.g. `buddy-media`). Use a separate bucket for development.
+2. Bucket → Settings → Public access: connect a custom domain (or enable the r2.dev URL for development). That URL is `R2_PUBLIC_URL`, without a trailing slash.
+3. Bucket → Settings → CORS policy, so the web app can upload: allow `PUT` from your web origins (e.g. `http://localhost:7481`) with header `content-type`.
+4. R2 → Manage API tokens → Create token with "Object Read & Write" on that bucket. It gives `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`; `R2_ACCOUNT_ID` is in the R2 overview.
+5. Put all five in `apps/api/.env` (development) and the production `.env`.
+
+Old chat photos are deleted by the API itself (see `RETENTION` in `packages/shared/src/constants.ts`), so no lifecycle rule is needed.
+
 ## 2. GitHub secrets
 
 In the repo: Settings → Secrets and variables → Actions → New repository secret.

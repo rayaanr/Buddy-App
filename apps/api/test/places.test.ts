@@ -147,6 +147,7 @@ describe('venue providers', () => {
         BETTER_AUTH_URL: 'http://localhost:7400',
         BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-123',
         VENUE_PROVIDER: 'osm',
+        NODE_ENV: 'test',
       });
       const results = await createVenueSearch(env, t.deps.db, t.deps.logger).search('kandy');
       expect(results.venues[0]).toMatchObject({ name: 'Kandy' });
@@ -165,6 +166,7 @@ describe('venue providers', () => {
         BETTER_AUTH_URL: 'http://localhost:7400',
         BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-123',
         VENUE_PROVIDER: 'osm',
+        NODE_ENV: 'test',
       });
       const search = createVenueSearch(env, t.deps.db, t.deps.logger);
       await search.search('galle');

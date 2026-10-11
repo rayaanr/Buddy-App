@@ -5,6 +5,14 @@ import { loadEnv } from '../src/env';
 import { createStorage } from '../src/lib/storage';
 import { memoryStorage, useTestApp } from './harness';
 
+/** Back to the plain strings environment variables are. */
+const stringify = (o: object) =>
+  Object.fromEntries(
+    Object.entries(o)
+      .filter(([, v]) => v !== undefined && typeof v !== 'object')
+      .map(([k, v]) => [k, String(v)]),
+  );
+
 describe('R2 presigned uploads', () => {
   const env = loadEnv({
     NODE_ENV: 'test',
@@ -16,6 +24,13 @@ describe('R2 presigned uploads', () => {
     R2_SECRET_ACCESS_KEY: 'secret',
     R2_BUCKET: 'buddy-media',
     R2_PUBLIC_URL: 'https://media.example.com',
+  });
+
+  it('is required: the server won’t start without it', () => {
+    const { R2_BUCKET: _bucket, R2_PUBLIC_URL: _url, ...rest } = env;
+    expect(() => loadEnv({ ...stringify(rest), NODE_ENV: 'development' })).toThrow(
+      /R2_BUCKET, R2_PUBLIC_URL/,
+    );
   });
 
   it('is disabled until every R2 setting is present', () => {

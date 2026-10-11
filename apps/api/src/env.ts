@@ -56,7 +56,7 @@ const schema = z
     /** Optional; only needed if push security is enabled in the Expo project. */
     EXPO_ACCESS_TOKEN: z.string().optional(),
 
-    /** Cloudflare R2 (S3-compatible). Uploads are disabled until all are set. */
+    /** Cloudflare R2 (S3-compatible) for photos. Required: the server won't start without it (tests excepted). */
     R2_ACCOUNT_ID: z.string().optional(),
     R2_ACCESS_KEY_ID: z.string().optional(),
     R2_SECRET_ACCESS_KEY: z.string().optional(),
@@ -94,6 +94,24 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     throw new Error(`Invalid environment:\n${problems.join('\n')}`);
   }
   const env = parsed.data;
+  // Photos (profiles, covers, logos, chat) need storage; without it they'd
+  // fail one request at a time, so refuse to start instead.
+  const r2 = {
+    R2_ACCOUNT_ID: env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: env.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET: env.R2_BUCKET,
+    R2_PUBLIC_URL: env.R2_PUBLIC_URL,
+  };
+  const missing = Object.entries(r2)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
+  if (env.NODE_ENV !== 'test' && missing.length) {
+    throw new Error(
+      `Photo storage (Cloudflare R2) isn’t set up. Add ${missing.join(', ')} to apps/api/.env ` +
+        '(see infra/README.md, "Photo storage").',
+    );
+  }
   if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
     throw new Error(
       'RESEND_API_KEY is required in production: users could not receive sign-in codes.',

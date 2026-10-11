@@ -17,7 +17,7 @@ Find people nearby to do things with: runs, games, markets and more, in Colombo.
 
 ## Quick start
 
-Needs [Bun](https://bun.sh), Node 22 and Docker (or your own Postgres 17 + PostGIS on port 7432).
+Needs [Bun](https://bun.sh), Node 22 and Docker (or your own Postgres 17 + PostGIS on port 7432), plus a Cloudflare R2 bucket for photos: the API won't start without its `R2_*` settings in `apps/api/.env` (see [infra/README.md](infra/README.md#photo-storage-cloudflare-r2)).
 
 ```bash
 bun run dev
