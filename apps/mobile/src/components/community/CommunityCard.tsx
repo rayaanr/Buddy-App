@@ -9,6 +9,9 @@ import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
 const PHOTO_HEIGHT = 124;
+const LOGO = 58;
+/** How far the logo hangs below the cover. */
+const LOGO_OVERHANG = 12;
 
 export const communityMeta = (c: CommunitySummary) =>
   `${c.memberCount} member${c.memberCount === 1 ? '' : 's'} · ${c.weeklyActivityCount} ${
@@ -28,18 +31,22 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
         accessibilityLabel={`${c.name}, ${communityMeta(c)}`}
         className="overflow-hidden rounded-[22px] bg-surface"
       >
-        {/* The logo sits on the cover's corner, leaving the text its full width. */}
-        <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }}>
-          <View className="absolute bottom-3 left-3">
-            <Avatar
-              uri={c.logoUrl ?? undefined}
-              name={c.name}
-              shape="rounded"
-              size={44}
-              ring={colors.surface}
-            />
-          </View>
-        </Photo>
+        <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }} />
+        {/* The logo hangs over the cover's bottom-right edge, leaving the text its full width. */}
+        <View
+          pointerEvents="none"
+          className="absolute right-4"
+          style={{ top: PHOTO_HEIGHT - LOGO + LOGO_OVERHANG }}
+        >
+          <Avatar
+            uri={c.logoUrl ?? undefined}
+            name={c.name}
+            shape="rounded"
+            size={LOGO}
+            ring={colors.surface}
+            ringWidth={3}
+          />
+        </View>
         <View className="py-4 pl-[18px] pr-[120px]">
           <Text className="font-sans-semibold text-[17.5px] text-ink" numberOfLines={2}>
             {c.name}
