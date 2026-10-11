@@ -57,7 +57,9 @@ describe('creating activities', () => {
       location: { lat: 6.8985, lng: 79.8555 },
       area: 'Colombo 3',
     });
-    expect(res.body.coverUrl).toContain('unsplash');
+    // No cover uploaded: one of Buddy's pictures, here for its words ("chess" isn't one,
+    // so one of the Social set).
+    expect(res.body.coverUrl).toMatch(/\/fallbacks\/activity-social-0\d\.svg$/);
 
     const lines = await t.deps.db
       .select()

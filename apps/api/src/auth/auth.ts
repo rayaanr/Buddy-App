@@ -12,6 +12,7 @@ import type { Env } from '../env';
 import type { Logger } from '../logger';
 import { signInCodeEmail, type Mailer } from '../lib/mailer';
 import type { RateLimiter } from '../lib/rate-limit';
+import { createUrls } from '../lib/urls';
 import { isSuspended } from '../modules/moderation/service';
 
 const DAY_SECONDS = 24 * 60 * 60;
@@ -46,6 +47,7 @@ function nameFromEmail(email: string) {
  * it so the app can route the new user to onboarding.
  */
 export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
+  const { art } = createUrls(env);
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
@@ -154,10 +156,11 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
             },
           }),
           after: async (user) => {
-            // Google sign-ups start with their Google photo until they upload one.
+            // Google sign-ups start with their Google photo until they upload
+            // one; everyone else with one of our avatars until they pick theirs.
             await db
               .insert(schema.profiles)
-              .values({ userId: user.id, avatarUrl: user.image ?? null })
+              .values({ userId: user.id, avatarUrl: user.image ?? art.avatar(user.id, null) })
               .onConflictDoNothing();
           },
         },

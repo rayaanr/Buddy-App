@@ -5,6 +5,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useActivity, useActivityMembers } from '@/api/queries';
 import { ChatView } from '@/components/chat/ChatView';
 import { whenLong } from '@/lib/activity';
+import { chatImage } from '@/lib/art';
 
 /** An activity's group chat: everyone going. */
 export default function ActivityChatScreen() {
@@ -17,7 +18,7 @@ export default function ActivityChatScreen() {
       title={a?.title ?? ''}
       subtitle={a ? `${a.goingCount} of ${a.capacity} going` : ''}
       membersOnly="Join this activity to see its chat."
-      image={a?.coverUrl}
+      image={a ? chatImage(id, a.coverUrl) : undefined}
       // Back to the activity if that's where you came from, else open it.
       onTitlePress={() => router.dismissTo(`/activity/${id}`)}
       people={people}

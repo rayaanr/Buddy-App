@@ -1,5 +1,7 @@
 import {
+  ALL_ACTIVITY_ART,
   type ActivityGroup,
+  FALLBACK_ART,
   atLocalDay,
   clockLabel,
   LIMITS,
@@ -444,8 +446,15 @@ export function ActivityForm({
         <CoverField
           cover={cover}
           hue={GROUP_HUES[group]}
-          removeLabel={initialCover ? 'Use the default' : 'Remove'}
-          hint="Optional. Otherwise it gets a photo for its type."
+          hint="Optional. Otherwise it gets one of Buddy’s pictures for it."
+          // Its type's pictures first, then the rest.
+          art={{
+            ids: [
+              ...FALLBACK_ART.activityCover[group],
+              ...ALL_ACTIVITY_ART.filter((id) => !FALLBACK_ART.activityCover[group].includes(id)),
+            ],
+            aspect: 4 / 3,
+          }}
         />
       </KeyboardAwareScrollView>
 

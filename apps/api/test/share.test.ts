@@ -35,7 +35,8 @@ describe('share pages', () => {
     expect(html).toMatch(
       /og:description" content="\w{3} \d+ \w{3}, 18:30 · Barefoot Café, Colombo 3\. 1 of 6 going/,
     );
-    expect(html).toContain('og:image');
+    // Its picture is one of ours (SVG), which link previews can't show.
+    expect(html).not.toContain('og:image');
     expect(html).toContain(`href="buddy://activity/${id}"`);
     expect(html).toContain('Hosted by Kavindu<');
     expect(html).not.toContain('<b>chai');

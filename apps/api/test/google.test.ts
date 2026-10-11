@@ -108,7 +108,8 @@ describe('Google sign-in', () => {
     const headers = { cookie: back.cookie, ...origin };
     await t.call('/v1/me', { method: 'PATCH', headers, body: { avatarKey: null } });
     const me = await t.call<Me>('/v1/me', { headers });
-    expect(me.body.avatarUrl).toBeNull();
+    // One of the avatars for people who haven't said their gender, instead.
+    expect(me.body.avatarUrl).toMatch(/\/fallbacks\/other-0\d\.svg$/);
   });
 
   it('signs an existing email-code user into their own account', async () => {

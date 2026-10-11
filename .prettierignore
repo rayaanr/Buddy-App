@@ -8,3 +8,4 @@ package-lock.json
 # Local tool settings
 .claude/
 .agents/
+apps/api/src/brand/fallback-art.ts

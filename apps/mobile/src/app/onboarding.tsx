@@ -104,7 +104,7 @@ function Steps({ me }: { me: Me }) {
     },
     {
       title: 'A bit about you',
-      hint: 'Only you see these. Buddy is for people 18 and over.',
+      hint: 'Not shown on your profile, though your avatar (until you add a photo) is from the set for your gender. Buddy is for people 18 and over.',
       canContinue: !!gender && validBirthYear(year) !== null,
       required: true,
       save: (): UpdateMeInput => ({

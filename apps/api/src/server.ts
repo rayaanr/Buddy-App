@@ -4,6 +4,7 @@ import { WebSocketServer } from 'ws';
 import { createApp } from './app';
 import { createDeps } from './deps';
 import { loadEnv } from './env';
+import { fillMissingPictures } from './jobs/pictures';
 import { startReminders } from './jobs/reminders';
 import { startRetention } from './jobs/retention';
 import { startSeries } from './jobs/series';
@@ -14,6 +15,10 @@ const env = loadEnv();
 startSentry(env);
 const { deps, close } = createDeps(env);
 const app = createApp(deps);
+// Anything saved before Buddy had its own pictures gets one.
+void fillMissingPictures(deps.db, deps.urls)
+  .then((n) => n && deps.logger.info({ filled: n }, 'Gave pictures to rows without one'))
+  .catch((err: unknown) => deps.logger.error({ err }, 'Could not fill missing pictures'));
 const stopReminders = startReminders(deps);
 const stopSeries = startSeries(deps);
 const stopRetention = startRetention(deps);

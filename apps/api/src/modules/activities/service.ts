@@ -1,4 +1,8 @@
 import {
+  ALL_ACTIVITY_ART,
+  artFromKey,
+  artFromUrl,
+  FALLBACK_ART,
   type ActivityDetail,
   type ActivityGroup,
   type CreateActivityInput,
@@ -31,7 +35,7 @@ import {
   profiles,
   user,
 } from '../../db/schema';
-import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
+import { badRequest, conflict, forbidden, HttpError, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
@@ -56,16 +60,27 @@ const GROUP_CATEGORY: Record<ActivityGroup, string> = {
   Food: 'FOOD & MARKETS',
 };
 
-/** Stock photo per type until the host uploads a cover (matches the design). */
-const DEFAULT_COVERS: Record<ActivityGroup, string> = {
-  Social: '1543269865-cbf427effbad',
-  Sports: '1574629810360-7efbbe195018',
-  Running: '1552674605-db6ffd4facb5',
-  Creative: '1460661419201-fd4cecdf8a8b',
-  Food: '1488459716781-31db52582fe9',
-};
-export const stockCover = (group: ActivityGroup) =>
-  `https://images.unsplash.com/photo-${DEFAULT_COVERS[group]}?w=800&q=70&auto=format&fit=crop`;
+/**
+ * The cover for what the host chose: their own upload, one of our pictures
+ * they picked (`art:<id>`), or with neither, ours for this activity.
+ */
+async function coverFrom(
+  { urls, storage }: { urls: Urls; storage: Storage | null },
+  hostId: string,
+  key: string | null | undefined,
+  activity: { id: string; group: ActivityGroup; title: string; description?: string },
+) {
+  const picked = artFromKey(key);
+  if (picked) {
+    if (!ALL_ACTIVITY_ART.includes(picked)) throw badRequest('Pick one of the pictures shown');
+    return urls.art.url(picked);
+  }
+  if (key) {
+    await requireUpload(storage, key, 'cover', hostId);
+    return urls.fromKey(key);
+  }
+  return urls.art.activityCover(activity);
+}
 
 export async function getActivityDetail(
   db: Db | Tx,
@@ -304,14 +319,20 @@ export async function createActivity(
   input: CreateActivityInput & { description: string },
 ) {
   checkStartsAt(input.startsAt);
-  if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', host.id);
   if (input.communityId) await requireCommunityMember(db, input.communityId, host.id);
+  // Its id now, so its picture (without a cover) is always the same one.
+  const newId = randomUUID();
+  const coverUrl = await coverFrom({ urls, storage }, host.id, input.coverKey, {
+    id: newId,
+    ...input,
+  });
 
   const where = await meetingPoint(db, host.id, input.location);
   const id = await db.transaction(async (tx) => {
     const [row] = await tx
       .insert(activities)
       .values({
+        id: newId,
         hostId: host.id,
         title: input.title,
         category: input.interest ? input.interest.toUpperCase() : GROUP_CATEGORY[input.group],
@@ -326,7 +347,7 @@ export async function createActivity(
         description: input.description,
         costLkr: input.costLkr ?? null,
         bring: input.bring ?? '',
-        coverUrl: urls.fromKey(input.coverKey) ?? stockCover(input.group),
+        coverUrl,
         ...(input.repeatsWeekly && { seriesId: randomUUID(), repeatsWeekly: true }),
         communityId: input.communityId ?? null,
       })
@@ -614,7 +635,6 @@ export async function updateActivity(
   input: UpdateActivityInput,
 ) {
   if (input.startsAt !== undefined) checkStartsAt(input.startsAt);
-  if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', host.id);
   return db.transaction(async (tx) => {
     const row = await lockForHost(tx, host.id, activityId);
 
@@ -642,6 +662,14 @@ export async function updateActivity(
     const where = relocated ? await meetingPoint(tx, host.id, input.location) : null;
     const group = input.group ?? (row.group as ActivityGroup);
     const groupChanged = group !== row.group;
+    const coverArt = artFromUrl(row.coverUrl);
+    // What a picture of ours for it is chosen from, after this edit.
+    const described = {
+      id: row.id,
+      group,
+      title: input.title ?? row.title,
+      description: input.description ?? row.description,
+    };
 
     const patch = {
       title: input.title,
@@ -663,15 +691,16 @@ export async function updateActivity(
         ? {
             group,
             category: row.interest ? row.category : GROUP_CATEGORY[group],
-            // Swap the stock photo along with the type; keep an uploaded cover.
+            // One of our pictures from the old type gives way to the new type's;
+            // an uploaded cover (or a picture that fits either) stays.
             coverUrl:
-              row.coverUrl === stockCover(row.group as ActivityGroup)
-                ? stockCover(group)
+              coverArt && !FALLBACK_ART.activityCover[group].includes(coverArt)
+                ? urls.art.activityCover(described)
                 : row.coverUrl,
           }
         : {}),
       ...(input.coverKey !== undefined && {
-        coverUrl: (input.coverKey && urls.fromKey(input.coverKey)) || stockCover(group),
+        coverUrl: await coverFrom({ urls, storage }, host.id, input.coverKey, described),
       }),
     };
     const replacedPhotos =

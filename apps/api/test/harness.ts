@@ -95,7 +95,7 @@ export function useTestApp(
     await (deps.push as { settled?: () => Promise<void> }).settled?.();
     mail.sent.length = 0;
     deps.limiter.reset();
-    await seed(deps.db);
+    await seed(deps.db, { publicUrl: deps.env.BETTER_AUTH_URL });
   });
   afterAll(() => close());
 

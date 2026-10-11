@@ -106,8 +106,9 @@ describe('starting a community', () => {
     expect(res.body).toMatchObject({
       name: 'Kandy Lake Walks',
       about: 'Evening loops of the lake.',
-      coverUrl: null,
-      logoUrl: null,
+      // Buddy's pictures for it instead: "lake" and "walks" call for these.
+      coverUrl: expect.stringMatching(/\/fallbacks\/cover-01\.svg$/),
+      logoUrl: expect.stringMatching(/\/fallbacks\/community-\d+\.svg$/),
     });
     const clash = await t.call(`/v1/communities/${body.id}`, {
       method: 'PATCH',

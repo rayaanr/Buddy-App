@@ -13,7 +13,8 @@ import { eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../../src/db/client';
 import * as s from '../../src/db/schema';
-import { stockCover } from '../../src/modules/activities/service';
+import { fillMissingPictures } from '../../src/jobs/pictures';
+import { createUrls } from '../../src/lib/urls';
 import { ACTIVITIES, DEMO_ACTIVITIES, type SeedActivity, type When } from './activities';
 import { COMMUNITIES, DEMO_COMMUNITIES, DEMO_MEMBERSHIPS } from './communities';
 import { DEMO_NAME, PEOPLE, emailOf } from './people';
@@ -42,9 +43,18 @@ export interface SeedOptions {
   now?: Date;
   /** Add the demo layer on top of the core data. */
   demo?: boolean;
+  /** The API's public URL, which serves the pictures given to anything without a photo. */
+  publicUrl?: string;
 }
 
-export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptions = {}) {
+export async function seed(
+  db: Db,
+  {
+    now = new Date(),
+    demo = false,
+    publicUrl = process.env.BETTER_AUTH_URL ?? 'http://localhost:7400',
+  }: SeedOptions = {},
+) {
   const communities = demo ? [...COMMUNITIES, ...DEMO_COMMUNITIES] : COMMUNITIES;
   const activities = demo ? [...ACTIVITIES, ...DEMO_ACTIVITIES] : ACTIVITIES;
 
@@ -147,7 +157,8 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
         location: a.at ?? (await town(a.area)).location,
         capacity: a.capacity,
         description: a.description,
-        coverUrl: a.cover ? unsplash(a.cover) : stockCover(a.group),
+        // Without a photo it gets one of our pictures (below).
+        coverUrl: a.cover ? unsplash(a.cover) : null,
         createdAt: new Date(Math.min(now.getTime(), start.getTime()) - 2 * 24 * 60 * MINUTE),
       })
       .returning({ id: s.activities.id });
@@ -185,6 +196,12 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
         .values([...readUpTo].map(([userId, lastReadAt]) => ({ activityId, userId, lastReadAt })));
     }
   }
+
+  // People, activities and communities without a photo get one of our pictures.
+  await fillMissingPictures(
+    db,
+    createUrls({ R2_PUBLIC_URL: undefined, BETTER_AUTH_URL: publicUrl }),
+  );
 
   return {
     users: PEOPLE.length,

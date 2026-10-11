@@ -1,4 +1,4 @@
-import { LIMITS, type Place } from '@buddy/shared';
+import { FALLBACK_ART, LIMITS, type Place } from '@buddy/shared';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -110,6 +110,7 @@ export function CommunityForm({
           size={84}
           noun="logo"
           emptyHint="Add a logo (optional)"
+          art={{ ids: FALLBACK_ART.communityLogo, label: 'Choose a picture' }}
         />
 
         <SectionLabel className="mb-2 mt-6">Name</SectionLabel>
@@ -188,8 +189,8 @@ export function CommunityForm({
         <CoverField
           cover={cover}
           hue={COMMUNITY_HUE}
-          removeLabel="Remove"
-          hint="Optional, but it helps people find you."
+          hint="Optional. Otherwise it gets one of Buddy’s pictures."
+          art={{ ids: FALLBACK_ART.communityCover, aspect: 16 / 9 }}
         />
       </KeyboardAwareScrollView>
 

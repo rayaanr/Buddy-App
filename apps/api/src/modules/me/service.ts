@@ -1,5 +1,8 @@
 import {
   type ActivityGroup,
+  artFromKey,
+  artFromUrl,
+  avatarArtFor,
   type Availability,
   firstName,
   type Gender,
@@ -19,11 +22,11 @@ import {
   user,
   places,
 } from '../../db/schema';
-import { notFound } from '../../lib/errors';
+import { badRequest, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { keyFromUrl, requireUpload } from '../../lib/upload-keys';
 import type { ChangeResult } from '../activities/announce';
-import { cancelLocked, stockCover } from '../activities/service';
+import { cancelLocked } from '../activities/service';
 import type { Urls } from '../../lib/urls';
 import { requirePlace, toPlace } from '../profiles/service';
 
@@ -83,23 +86,34 @@ export async function getMe(
 export async function updateMe(
   db: Db,
   storage: Storage | null,
+  urls: Urls,
   userId: string,
   input: UpdateMeInput,
 ) {
+  const picked = artFromKey(input.avatarKey);
   // Avatar keys are issued per user by the upload endpoint; reject anyone else's.
-  if (input.avatarKey) await requireUpload(storage, input.avatarKey, 'avatar', userId);
+  if (input.avatarKey && !picked) await requireUpload(storage, input.avatarKey, 'avatar', userId);
   if (input.placeId !== undefined) await requirePlace(db, input.placeId);
   return db.transaction(async (tx) => {
     // The photo being replaced, for the caller to clean up once this is saved.
-    const [before] =
-      input.avatarKey !== undefined
-        ? await tx
-            .select({ avatarKey: profiles.avatarKey })
-            .from(profiles)
-            .where(eq(profiles.userId, userId))
-        : [];
+    const [before] = await tx
+      .select({
+        avatarKey: profiles.avatarKey,
+        avatarUrl: profiles.avatarUrl,
+        gender: profiles.gender,
+      })
+      .from(profiles)
+      .where(eq(profiles.userId, userId));
+    const gender = input.gender !== undefined ? input.gender : before?.gender;
+    // Avatars come from the set for your gender.
+    if (picked && !avatarArtFor(gender).includes(picked)) {
+      throw badRequest('Pick one of the avatars shown');
+    }
+    const avatar = avatarPatch(urls, userId, gender, input.avatarKey, picked, before);
     const replacedPhotos =
-      before?.avatarKey && before.avatarKey !== input.avatarKey ? [before.avatarKey] : [];
+      input.avatarKey !== undefined && before?.avatarKey && before.avatarKey !== input.avatarKey
+        ? [before.avatarKey]
+        : [];
     if (input.name !== undefined) {
       await tx.update(user).set({ name: input.name }).where(eq(user.id, userId));
     }
@@ -109,8 +123,7 @@ export async function updateMe(
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),
       ...(input.hiddenInterests !== undefined && { hiddenInterests: input.hiddenInterests }),
-      // Uploading or removing a photo also drops the starting one (e.g. from Google).
-      ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey, avatarUrl: null }),
+      ...avatar,
       ...(input.gender !== undefined && { gender: input.gender }),
       ...(input.birthYear !== undefined && { birthYear: input.birthYear }),
       // Only ever set once, so finishing setup again keeps the first date.
@@ -131,6 +144,34 @@ export async function updateMe(
 }
 
 /**
+ * What changes about someone's picture. Uploading or removing a photo also
+ * drops the starting one (e.g. from Google); without a photo they get an
+ * avatar from their gender's set, picked by them or else by us. Changing
+ * gender swaps one of ours for the new set's.
+ */
+function avatarPatch(
+  urls: Urls,
+  userId: string,
+  gender: string | null | undefined,
+  key: string | null | undefined,
+  picked: string | null,
+  before: { avatarKey: string | null; avatarUrl: string | null } | undefined,
+) {
+  if (picked) return { avatarKey: null, avatarUrl: urls.art.url(picked) };
+  if (key) return { avatarKey: key, avatarUrl: null };
+  if (key === null) return { avatarKey: null, avatarUrl: urls.art.avatar(userId, gender) };
+  // Unchanged photo: only one of ours from the wrong set needs replacing.
+  const ours = artFromUrl(before?.avatarUrl);
+  if (
+    !before?.avatarKey &&
+    (!before?.avatarUrl || (ours && !avatarArtFor(gender).includes(ours)))
+  ) {
+    return { avatarUrl: urls.art.avatar(userId, gender) };
+  }
+  return {};
+}
+
+/**
  * Deletes the account (required by Apple and Google for apps with sign-up).
  * Sessions, profile, memberships and blocks go with it (ON DELETE CASCADE).
  * What other people still need stays, without them: upcoming activities they
@@ -145,7 +186,7 @@ const OTP_TYPES = ['sign-in', 'email-verification', 'forget-password', 'change-e
 export async function deleteAccount(
   db: Db,
   userId: string,
-  { publicUrl }: { publicUrl: string | undefined },
+  { publicUrl, urls }: { publicUrl: string | undefined; urls: Urls },
 ) {
   return db.transaction(async (tx) => {
     const [me] = await tx
@@ -174,13 +215,20 @@ export async function deleteAccount(
           }),
         });
       }
-      // Their own photo leaves with them; the activity goes back to a stock one.
+      // Their own photo leaves with them; the activity gets one of our pictures.
       const coverKey = keyFromUrl(row.coverUrl, publicUrl);
       if (coverKey) {
         photoKeys.push(coverKey);
         await tx
           .update(activities)
-          .set({ coverUrl: stockCover(row.group as ActivityGroup) })
+          .set({
+            coverUrl: urls.art.activityCover({
+              id: row.id,
+              group: row.group as ActivityGroup,
+              title: row.title,
+              description: row.description,
+            }),
+          })
           .where(eq(activities.id, row.id));
       }
     }

@@ -349,5 +349,7 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
 export function chatListRoutes(deps: Deps) {
   return new Hono<AppEnv>()
     .use(requireUser)
-    .get('/', async (c) => c.json({ chats: await listChats(deps.db, currentUser(c).id) }));
+    .get('/', async (c) =>
+      c.json({ chats: await listChats(deps.db, deps.urls, currentUser(c).id) }),
+    );
 }

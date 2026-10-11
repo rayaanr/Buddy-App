@@ -1,4 +1,4 @@
-import { placeLabel } from '@buddy/shared';
+import { artFromKey, FALLBACK_ART, placeLabel } from '@buddy/shared';
 import type {
   CommunityDetail,
   CommunitySummary,
@@ -6,6 +6,7 @@ import type {
   UpdateCommunityInput,
 } from '@buddy/shared';
 import { and, asc, eq, sql } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 
 import type { Db } from '../../db/client';
 import {
@@ -176,6 +177,30 @@ const nameTaken = (err: unknown) =>
   (err as { cause?: { code?: string } }).cause?.code === '23505';
 const takenError = () => conflict('There’s already a community with that name.');
 
+/**
+ * A community picture for what its creator chose: their upload, one of our
+ * pictures they picked (`art:<id>`), or with neither, ours for it.
+ */
+async function pictureFrom(
+  { urls, storage }: { urls: Urls; storage: Storage | null },
+  userId: string,
+  kind: 'cover' | 'logo',
+  key: string | null | undefined,
+  community: { id: string; name: string; about?: string },
+) {
+  const picked = artFromKey(key);
+  const set = kind === 'cover' ? FALLBACK_ART.communityCover : FALLBACK_ART.communityLogo;
+  if (picked) {
+    if (!set.includes(picked)) throw badRequest('Pick one of the pictures shown');
+    return urls.art.url(picked);
+  }
+  if (key) {
+    await requireUpload(storage, key, kind, userId);
+    return urls.fromKey(key);
+  }
+  return kind === 'cover' ? urls.art.communityCover(community) : urls.art.communityLogo(community);
+}
+
 /** Starts a community; the creator joins it straight away. */
 export async function createCommunity(
   db: Db,
@@ -183,8 +208,11 @@ export async function createCommunity(
   userId: string,
   input: CreateCommunityInput & { about: string; rules: string[] },
 ) {
-  if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', userId);
-  if (input.logoKey) await requireUpload(storage, input.logoKey, 'logo', userId);
+  // Its id now, so its pictures (without photos) are always the same ones.
+  const newId = randomUUID();
+  const described = { id: newId, name: input.name, about: input.about };
+  const coverUrl = await pictureFrom({ urls, storage }, userId, 'cover', input.coverKey, described);
+  const logoUrl = await pictureFrom({ urls, storage }, userId, 'logo', input.logoKey, described);
   // Where it meets: the town picked, or else where its creator lives.
   const placeId =
     input.placeId !== undefined
@@ -195,11 +223,12 @@ export async function createCommunity(
       const [row] = await tx
         .insert(communities)
         .values({
+          id: newId,
           name: input.name,
           about: input.about,
           rules: input.rules,
-          coverUrl: urls.fromKey(input.coverKey),
-          logoUrl: urls.fromKey(input.logoKey),
+          coverUrl,
+          logoUrl,
           placeId,
           createdBy: userId,
         })
@@ -224,6 +253,8 @@ export async function updateCommunity(
   const [row] = await db
     .select({
       createdBy: communities.createdBy,
+      name: communities.name,
+      about: communities.about,
       coverUrl: communities.coverUrl,
       logoUrl: communities.logoUrl,
     })
@@ -231,8 +262,16 @@ export async function updateCommunity(
     .where(eq(communities.id, id));
   if (!row) throw notFound('Community');
   if (row.createdBy !== userId) throw forbidden('Only the person who started it can edit it');
-  if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', userId);
-  if (input.logoKey) await requireUpload(storage, input.logoKey, 'logo', userId);
+  const described = { id, name: input.name ?? row.name, about: input.about ?? row.about };
+  const deps = { urls, storage };
+  const coverUrl =
+    input.coverKey === undefined
+      ? undefined
+      : await pictureFrom(deps, userId, 'cover', input.coverKey, described);
+  const logoUrl =
+    input.logoKey === undefined
+      ? undefined
+      : await pictureFrom(deps, userId, 'logo', input.logoKey, described);
 
   if (input.placeId !== undefined) await requirePlace(db, input.placeId);
 
@@ -240,8 +279,8 @@ export async function updateCommunity(
     ...(input.name !== undefined && { name: input.name }),
     ...(input.about !== undefined && { about: input.about }),
     ...(input.rules !== undefined && { rules: input.rules }),
-    ...(input.coverKey !== undefined && { coverUrl: urls.fromKey(input.coverKey) }),
-    ...(input.logoKey !== undefined && { logoUrl: urls.fromKey(input.logoKey) }),
+    ...(coverUrl !== undefined && { coverUrl }),
+    ...(logoUrl !== undefined && { logoUrl }),
     ...(input.placeId !== undefined && { placeId: input.placeId }),
   };
   if (Object.keys(patch).length) {

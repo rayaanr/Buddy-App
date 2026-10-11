@@ -2,6 +2,7 @@ export * from './brand';
 export * from './constants';
 export * from './text';
 export * from './time';
+export * from './fallbacks';
 export * from './schemas/common';
 export * from './schemas/activity';
 export * from './schemas/user';

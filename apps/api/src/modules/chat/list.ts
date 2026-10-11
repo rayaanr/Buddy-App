@@ -2,6 +2,7 @@ import { type ChatPreview, messageSummary } from '@buddy/shared';
 import { sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
+import type { Urls } from '../../lib/urls';
 import { notBlockedBetween } from '../safety/blocks';
 
 /** Activity chats stay on the list this long after the activity starts. */
@@ -33,7 +34,7 @@ interface Row extends Record<string, unknown> {
  * many messages from others arrived since you last read it; people on either
  * side of a block with you don't count.
  */
-export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]> {
+export async function listChats(db: Db, urls: Urls, viewerId: string): Promise<ChatPreview[]> {
   const visible = (sender: string) =>
     sql`(${sql.raw(sender)} is null or ${notBlockedBetween(viewerId, sql.raw(sender))})`;
   const fromOthers = sql`x.kind = 'user' and x.sender_id <> ${viewerId} and ${notBlockedBetween(viewerId, sql`x.sender_id`)}`;
@@ -93,7 +94,10 @@ export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]
         kind: r.kind,
         id: r.id,
         title: r.title,
-        imageUrl: r.image_url,
+        // A photo of its own, or else a group picture (not the activity's or
+        // community's own fallback, which is drawn for a cover, not a chat).
+        imageUrl:
+          r.image_url && !urls.art.isFallback(r.image_url) ? r.image_url : urls.art.groupChat(r.id),
         startsAt: r.starts_at ? iso(r.starts_at) : null,
         cancelled: r.cancelled,
         muted: r.muted,

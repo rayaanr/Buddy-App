@@ -12,7 +12,7 @@ export const privacyHtml = (contact: string) => `
 <ul>
   <li><strong>Your account:</strong> email address (to send sign-in codes), your name, and the home town you pick. If you sign in with Google, we get your name, email address and profile photo from Google.</li>
   <li><strong>Your profile:</strong> bio, interests, availability and an optional photo. Interests you mark “Not into” only change what we suggest to you.</li>
-  <li><strong>About you (private):</strong> your gender and birth year. We use your birth year to keep Buddy for people 18 and over. Neither is shown to other people.</li>
+  <li><strong>About you:</strong> your gender and birth year. We use your birth year to keep Buddy for people 18 and over; it isn’t shown to anyone. Your gender isn’t shown either, but until you add a photo your avatar is one of Buddy’s pictures from the set for it (men, women, or animals for everyone else), so others may be able to tell from it.</li>
   <li><strong>What you do on Buddy:</strong> activities you host or join, communities you join, group chat messages, people you block, and reports you file.</li>
   <li><strong>After an activity:</strong> whether the host marked you as there, and your answer to “would you go again?”. Only the host sees who they marked. Answers are only shown as a total on the host’s profile, never who gave them.</li>
   <li><strong>Location:</strong> only when you tap something like “Near me” or pin a meeting point. Your phone’s position is sent with that request to find nearby activities and is not stored. A meeting point you pin is stored with the activity and shown to others.</li>

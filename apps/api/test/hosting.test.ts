@@ -118,7 +118,7 @@ describe('cover photos', () => {
     expect((await patch('covers/someone-else/a.jpg')).status).toBe(403);
     // A prefix match isn't enough: no climbing out into someone else's folder.
     expect((await patch(`covers/${host.userId}/../../avatars/x/y.jpg`)).status).toBe(403);
-    expect((await patch(null)).body.coverUrl).toContain('unsplash');
+    expect((await patch(null)).body.coverUrl).toMatch(/\/fallbacks\/activity-[a-z]+-\d+\.svg$/);
   });
 });
 

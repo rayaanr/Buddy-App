@@ -1,4 +1,5 @@
 import {
+  avatarArtFor,
   GENDER_LABELS,
   GENDERS,
   LIMITS,
@@ -111,7 +112,15 @@ function EditProfileForm({ me }: { me: Saved }) {
           paddingBottom: 24,
         }}
       >
-        <PhotoButton image={photo} name={name || me.name} shape="circle" size={96} noun="photo" />
+        <PhotoButton
+          image={photo}
+          name={name || me.name}
+          shape="circle"
+          size={96}
+          noun="photo"
+          // The avatars for the gender chosen below.
+          art={{ ids: avatarArtFor(gender), label: 'Choose an avatar' }}
+        />
 
         <SectionLabel className="mb-2 mt-6">Name</SectionLabel>
         <TextField
@@ -173,7 +182,8 @@ function EditProfileForm({ me }: { me: Saved }) {
 
         <SectionLabel className="mb-1 mt-8">Just for you</SectionLabel>
         <Text className="mb-3 font-sans text-footnote leading-footnote text-muted">
-          Never shown on your profile.
+          Not shown on your profile. Without a photo, your avatar comes from the set for your
+          gender.
         </Text>
         <Text className="mb-2 font-sans text-label text-muted">Gender</Text>
         <View className="flex-row flex-wrap gap-2" role="radiogroup" accessibilityLabel="Gender">

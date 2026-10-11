@@ -1,4 +1,4 @@
-import { firstName, UUID_RE } from '@buddy/shared';
+import { firstName, isFallbackUrl, UUID_RE } from '@buddy/shared';
 import type { ActivitySummary } from '@buddy/shared';
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
@@ -38,7 +38,8 @@ function meta(a: ActivitySummary, url: string) {
   return {
     title: a.title,
     description: `${whenText(new Date(a.startsAt))} · ${a.place}, ${a.area}. ${a.goingCount} of ${a.capacity} going. Join on Buddy.`,
-    image: a.coverUrl ?? undefined,
+    // Link previews don't show SVG, so one of our pictures is left out.
+    image: a.coverUrl && !isFallbackUrl(a.coverUrl) ? a.coverUrl : undefined,
     url,
   };
 }

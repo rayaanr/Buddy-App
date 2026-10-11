@@ -4,6 +4,7 @@ import { Text, View } from 'react-native';
 
 import { useCommunity, useCommunityMembers } from '@/api/queries';
 import { ChatView } from '@/components/chat/ChatView';
+import { chatImage } from '@/lib/art';
 
 /** A community's group chat: all its members, between activities. */
 export default function CommunityChatScreen() {
@@ -16,7 +17,7 @@ export default function CommunityChatScreen() {
       room={{ kind: 'community', id }}
       title={c?.name ?? ''}
       subtitle={members}
-      image={c?.logoUrl}
+      image={c ? chatImage(id, c.logoUrl) : undefined}
       // Back to the community if that's where you came from, else open it.
       onTitlePress={() => router.dismissTo(`/community/${id}`)}
       membersOnly="Join this community to see its chat."

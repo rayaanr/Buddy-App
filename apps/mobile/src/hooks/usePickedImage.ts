@@ -1,9 +1,10 @@
-import type { UploadKind } from '@buddy/shared';
+import { artKey, isFallbackUrl, type UploadKind } from '@buddy/shared';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
 
 import { errorMessage } from '@/api/client';
 import { uploadImage } from '@/api/upload';
+import { artUri } from '@/lib/art';
 import { toast } from '@/store/ui';
 
 const CROP = {
@@ -15,8 +16,9 @@ const CROP = {
 
 /**
  * A photo picked from the library and uploaded straight away, so saving the
- * form is quick. `key` is what to save: undefined leaves the photo as it was,
- * null removes it, a string is the new upload.
+ * form is quick, or one of Buddy's own pictures. `key` is what to save:
+ * undefined leaves it as it was, null removes it (the server then gives it
+ * one of ours), a string is the new upload or `art:<id>`.
  */
 export function usePickedImage(kind: UploadKind, initialUri: string | null) {
   const [photo, setPhoto] = useState<{ uri: string | null; key?: string | null }>({
@@ -51,6 +53,10 @@ export function usePickedImage(kind: UploadKind, initialUri: string | null) {
     key: photo.key,
     uploading,
     pick,
+    /** One of Buddy's own pictures instead of a photo. */
+    choose: (id: string) => setPhoto({ uri: artUri(id), key: artKey(id) }),
+    /** It's one of ours, not a photo someone uploaded (so there's nothing to remove). */
+    isArt: isFallbackUrl(photo.uri),
     remove: () => setPhoto({ uri: null, key: null }),
   };
 }
