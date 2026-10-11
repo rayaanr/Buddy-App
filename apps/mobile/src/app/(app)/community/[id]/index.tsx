@@ -151,7 +151,20 @@ export default function CommunityScreen() {
           </Pressable>
         </View>
 
-        <SectionLabel className="mb-2.5 mt-[26px]">Upcoming</SectionLabel>
+        <View className="mb-2.5 mt-[26px] flex-row items-baseline justify-between">
+          <SectionLabel>Upcoming</SectionLabel>
+          {c.upcomingCount > c.upcoming.length ? (
+            <Pressable
+              onPress={() => router.push(`/community/${c.id}/activities`)}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text className="font-sans-medium text-label text-lime">
+                See all {c.upcomingCount}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
         <View className="gap-2.5">
           {c.upcoming.map((a) => (
             <ActivityRow key={a.id} activity={a} thumb={72} />

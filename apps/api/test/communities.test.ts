@@ -155,6 +155,34 @@ describe('activities in a community', () => {
     expect(detail.body.upcoming.map((a) => a.id)).toContain(res.body.id);
     expect(detail.body.weeklyActivityCount).toBe(mine.weeklyActivityCount + 1);
   });
+
+  it('shows the next 10 on the page and all of them under See all', async () => {
+    const me = await t.signIn();
+    const list = await t.call<{ communities: CommunitySummary[] }>('/v1/communities', {
+      headers: me.headers,
+    });
+    const mine = list.body.communities.find((c) => c.joined)!;
+    for (let i = 0; i < 11; i++) {
+      await t.call('/v1/activities', {
+        method: 'POST',
+        headers: me.headers,
+        body: { ...activity(mine.id), title: `Loop ${i}` },
+      });
+    }
+    const detail = await t.call<CommunityDetail>(`/v1/communities/${mine.id}`, {
+      headers: me.headers,
+    });
+    expect(detail.body.upcoming).toHaveLength(10);
+    expect(detail.body.upcomingCount).toBeGreaterThanOrEqual(11);
+    const all = await t.call<{ activities: ActivityDetail[] }>(
+      `/v1/communities/${mine.id}/activities`,
+      { headers: me.headers },
+    );
+    expect(all.body.activities).toHaveLength(detail.body.upcomingCount);
+    // Soonest first.
+    const times = all.body.activities.map((a) => a.startsAt);
+    expect([...times].sort()).toEqual(times);
+  });
 });
 
 describe('reporting a community', () => {

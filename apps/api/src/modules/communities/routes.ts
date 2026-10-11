@@ -23,6 +23,7 @@ import {
   muteCommunityChat,
   removeCommunityMember,
   updateCommunity,
+  communityActivities,
 } from './service';
 
 export function communityRoutes(deps: Deps) {
@@ -55,6 +56,12 @@ export function communityRoutes(deps: Deps) {
         await forgetPhotos(photoDeps, replacedPhotos);
         return c.json(community);
       })
+      // Community → See all: everything coming up, soonest first.
+      .get('/:id/activities', idParam(), async (c) =>
+        c.json({
+          activities: await communityActivities(db, urls, c.req.param('id'), currentUser(c).id),
+        }),
+      )
       .get('/:id', idParam(), async (c) =>
         c.json(await getCommunity(db, urls, c.req.param('id'), currentUser(c).id)),
       )

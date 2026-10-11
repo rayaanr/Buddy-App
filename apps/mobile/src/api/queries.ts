@@ -208,6 +208,14 @@ export function usePeopleSearch(search: string) {
   });
 }
 
+/** Everything coming up in a community (Community → See all). */
+export const useCommunityActivities = (id: string) =>
+  useQuery({
+    queryKey: [...keys.community(id), 'activities'] as const,
+    queryFn: async () =>
+      (await unwrap(api.communities[':id'].activities.$get({ param: { id } }))).activities,
+  });
+
 export const useCommunity = (id: string) =>
   useQuery({
     queryKey: keys.community(id),

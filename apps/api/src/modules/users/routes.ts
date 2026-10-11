@@ -23,6 +23,8 @@ import {
 import { originFor } from '../profiles/service';
 import { blockUser, unblockUser } from '../safety/service';
 
+const HOSTING_PREVIEW = 10;
+
 export function userRoutes({ db, urls }: Deps) {
   return (
     new Hono<AppEnv>()
@@ -95,6 +97,8 @@ export function userRoutes({ db, urls }: Deps) {
             viewerId: viewer.id,
             near: await originFor(db, viewer.id),
             where: [upcoming(), notCancelled(), eq(activities.hostId, id)],
+            // Their next few; a profile isn't the place for a long schedule.
+            limit: HOSTING_PREVIEW,
           }),
           countHosted(db, id),
           countWouldGoAgain(db, id),

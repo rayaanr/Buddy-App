@@ -29,6 +29,20 @@ import { notBlockedBetween } from '../safety/blocks';
 const MEMBER_PREVIEW = 6;
 /** The full list is short for now; page it once communities get big. */
 const MEMBER_LIST_MAX = 500;
+/** Activities on the community page; "See all" lists the rest. */
+const UPCOMING_PREVIEW = 10;
+const UPCOMING_MAX = 100;
+
+/** Everything coming up in a community, soonest first (Community → See all). */
+export async function communityActivities(db: Db, urls: Urls, id: string, viewerId: string) {
+  await getCommunity(db, urls, id, viewerId); // exists, and not hidden from you
+  return findActivitySummaries(db, urls, {
+    viewerId,
+    near: await originFor(db, viewerId),
+    where: [upcoming(), notCancelled(), eq(activities.communityId, id)],
+    limit: UPCOMING_MAX,
+  });
+}
 
 // Spelled out: with a single table Drizzle writes a bare "id", which inside
 // these subqueries would mean the activity's or member's own id.
@@ -125,11 +139,19 @@ export async function getCommunity(
     .orderBy(asc(communityMembers.joinedAt))
     .limit(MEMBER_PREVIEW);
 
-  const upcomingActivities = await findActivitySummaries(db, urls, {
-    viewerId,
-    near: await originFor(db, viewerId),
-    where: [upcoming(), notCancelled(), eq(activities.communityId, id)],
-  });
+  const near = await originFor(db, viewerId);
+  const [upcomingActivities, [counted]] = await Promise.all([
+    findActivitySummaries(db, urls, {
+      viewerId,
+      near,
+      where: [upcoming(), notCancelled(), eq(activities.communityId, id)],
+      limit: UPCOMING_PREVIEW,
+    }),
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(activities)
+      .where(and(upcoming(), notCancelled(), eq(activities.communityId, id))),
+  ]);
 
   return {
     ...summary,
@@ -141,6 +163,7 @@ export async function getCommunity(
       avatarUrl: urls.avatar(m.avatarKey, m.avatarUrl),
     })),
     upcoming: upcomingActivities,
+    upcomingCount: counted?.n ?? upcomingActivities.length,
     isCreator: info?.createdBy === viewerId,
     chatMuted: mine?.chatMuted ?? false,
     place: await requirePlace(db, summary.placeId),

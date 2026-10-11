@@ -27,7 +27,9 @@ export const communityDetail = communitySummary.extend({
   rules: z.array(z.string()),
   /** A handful of members for the face pile. */
   members: z.array(userSummary),
+  /** The next few coming up (see `upcomingCount` for all of them). */
   upcoming: z.array(activitySummary),
+  upcomingCount: z.number().int(),
   /** You started it, so you can edit it. */
   isCreator: z.boolean(),
   /** You turned off notifications from its group chat. */

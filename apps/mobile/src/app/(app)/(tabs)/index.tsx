@@ -1,7 +1,15 @@
 import { DISCOVER_FILTERS, type DiscoverFilter } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import {
   useCommunities,
@@ -20,7 +28,6 @@ import {
   CommunityPickCard,
 } from '@/components/activity/ActivityCards';
 import {
-  AnimatedView,
   BellIcon,
   ChatIcon,
   CountBadge,
@@ -47,7 +54,6 @@ import { cn } from '@/lib/cn';
 import { colors, TAB_BAR_HEIGHT, spacing } from '@/theme';
 import { currentPointIfAllowed } from '@/lib/location';
 import { useDiscoverStore } from '@/store/discover';
-import { fadeIn } from '@/theme/motion';
 
 export default function DiscoverScreen() {
   const { top } = useScreenInsets();
@@ -107,19 +113,10 @@ export default function DiscoverScreen() {
   const communityItems = fromCommunities.data ?? [];
   const showCommunityRow = !isSearch && filter === 'All' && communityItems.length > 0;
 
-  return (
-    <ScrollView
-      className="flex-1 bg-bg"
-      // On the map, dragging moves the map, not the page.
-      scrollEnabled={view === 'list'}
-      contentContainerStyle={{ paddingTop: top(58), paddingBottom: 24 }}
-      refreshControl={
-        <Refresh
-          refreshing={feed.isRefetching}
-          onRefresh={() => void Promise.all([feed.refetch(), fromCommunities.refetch()])}
-        />
-      }
-    >
+  // Everything above the feed scrolls with it, as the list's header; only
+  // the activity rows are virtualised (up to 50, each with a photo).
+  const header = (
+    <>
       <View className="flex-row items-center justify-between px-edge">
         <Pressable
           onPress={() => setWhere((w) => ({ open: true, key: w.key + 1 }))}
@@ -262,62 +259,98 @@ export default function DiscoverScreen() {
         </Text>
       ) : null}
 
-      <View className={cn('gap-3 px-edge', view === 'map' && 'hidden')}>
-        {isSearch ? (
-          <SearchMatches communities={matched.communities} people={matched.people} />
-        ) : null}
-        {isSearch && feed.data ? (
-          <Text className="font-sans text-label text-muted">
-            {results.length
-              ? `${results.length === 50 ? '50+' : results.length} across Sri Lanka, nearest first`
-              : ''}
-          </Text>
-        ) : null}
-        {feed.isLoading || locating ? (
-          <>
-            <ActivityHeroSkeleton />
-            <ActivityRowSkeleton />
-            <ActivityRowSkeleton />
-          </>
-        ) : null}
-        {feed.error ? (
-          <LoadError error={feed.error} onRetry={() => void feed.refetch()} stale={!!feed.data} />
-        ) : null}
-        {hero ? <ActivityHeroCard activity={hero} /> : null}
-        {/* Home stays calm: rows just fade in when they first appear. */}
-        {rows.map((a) => (
-          <AnimatedView key={a.id} entering={fadeIn}>
-            <ActivityRow activity={a} />
-          </AnimatedView>
-        ))}
-        {isSearch && feed.data && !results.length && matchedOthers ? (
-          <Text className="font-sans text-label text-muted">No activities match.</Text>
-        ) : null}
-        {isSearch && feed.data && !results.length && !matchedOthers ? (
-          <EmptyState
-            card
-            title={`Nothing matches “${searching}”`}
-            subtitle="Try another word, or host it yourself."
-            cta="Host an activity"
-            onPress={() => router.push('/create')}
+      {view === 'list' ? (
+        <View className="gap-3 px-edge pb-3">
+          {isSearch ? (
+            <SearchMatches communities={matched.communities} people={matched.people} />
+          ) : null}
+          {isSearch && feed.data ? (
+            <Text className="font-sans text-label text-muted">
+              {results.length
+                ? `${results.length === 50 ? '50+' : results.length} across Sri Lanka, nearest first`
+                : ''}
+            </Text>
+          ) : null}
+          {feed.isLoading || locating ? (
+            <>
+              <ActivityHeroSkeleton />
+              <ActivityRowSkeleton />
+              <ActivityRowSkeleton />
+            </>
+          ) : null}
+          {feed.error ? (
+            <LoadError error={feed.error} onRetry={() => void feed.refetch()} stale={!!feed.data} />
+          ) : null}
+          {hero ? <ActivityHeroCard activity={hero} /> : null}
+        </View>
+      ) : null}
+    </>
+  );
+
+  return (
+    <View className="flex-1 bg-bg">
+      <FlatList
+        style={styles.fill}
+        data={view === 'list' ? rows : []}
+        keyExtractor={(a) => a.id}
+        renderItem={({ item }) => (
+          <View className="px-edge">
+            <ActivityRow activity={item} />
+          </View>
+        )}
+        ItemSeparatorComponent={Gap}
+        ListHeaderComponent={header}
+        ListFooterComponent={
+          view === 'list' ? (
+            <View className="gap-3 px-edge pt-3">
+              {isSearch && feed.data && !results.length && matchedOthers ? (
+                <Text className="font-sans text-label text-muted">No activities match.</Text>
+              ) : null}
+              {isSearch && feed.data && !results.length && !matchedOthers ? (
+                <EmptyState
+                  card
+                  title={`Nothing matches “${searching}”`}
+                  subtitle="Try another word, or host it yourself."
+                  cta="Host an activity"
+                  onPress={() => router.push('/create')}
+                />
+              ) : null}
+              {!isSearch && feed.data && !hero ? (
+                <EmptyState
+                  card
+                  title="Nothing here yet"
+                  subtitle="Be the first to host something."
+                  cta="Host an activity"
+                  onPress={() => router.push('/create')}
+                />
+              ) : null}
+            </View>
+          ) : null
+        }
+        keyboardShouldPersistTaps="handled"
+        // On the map, dragging moves the map, not the page.
+        scrollEnabled={view === 'list'}
+        contentContainerStyle={{ paddingTop: top(58), paddingBottom: 24 }}
+        refreshControl={
+          <Refresh
+            refreshing={feed.isRefetching}
+            onRefresh={() => void Promise.all([feed.refetch(), fromCommunities.refetch()])}
           />
-        ) : null}
-        {!isSearch && feed.data && !hero ? (
-          <EmptyState
-            card
-            title="Nothing here yet"
-            subtitle="Be the first to host something."
-            cta="Host an activity"
-            onPress={() => router.push('/create')}
-          />
-        ) : null}
-      </View>
+        }
+      />
       <LocationSheet
         key={where.key}
         open={where.open}
         onClose={() => setWhere((w) => ({ ...w, open: false }))}
         home={homeLabel}
       />
-    </ScrollView>
+    </View>
   );
 }
+
+/** Space between activity rows. */
+function Gap() {
+  return <View className="h-3" />;
+}
+
+const styles = StyleSheet.create({ fill: { flex: 1 } });
