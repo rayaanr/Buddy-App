@@ -108,6 +108,20 @@ eas env:set --name EXPO_PUBLIC_API_URL --value https://api-buddy.<DOMAIN> --envi
 
 Then build with `eas build --profile production`. A release build without it stops at launch with an error rather than pointing at nothing.
 
+### Over-the-air updates (once, before the first store build)
+
+`expo-updates` is installed but not yet linked to EAS. From `apps/mobile`, signed in to Expo:
+
+```bash
+npx eas-cli@latest update:configure
+```
+
+It adds the update URL and runtime version to `app.json` and a channel to each build profile in `eas.json`. Commit what it changes. Builds made before this can never receive updates. Afterwards, JavaScript-only fixes ship with `eas update --channel production --environment production --message "…"`; anything native still needs a new build.
+
+### Development builds
+
+The `development` profile builds a dev client (`expo-dev-client`): it loads JavaScript from `bun run dev` on your machine and finds the API there too, so it has no API URL of its own. Build it once with `eas build --profile development`, and again whenever a native package changes (camera, clipboard and haptics, for example, arrived after the last one).
+
 ## 4. Backups
 
 Each deploy installs a cron job that runs `backup.sh` nightly at 02:30. Dumps go to `infra/backups/` on the server. To keep copies off the server (do this: it's what lets you move servers), install rclone, add an R2 remote named `r2` (`rclone config`), and the script copies each dump to the `buddy-backups` bucket (or `BACKUP_BUCKET`).

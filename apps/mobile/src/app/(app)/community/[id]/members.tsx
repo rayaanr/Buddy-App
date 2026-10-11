@@ -44,7 +44,11 @@ export default function CommunityMembersScreen() {
         <View className="mt-4">
           {members.isLoading ? <Loading className="py-10" /> : null}
           {members.error ? (
-            <LoadError error={members.error} onRetry={() => void members.refetch()} />
+            <LoadError
+              error={members.error}
+              onRetry={() => void members.refetch()}
+              stale={!!members.data}
+            />
           ) : null}
           {members.data?.map((m) => (
             <View key={m.id} className="flex-row items-center border-b border-divider">

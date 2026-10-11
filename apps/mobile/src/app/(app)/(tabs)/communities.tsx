@@ -66,7 +66,11 @@ export default function CommunitiesScreen() {
           </>
         ) : null}
         {communities.error ? (
-          <LoadError error={communities.error} onRetry={() => void communities.refetch()} />
+          <LoadError
+            error={communities.error}
+            onRetry={() => void communities.refetch()}
+            stale={!!communities.data}
+          />
         ) : null}
         {communities.data?.map((c, i) => (
           <AnimatedView key={c.id} entering={enterItem(i)} layout={layoutItem}>

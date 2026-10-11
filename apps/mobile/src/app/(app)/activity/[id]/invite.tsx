@@ -115,7 +115,11 @@ function Invite({ activity: a }: { activity: ActivityDetail }) {
 
         {people.isLoading ? <Loading className="py-10" /> : null}
         {people.error ? (
-          <LoadError error={people.error} onRetry={() => void people.refetch()} />
+          <LoadError
+            error={people.error}
+            onRetry={() => void people.refetch()}
+            stale={!!people.data}
+          />
         ) : null}
         {people.data && !list.length ? (
           <EmptyState

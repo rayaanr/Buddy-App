@@ -73,7 +73,11 @@ export default function ModerationScreen() {
 
         <View className="mt-4 gap-3">
           {reports.error ? (
-            <LoadError error={reports.error} onRetry={() => void reports.refetch()} />
+            <LoadError
+              error={reports.error}
+              onRetry={() => void reports.refetch()}
+              stale={!!reports.data}
+            />
           ) : null}
           {reports.data?.length === 0 ? (
             <EmptyState

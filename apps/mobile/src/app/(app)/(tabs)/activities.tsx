@@ -100,7 +100,11 @@ export default function ActivitiesScreen() {
           </>
         ) : null}
         {current.error ? (
-          <LoadError error={current.error} onRetry={() => void current.refetch()} />
+          <LoadError
+            error={current.error}
+            onRetry={() => void current.refetch()}
+            stale={!!current.data}
+          />
         ) : null}
         {list.map((a, i) => (
           <AnimatedView key={a.id} entering={enterItem(i)} layout={layoutItem}>

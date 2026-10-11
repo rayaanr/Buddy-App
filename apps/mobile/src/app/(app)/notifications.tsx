@@ -40,7 +40,9 @@ export default function NotificationsScreen() {
       >
         <View>
           {list.isLoading ? <Loading className="py-10" /> : null}
-          {list.error ? <LoadError error={list.error} onRetry={() => void list.refetch()} /> : null}
+          {list.error ? (
+            <LoadError error={list.error} onRetry={() => void list.refetch()} stale={!!list.data} />
+          ) : null}
           {list.data?.notifications.length === 0 ? (
             <EmptyState
               card

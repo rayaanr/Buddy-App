@@ -35,7 +35,11 @@ export default function BlockedPeopleScreen() {
         {blocked.isLoading ? <Loading /> : null}
         {blocked.error ? (
           <View className="mt-6">
-            <LoadError error={blocked.error} onRetry={() => void blocked.refetch()} />
+            <LoadError
+              error={blocked.error}
+              onRetry={() => void blocked.refetch()}
+              stale={!!blocked.data}
+            />
           </View>
         ) : null}
         {blocked.data?.length === 0 ? (

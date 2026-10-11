@@ -20,8 +20,8 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { authClient } from '@/api/auth-client';
-import { ApiRequestError } from '@/api/client';
-import { queryClient, signOut, useMe } from '@/api/queries';
+import { connectQueriesToApp } from '@/api/lifecycle';
+import { queryClient, useMe } from '@/api/queries';
 import { ToastHost } from '@/components/ui';
 import { useHydrated } from '@/hooks/useHydrated';
 import { activityPathFrom } from '@/lib/pendingLink';
@@ -30,6 +30,7 @@ import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
+connectQueriesToApp();
 
 /** The launch link is only ever remembered once (not again after signing out). */
 let initialLinkSeen = false;
@@ -87,11 +88,6 @@ function RootNavigator() {
   const signedIn = !!session.data;
   const me = useMe(signedIn);
   const remembered = useAccountStore((s) => !!s.remembered);
-
-  // An expired session shows up as a 401 from the API: treat it as signed out.
-  useEffect(() => {
-    if (me.error instanceof ApiRequestError && me.error.status === 401) void signOut();
-  }, [me.error]);
 
   // Returning users who open the app already signed in get the "Picked for you"
   // deck, unless a link opened it somewhere specific (e.g. a chat).

@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  Pressable,
   RefreshControl,
   Text,
   View,
@@ -26,8 +27,37 @@ export function Loading({ className }: { className?: string }) {
   );
 }
 
-/** A failed request, with the API's message and a retry. */
-export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+/**
+ * A failed request, with the API's message and a retry. `stale`: there's
+ * already something on screen from before (a refresh failed), so this is a
+ * slim line above it rather than a card in its place.
+ */
+export function LoadError({
+  error,
+  onRetry,
+  stale,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  stale?: boolean;
+}) {
+  if (stale) {
+    return (
+      <View className="mb-3 flex-row items-center gap-3 rounded-2xl bg-surface py-2.5 pl-4 pr-2">
+        <Text className="flex-1 font-sans text-[13.5px] text-muted" numberOfLines={2}>
+          Couldn’t refresh. {errorMessage(error)}
+        </Text>
+        <Pressable
+          onPress={onRetry}
+          accessibilityRole="button"
+          hitSlop={6}
+          className="h-9 justify-center rounded-xl px-3 active:bg-surface-raised"
+        >
+          <Text className="font-sans-semibold text-[14px] text-lime">Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
   return (
     <View className="items-center rounded-[20px] bg-surface px-5 py-10">
       <Text className="font-sans-semibold text-[17px] text-ink">Couldn’t load this</Text>

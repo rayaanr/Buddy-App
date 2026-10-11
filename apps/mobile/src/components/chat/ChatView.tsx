@@ -403,12 +403,18 @@ export function ChatView({
 
       {chat.isLoading ? (
         <Loading className="flex-1" />
-      ) : chat.error ? (
+      ) : chat.error && !chat.loaded ? (
         <View className="flex-1 justify-center px-[18px]">
           <LoadError error={chat.error} onRetry={() => void chat.refetch()} />
         </View>
       ) : (
         <View className="flex-1">
+          {/* A refresh failed: keep the messages, say so above them. */}
+          {chat.error ? (
+            <View className="px-[18px] pt-2">
+              <LoadError error={chat.error} onRetry={() => void chat.refetch()} stale />
+            </View>
+          ) : null}
           <FlatList
             ref={list}
             inverted

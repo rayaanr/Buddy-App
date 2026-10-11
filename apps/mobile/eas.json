@@ -9,10 +9,9 @@
     },
     "development": {
       "extends": "base",
+      "developmentClient": true,
       "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.20:7400"
-      }
+      "environment": "development"
     },
     "preview": {
       "extends": "base",

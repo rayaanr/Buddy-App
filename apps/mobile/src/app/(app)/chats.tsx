@@ -107,7 +107,11 @@ export default function ChatsScreen() {
         <View>
           {chats.isLoading ? <Loading className="py-10" /> : null}
           {chats.error ? (
-            <LoadError error={chats.error} onRetry={() => void chats.refetch()} />
+            <LoadError
+              error={chats.error}
+              onRetry={() => void chats.refetch()}
+              stale={!!chats.data}
+            />
           ) : null}
           {chats.data?.length === 0 ? (
             <EmptyState

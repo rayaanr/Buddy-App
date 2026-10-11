@@ -13,6 +13,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 
+import { merge, refreshed } from '@/lib/chatPages';
 import { API_URL } from '@/config';
 import { sessionCookie } from './auth-client';
 import { api, unwrap } from './client';
@@ -77,14 +78,6 @@ const endpoints = ({ kind }: ChatRoom) =>
   kind === 'activity' ? api.activities[':id'].chat : api.communities[':id'].chat;
 
 /** Inserts or replaces messages by id, keeping oldest-first order. */
-function merge(list: ChatMessage[], incoming: ChatMessage[]) {
-  const byId = new Map(list.map((m) => [m.id, m]));
-  for (const m of incoming) byId.set(m.id, m);
-  return [...byId.values()].sort(
-    (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id),
-  );
-}
-
 /**
  * Live group chat for an activity or a community: history over HTTP, live events over a
  * WebSocket (with reconnect and catch-up), optimistic sends with retry,
@@ -97,7 +90,11 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
   const chat = endpoints(room);
   const history = useQuery({
     queryKey: key,
-    queryFn: () => unwrap(chat.messages.$get({ param: { id: roomId }, query: {} })),
+    queryFn: async () =>
+      refreshed(
+        qc.getQueryData<MessagesPage>(key),
+        await unwrap(chat.messages.$get({ param: { id: roomId }, query: {} })),
+      ),
   });
 
   const [pending, setPending] = useState<Map<string, Pending>>(new Map());
@@ -150,13 +147,21 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
         headers: cookie ? { cookie } : {},
       });
       socket.current = ws;
+      let opened = false;
 
       ws.onopen = () => {
+        opened = true;
         attempt = 0;
         void catchUp();
       };
       ws.onmessage = (e) => {
-        const parsed = serverEvent.safeParse(JSON.parse(String(e.data)));
+        let data: unknown;
+        try {
+          data = JSON.parse(String(e.data));
+        } catch {
+          return;
+        }
+        const parsed = serverEvent.safeParse(data);
         if (!parsed.success) return;
         const event = parsed.data;
         if (event.type === 'message') {
@@ -207,7 +212,12 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
         socket.current = null;
         // 4403: removed from the activity; don't keep knocking.
         if (closedByUs || e.code === 4403) return;
-        const delay = Math.min(RECONNECT_MAX_MS, 1000 * 2 ** attempt++);
+        // Refused twice before opening: maybe the session expired (the socket
+        // can't say why). Checking who's signed in signs out on a 401.
+        if (!opened && attempt >= 1) void qc.invalidateQueries({ queryKey: keys.me });
+        // Jittered, so a server restart isn't met by every phone at once.
+        const delay =
+          Math.min(RECONNECT_MAX_MS, 1000 * 2 ** attempt++) * (0.75 + Math.random() / 2);
         retryTimer = setTimeout(() => void connect(), delay);
       };
     };
@@ -223,6 +233,8 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     // Phones drop sockets in the background; reconnect (and catch up) on return.
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active' && !socket.current) {
+        // A reconnect may already be waiting: one socket, not two.
+        clearTimeout(retryTimer);
         closedByUs = false;
         attempt = 0;
         void connect();
@@ -582,6 +594,8 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     edit,
     remove,
     isLoading: history.isLoading,
+    /** Messages are here (a later refresh may still have failed: see `error`). */
+    loaded: history.data !== undefined,
     error: history.error,
     refetch: history.refetch,
     typingName: typing?.name ?? null,

@@ -121,7 +121,11 @@ export function MembersSheet({
           {people.isLoading ? <Loading className="py-10" /> : null}
           {people.error ? (
             <View className="mt-4">
-              <LoadError error={people.error} onRetry={() => void people.refetch()} />
+              <LoadError
+                error={people.error}
+                onRetry={() => void people.refetch()}
+                stale={!!people.data}
+              />
             </View>
           ) : null}
           <View className="mt-2">

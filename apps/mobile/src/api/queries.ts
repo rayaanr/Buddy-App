@@ -15,6 +15,8 @@ import type {
 } from '@buddy/shared';
 import {
   keepPreviousData,
+  MutationCache,
+  QueryCache,
   QueryClient,
   useMutation,
   useQuery,
@@ -29,7 +31,23 @@ import { useAccountStore } from '@/store/account';
 import { useDiscoverStore } from '@/store/discover';
 import { ApiRequestError, api, unwrap } from './client';
 
+/**
+ * The API only answers 401 when no one is signed in: the session expired or
+ * was revoked (e.g. deleted on another phone). Any request that gets one
+ * signs out, and the root navigator shows sign-in.
+ */
+let signingOut = false;
+const signOutIfExpired = (err: unknown) => {
+  if (signingOut || !(err instanceof ApiRequestError && err.status === 401)) return;
+  signingOut = true;
+  void signOut().finally(() => {
+    signingOut = false;
+  });
+};
+
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: signOutIfExpired }),
+  mutationCache: new MutationCache({ onError: signOutIfExpired }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

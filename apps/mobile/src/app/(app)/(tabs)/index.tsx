@@ -261,7 +261,9 @@ export default function DiscoverScreen() {
             <ActivityRowSkeleton />
           </>
         ) : null}
-        {feed.error ? <LoadError error={feed.error} onRetry={() => void feed.refetch()} /> : null}
+        {feed.error ? (
+          <LoadError error={feed.error} onRetry={() => void feed.refetch()} stale={!!feed.data} />
+        ) : null}
         {hero ? <ActivityHeroCard activity={hero} /> : null}
         {/* Home stays calm: rows just fade in when they first appear. */}
         {rows.map((a) => (
