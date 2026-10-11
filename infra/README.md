@@ -133,6 +133,20 @@ Push goes through Expo's push service, which hands Android messages to Firebase 
 
 Without the file the app still works; Android phones just don't get a push token. iPhones need a paid Apple Developer account for push.
 
+### Crash reports (Sentry, optional)
+
+Both the app and the API send crashes to [Sentry](https://sentry.io) once they have a DSN, and send nothing without one. The free plan is enough. Create two projects in Sentry (React Native, and Bun for the API) and copy each one's DSN.
+
+- **API:** add `SENTRY_DSN=<api project DSN>` to the `ENV_FILE` secret and run the deploy workflow. Unexpected errors (the 500s) are reported with their request ID, which matches the API log.
+- **App:** from `apps/mobile`:
+  ```bash
+  npx eas-cli@latest env:create --name EXPO_PUBLIC_SENTRY_DSN --value <app project DSN> --environment preview --environment production --visibility plaintext
+  ```
+  Then build again. Reports come from builds only, never from `bun run dev`.
+- **Readable stack traces (optional):** Sentry → Settings → Auth Tokens → create one, then set `SENTRY_AUTH_TOKEN` (visibility secret), `SENTRY_ORG` and `SENTRY_PROJECT` (your org and project slugs) the same way. Builds then upload source maps. Without the token they skip the upload and still build.
+
+Neither sends names or emails, only the error, the screen or request, and the device. To keep IP addresses out too, turn on Sentry → Settings → Security & Privacy → Prevent Storing of IP Addresses.
+
 ### Development builds
 
 The `development` profile builds a dev client (`expo-dev-client`): it loads JavaScript from `bun run dev` on your machine and finds the API there too, so it has no API URL of its own. Build it once with `eas build --profile development`, and again whenever a native package changes (camera, clipboard and haptics, for example, arrived after the last one).

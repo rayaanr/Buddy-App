@@ -7,8 +7,10 @@ import { loadEnv } from './env';
 import { startReminders } from './jobs/reminders';
 import { startRetention } from './jobs/retention';
 import { startSeries } from './jobs/series';
+import { flushSentry, startSentry } from './lib/sentry';
 
 const env = loadEnv();
+startSentry(env);
 const { deps, close } = createDeps(env);
 const app = createApp(deps);
 const stopReminders = startReminders(deps);
@@ -30,7 +32,8 @@ const shutdown = (signal: string) => {
   stopRetention();
   wss.close();
   server.close(() => {
-    void close().finally(() => process.exit(0));
+    // Send any crash reports still queued before exiting.
+    void Promise.allSettled([close(), flushSentry()]).finally(() => process.exit(0));
   });
   setTimeout(() => process.exit(1), 10_000).unref();
 };

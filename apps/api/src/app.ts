@@ -10,6 +10,7 @@ import { loadSession } from './auth/middleware';
 import type { AppEnv, Deps } from './http/context';
 import { HttpError } from './lib/errors';
 import { clientIp } from './lib/rate-limit';
+import { reportError } from './lib/sentry';
 import { activityRoutes } from './modules/activities/routes';
 import { brandRoutes } from './modules/brand/routes';
 import { chatListRoutes, chatRoutes } from './modules/chat/routes';
@@ -46,6 +47,7 @@ export function createApp(deps: Deps) {
   app.onError((err, c) => {
     if (err instanceof HttpError) return c.json(err.toBody(), err.status);
     logger.error({ err, reqId: c.get('requestId') }, 'Unhandled error');
+    reportError(err, c.get('requestId'));
     return c.json({ error: { code: ERROR_CODES.internal, message: 'Something went wrong' } }, 500);
   });
 
@@ -110,6 +112,10 @@ export function createApp(deps: Deps) {
       c.header('cache-control', 'no-store');
     })
     .use(loadSession(deps))
+    // What the sign-in screens can offer (public: asked before signing in).
+    .get('/config', (c) =>
+      c.json({ signIn: { google: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) } }),
+    )
     .route('/me', meRoutes(deps))
     .route('/chats', chatListRoutes(deps))
     .route('/activities/:id/chat', chatRoutes(deps, 'activity'))

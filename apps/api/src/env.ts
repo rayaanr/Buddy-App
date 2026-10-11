@@ -63,6 +63,9 @@ const schema = z
     /** Optional; only needed if push security is enabled in the Expo project. */
     EXPO_ACCESS_TOKEN: z.string().optional(),
 
+    /** Crash reports go to Sentry when set (the project's DSN). Off without it. */
+    SENTRY_DSN: z.url().optional(),
+
     /** Cloudflare R2 (S3-compatible) for photos. Required: the server won't start without it (tests excepted). */
     R2_ACCOUNT_ID: z.string().optional(),
     R2_ACCESS_KEY_ID: z.string().optional(),

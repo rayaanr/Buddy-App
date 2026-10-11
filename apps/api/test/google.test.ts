@@ -128,6 +128,11 @@ describe('Google sign-in', () => {
 });
 
 describe('Google settings', () => {
+  it('tells the app to offer Google sign-in', async () => {
+    const res = await t.call<{ signIn: { google: boolean } }>('/v1/config');
+    expect(res.body.signIn.google).toBe(true);
+  });
+
   const base = {
     NODE_ENV: 'test',
     DATABASE_URL: 'postgres://x@localhost/x',

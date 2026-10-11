@@ -18,6 +18,13 @@ describe('health', () => {
   });
 });
 
+describe('config', () => {
+  it('says Google sign-in is off when it isn’t set up', async () => {
+    const res = await t.call<{ signIn: { google: boolean } }>('/v1/config');
+    expect(res).toEqual({ status: 200, body: { signIn: { google: false } } });
+  });
+});
+
 describe('activities feed', () => {
   it('requires sign-in', async () => {
     const res = await t.call('/v1/activities');

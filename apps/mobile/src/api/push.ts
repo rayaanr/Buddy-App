@@ -113,6 +113,31 @@ export async function unregisterPush() {
   await unwrap(api.me['push-tokens'].$delete({ json: { token } })).catch(() => {});
 }
 
+async function setBadge(count: number) {
+  try {
+    const Notifications = await notifications();
+    await Notifications?.setBadgeCountAsync(count);
+  } catch {
+    // Some Android launchers have no badges; nothing to do.
+  }
+}
+
+/**
+ * Unread chat messages on the app icon (muted chats left out, as in the app).
+ * Kept up to date while the app is open; cleared on sign-out.
+ */
+export function useAppIconBadge(count: number) {
+  useEffect(() => {
+    if (supported) void setBadge(count);
+  }, [count]);
+  useEffect(
+    () => () => {
+      if (supported) void setBadge(0);
+    },
+    [],
+  );
+}
+
 /**
  * Tapping a notification opens what it's about: the group chat, or the
  * activity page (time changes, cancellations). Covers taps that launched the

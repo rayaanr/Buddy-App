@@ -1,6 +1,6 @@
-import type { AdminReport, ReportReason, ResolveReportInput } from '@buddy/shared';
+import type { AdminPerson, AdminReport, ReportReason, ResolveReportInput } from '@buddy/shared';
 import { firstName } from '@buddy/shared';
-import { and, desc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, type SQL, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 
 import type { Db } from '../../db/client';
@@ -13,7 +13,7 @@ import {
   session,
   user,
 } from '../../db/schema';
-import { badRequest, notFound } from '../../lib/errors';
+import { badRequest, HttpError, notFound } from '../../lib/errors';
 import type { Urls } from '../../lib/urls';
 import type { ChangeResult } from '../activities/announce';
 import { cancelLocked } from '../activities/service';
@@ -102,6 +102,93 @@ interface Resolved {
   removedPhotos: string[];
 }
 
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+/** Calls off an activity for breaking the rules (and stops it repeating). */
+async function cancelForRules(tx: Tx, activityId: string, out: Resolved) {
+  const [row] = await tx
+    .select()
+    .from(activities)
+    .where(eq(activities.id, activityId))
+    .for('update');
+  if (!row) throw notFound('Activity');
+  if (row.cancelledAt) return;
+  out.cancelled.push({
+    id: row.id,
+    result: await cancelLocked(tx, row, {
+      stopRepeating: true,
+      line: 'Buddy removed this activity for breaking the community rules',
+      notice: {
+        title: `Cancelled: ${row.title}`,
+        body: 'Buddy removed it for breaking the community rules.',
+      },
+    }),
+  });
+}
+
+/** Deletes a community with its chat; its photos are left for the caller to clean up. */
+async function deleteCommunity(tx: Tx, communityId: string, out: Resolved) {
+  const chatPhotos = await communityChatPhotos(tx, communityId);
+  const [gone] = await tx
+    .delete(communities)
+    .where(eq(communities.id, communityId))
+    .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
+  if (!gone) throw notFound('Community');
+  out.removedPhotos.push(
+    ...[gone.coverUrl, gone.logoUrl, ...chatPhotos].filter((u): u is string => !!u),
+  );
+}
+
+/** Signs someone out everywhere, keeps them out, and calls off what they host. */
+async function suspendLocked(tx: Tx, personId: string, out: Resolved) {
+  const [who] = await tx.select({ name: user.name }).from(user).where(eq(user.id, personId));
+  if (!who) throw notFound('Person');
+  await tx
+    .update(profiles)
+    .set({ suspendedAt: new Date() })
+    .where(and(eq(profiles.userId, personId), isNull(profiles.suspendedAt)));
+  // Signed out everywhere; signing back in is refused (see auth.ts).
+  await tx.delete(session).where(eq(session.userId, personId));
+  // What they host can't go ahead.
+  const hosted = await tx
+    .select()
+    .from(activities)
+    .where(
+      and(
+        eq(activities.hostId, personId),
+        isNull(activities.cancelledAt),
+        sql`${activities.startsAt} > now()`,
+      ),
+    )
+    .for('update');
+  const host = firstName(who.name);
+  for (const row of hosted) {
+    out.cancelled.push({
+      id: row.id,
+      result: await cancelLocked(tx, row, {
+        stopRepeating: true,
+        line: `${host} can’t host on Buddy any more, so this activity is off`,
+        notice: { title: `Cancelled: ${row.title}`, body: `${host} can’t host it any more.` },
+      }),
+    });
+  }
+}
+
+/** Marks open reports as dealt with. */
+async function closeReports(
+  tx: Tx,
+  moderatorId: string,
+  resolution: string,
+  which: (SQL | undefined)[],
+) {
+  await tx
+    .update(reports)
+    .set({ status: 'resolved', resolution, resolvedBy: moderatorId, resolvedAt: new Date() })
+    .where(and(eq(reports.status, 'open'), or(...which)));
+}
+
+const nothingYet = (): Resolved => ({ cancelled: [], removedMessage: null, removedPhotos: [] });
+
 /**
  * Acts on a report: removes the content and/or suspends the person, or just
  * dismisses it. Other open reports about the same content or person are
@@ -117,8 +204,30 @@ export async function resolveReport(
     const [report] = await tx.select().from(reports).where(eq(reports.id, reportId)).for('update');
     if (!report) throw notFound('Report');
 
-    const out: Resolved = { cancelled: [], removedMessage: null, removedPhotos: [] };
-    const done: string[] = [];
+    const out = nothingYet();
+    if (input.removeContent && !report.messageId && !report.activityId && !report.communityId) {
+      throw badRequest('This report is about a person; suspend them instead');
+    }
+    if (input.suspend && !report.targetUserId) {
+      throw badRequest('Nobody to suspend: the account no longer exists');
+    }
+
+    // Close this report and any other open ones the action settles. First:
+    // deleting a message or community clears the reports' link to it.
+    const done = [input.removeContent && 'removed', input.suspend && 'suspended'].filter(Boolean);
+    await closeReports(tx, moderatorId, done.length ? done.join(',') : 'dismissed', [
+      eq(reports.id, report.id),
+      input.removeContent && report.messageId ? eq(reports.messageId, report.messageId) : undefined,
+      input.removeContent && report.activityId && !report.messageId
+        ? and(eq(reports.activityId, report.activityId), isNull(reports.messageId))
+        : undefined,
+      input.removeContent && report.communityId
+        ? eq(reports.communityId, report.communityId)
+        : undefined,
+      input.suspend && report.targetUserId
+        ? eq(reports.targetUserId, report.targetUserId)
+        : undefined,
+    ]);
 
     if (input.removeContent) {
       if (report.messageId) {
@@ -133,99 +242,73 @@ export async function resolveReport(
           });
         out.removedMessage = message ?? null;
       } else if (report.activityId) {
-        const [row] = await tx
-          .select()
-          .from(activities)
-          .where(eq(activities.id, report.activityId))
-          .for('update');
-        if (row && !row.cancelledAt) {
-          out.cancelled.push({
-            id: row.id,
-            result: await cancelLocked(tx, row, {
-              stopRepeating: true,
-              line: 'Buddy removed this activity for breaking the community rules',
-              notice: {
-                title: `Cancelled: ${row.title}`,
-                body: 'Buddy removed it for breaking the community rules.',
-              },
-            }),
-          });
-        }
+        await cancelForRules(tx, report.activityId, out).catch(ignoreGone);
       } else if (report.communityId) {
-        const chatPhotos = await communityChatPhotos(tx, report.communityId);
-        const [gone] = await tx
-          .delete(communities)
-          .where(eq(communities.id, report.communityId))
-          .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
-        out.removedPhotos = [gone?.coverUrl, gone?.logoUrl, ...chatPhotos].filter(
-          (u): u is string => !!u,
-        );
-      } else {
-        throw badRequest('This report is about a person; suspend them instead');
+        await deleteCommunity(tx, report.communityId, out).catch(ignoreGone);
       }
-      done.push('removed');
     }
-
-    if (input.suspend) {
-      const personId = report.targetUserId;
-      if (!personId) throw badRequest('Nobody to suspend: the account no longer exists');
-      const [who] = await tx.select({ name: user.name }).from(user).where(eq(user.id, personId));
-      await tx
-        .update(profiles)
-        .set({ suspendedAt: new Date() })
-        .where(and(eq(profiles.userId, personId), isNull(profiles.suspendedAt)));
-      // Signed out everywhere; signing back in is refused (see auth.ts).
-      await tx.delete(session).where(eq(session.userId, personId));
-      // What they host can't go ahead.
-      const hosted = await tx
-        .select()
-        .from(activities)
-        .where(
-          and(
-            eq(activities.hostId, personId),
-            isNull(activities.cancelledAt),
-            sql`${activities.startsAt} > now()`,
-          ),
-        )
-        .for('update');
-      const host = firstName(who?.name ?? 'The host');
-      for (const row of hosted) {
-        out.cancelled.push({
-          id: row.id,
-          result: await cancelLocked(tx, row, {
-            stopRepeating: true,
-            line: `${host} can’t host on Buddy any more, so this activity is off`,
-            notice: { title: `Cancelled: ${row.title}`, body: `${host} can’t host it any more.` },
-          }),
-        });
-      }
-      done.push('suspended');
-    }
-
-    // Close this report, and any other open ones the action settled.
-    const settled = [
-      eq(reports.id, report.id),
-      input.removeContent && report.messageId ? eq(reports.messageId, report.messageId) : null,
-      input.removeContent && report.activityId && !report.messageId
-        ? and(eq(reports.activityId, report.activityId), isNull(reports.messageId))
-        : null,
-      input.removeContent && report.communityId
-        ? eq(reports.communityId, report.communityId)
-        : null,
-      input.suspend && report.targetUserId ? eq(reports.targetUserId, report.targetUserId) : null,
-    ].filter((c) => c !== null);
-    await tx
-      .update(reports)
-      .set({
-        status: 'resolved',
-        resolution: done.length ? done.join(',') : 'dismissed',
-        resolvedBy: moderatorId,
-        resolvedAt: new Date(),
-      })
-      .where(and(eq(reports.status, 'open'), or(...settled)));
+    if (input.suspend && report.targetUserId) await suspendLocked(tx, report.targetUserId, out);
 
     return out;
   });
+}
+
+/** Reported content that's already gone counts as removed. */
+const ignoreGone = (err: unknown) => {
+  if (!(err instanceof HttpError && err.status === 404)) throw err;
+};
+
+/** Suspends someone without a report (Admin → People). Open reports about them close too. */
+export async function suspendPerson(db: Db, moderatorId: string, personId: string) {
+  return db.transaction(async (tx) => {
+    const out = nothingYet();
+    await suspendLocked(tx, personId, out);
+    await closeReports(tx, moderatorId, 'suspended', [eq(reports.targetUserId, personId)]);
+    return out;
+  });
+}
+
+/** Removes an activity for breaking the rules, reported or not. */
+export async function removeActivity(db: Db, moderatorId: string, activityId: string) {
+  return db.transaction(async (tx) => {
+    const out = nothingYet();
+    await cancelForRules(tx, activityId, out);
+    await closeReports(tx, moderatorId, 'removed', [
+      and(eq(reports.activityId, activityId), isNull(reports.messageId)),
+    ]);
+    return out;
+  });
+}
+
+/** Deletes a community for breaking the rules, reported or not. */
+export async function removeCommunity(db: Db, moderatorId: string, communityId: string) {
+  return db.transaction(async (tx) => {
+    const out = nothingYet();
+    // First: deleting it clears the reports' link to it.
+    await closeReports(tx, moderatorId, 'removed', [eq(reports.communityId, communityId)]);
+    await deleteCommunity(tx, communityId, out);
+    return out;
+  });
+}
+
+/** Admin → People: anyone, by name or email (suspended people too). */
+export async function findPeople(db: Db, urls: Urls, q: string): Promise<AdminPerson[]> {
+  const like = `%${q.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
+  const rows = await db
+    .select({ user, profile: profiles })
+    .from(user)
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .where(or(sql`${user.name} ilike ${like}`, sql`${user.email} ilike ${like}`))
+    .orderBy(user.name)
+    .limit(30);
+  return rows.map(({ user: u, profile: p }) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    avatarUrl: urls.avatar(p?.avatarKey, p?.avatarUrl),
+    joinedAt: u.createdAt.toISOString(),
+    suspended: !!p?.suspendedAt,
+  }));
 }
 
 /** Lets a suspended person back in (their cancelled activities stay cancelled). */

@@ -30,6 +30,7 @@ export const privacyHtml = (contact: string) => `
   <li>Cloudflare R2, to store photos.</li>
   <li>Expo, Apple and Google, to deliver push notifications.</li>
   <li>OpenStreetMap (via Photon) or Google Places, to search for meeting points.</li>
+  <li>Sentry, to tell us when the app or our servers crash. Crash reports describe the error and your device, not who you are.</li>
 </ul>
 
 <h2>How long we keep messages</h2>

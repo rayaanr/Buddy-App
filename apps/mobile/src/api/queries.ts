@@ -59,6 +59,17 @@ export const queryClient = new QueryClient({
   },
 });
 
+/**
+ * What the server offers before sign-in (e.g. Google sign-in, only when it's
+ * set up there). Fixed while the app runs.
+ */
+export const useServerConfig = () =>
+  useQuery({
+    queryKey: ['config'] as const,
+    queryFn: () => unwrap(api.config.$get()),
+    staleTime: Infinity,
+  });
+
 /** Query keys in one place, so mutations invalidate exactly what they affect. */
 export const keys = {
   me: ['me'] as const,
@@ -568,6 +579,43 @@ export function useLiftSuspension() {
   return useMutation({
     mutationFn: (userId: string) =>
       unwrap(api.admin.suspensions[':id'].$delete({ param: { id: userId } })),
+    onSuccess: () => refreshAfterModeration(qc),
+  });
+}
+
+/** Admin → People: anyone, by name or email (2 letters or more). */
+export const useAdminPeople = (q: string) =>
+  useQuery({
+    queryKey: ['admin', 'people', q] as const,
+    queryFn: async () => (await unwrap(api.admin.people.$get({ query: { q } }))).people,
+    enabled: q.length >= 2,
+    placeholderData: keepPreviousData,
+  });
+
+/** Suspends someone without a report: signed out, kept out, their activities called off. */
+export function useSuspendPerson() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      unwrap(api.admin.people[':id'].suspend.$post({ param: { id: userId } })),
+    onSuccess: () => refreshAfterModeration(qc),
+  });
+}
+
+/** Calls off any activity for breaking the rules; everyone going is told. */
+export function useRemoveActivity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.admin.activities[':id'].$delete({ param: { id } })),
+    onSuccess: () => refreshAfterModeration(qc),
+  });
+}
+
+/** Deletes any community for breaking the rules. */
+export function useRemoveCommunity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unwrap(api.admin.communities[':id'].$delete({ param: { id } })),
     onSuccess: () => refreshAfterModeration(qc),
   });
 }

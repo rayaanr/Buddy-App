@@ -1,4 +1,11 @@
-import type { ActivityDetail, AdminReport, Me, AdminStats } from '@buddy/shared';
+import type {
+  ActivityDetail,
+  AdminPerson,
+  AdminReport,
+  AdminStats,
+  CommunityDetail,
+  Me,
+} from '@buddy/shared';
 import { atLocalTime } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
@@ -168,5 +175,132 @@ describe('admin dashboard', () => {
     expect(s.daily).toHaveLength(14);
     expect(s.daily.at(-1)!.signups).toBeGreaterThanOrEqual(2);
     expect(s.daily[0]!.day < s.daily.at(-1)!.day).toBe(true);
+  });
+});
+
+describe('acting without a report', () => {
+  it('finds anyone by name or email, and only for moderators', async () => {
+    const someone = await t.signIn('finder@buddy.test', 'Finder');
+    expect((await t.call('/v1/admin/people?q=fin', { headers: someone.headers })).status).toBe(403);
+
+    const mod = await moderator();
+    const byEmail = await t.call<{ people: AdminPerson[] }>('/v1/admin/people?q=finder@', {
+      headers: mod.headers,
+    });
+    expect(byEmail.body.people).toEqual([
+      expect.objectContaining({ id: someone.userId, email: 'finder@buddy.test', suspended: false }),
+    ]);
+    const byName = await t.call<{ people: AdminPerson[] }>('/v1/admin/people?q=FIND', {
+      headers: mod.headers,
+    });
+    expect(byName.body.people.map((p) => p.id)).toContain(someone.userId);
+    // "%" is a letter here, not a wildcard.
+    const wild = await t.call<{ people: AdminPerson[] }>('/v1/admin/people?q=%25%25', {
+      headers: mod.headers,
+    });
+    expect(wild.body.people).toEqual([]);
+  });
+
+  it('suspends someone straight away and closes reports about them', async () => {
+    const bad = await t.signIn('rude@buddy.test', 'Rude');
+    const activityId = await hostActivity(bad.headers, 'Shouting club');
+    const guest = await t.signIn();
+    await t.call('/v1/reports', {
+      method: 'POST',
+      headers: guest.headers,
+      body: { reason: 'harassment', userId: bad.userId },
+    });
+
+    const mod = await moderator();
+    const res = await t.call(`/v1/admin/people/${bad.userId}/suspend`, {
+      method: 'POST',
+      headers: mod.headers,
+    });
+    expect(res.status).toBe(200);
+    expect((await t.call('/v1/me', { headers: bad.headers })).status).toBe(401);
+    expect((await t.call(`/v1/activities/${activityId}`, { headers: mod.headers })).status).toBe(
+      404,
+    );
+    expect((await openReports(mod.headers)).some((r) => r.person?.id === bad.userId)).toBe(false);
+    const found = await t.call<{ people: AdminPerson[] }>('/v1/admin/people?q=rude@', {
+      headers: mod.headers,
+    });
+    expect(found.body.people[0]?.suspended).toBe(true);
+
+    // Not yourself, and not someone who doesn't exist.
+    expect(
+      (
+        await t.call(`/v1/admin/people/${mod.userId}/suspend`, {
+          method: 'POST',
+          headers: mod.headers,
+        })
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await t.call(`/v1/admin/people/${randomUUID()}/suspend`, {
+          method: 'POST',
+          headers: mod.headers,
+        })
+      ).status,
+    ).toBe(404);
+  });
+
+  it('removes any activity, telling the people going', async () => {
+    const host = await t.signIn();
+    const activityId = await hostActivity(host.headers, 'Not allowed here');
+    const mod = await moderator();
+    const res = await t.call(`/v1/admin/activities/${activityId}`, {
+      method: 'DELETE',
+      headers: mod.headers,
+    });
+    expect(res.status).toBe(200);
+    const after = await t.call<ActivityDetail>(`/v1/activities/${activityId}`, {
+      headers: host.headers,
+    });
+    expect(after.body.cancelled).toBe(true);
+    expect(
+      (
+        await t.call(`/v1/admin/activities/${randomUUID()}`, {
+          method: 'DELETE',
+          headers: mod.headers,
+        })
+      ).status,
+    ).toBe(404);
+  });
+
+  it('removes any community, and the reports about it close', async () => {
+    const owner = await t.signIn('badvibes@buddy.test', 'Owner');
+    const created = await t.call<CommunityDetail>('/v1/communities', {
+      method: 'POST',
+      headers: owner.headers,
+      body: { name: 'Bad Vibes Only', about: 'Against the rules.' },
+    });
+    expect(created.status).toBe(201);
+    const communityId = created.body.id;
+    const guest = await t.signIn('reporter@buddy.test', 'Reporter');
+    const rep = await t.call('/v1/reports', {
+      method: 'POST',
+      headers: guest.headers,
+      body: { reason: 'spam', communityId },
+    });
+    expect(rep.status).toBe(201);
+
+    const mod = await moderator();
+    const res = await t.call(`/v1/admin/communities/${communityId}`, {
+      method: 'DELETE',
+      headers: mod.headers,
+    });
+    expect(res.status).toBe(200);
+    expect(
+      (await t.call(`/v1/communities/${communityId}`, { headers: owner.headers })).status,
+    ).toBe(404);
+    const resolved = await t.call<{ reports: AdminReport[] }>('/v1/admin/reports?status=resolved', {
+      headers: mod.headers,
+    });
+    expect(resolved.body.reports.some((r) => r.reporter?.id === guest.userId)).toBe(true);
+    expect((await openReports(mod.headers)).some((r) => r.reporter?.id === guest.userId)).toBe(
+      false,
+    );
   });
 });

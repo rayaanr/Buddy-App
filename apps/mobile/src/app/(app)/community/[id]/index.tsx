@@ -3,7 +3,13 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
-import { useCommunity, useDeleteCommunity, useUnreadMessages } from '@/api/queries';
+import {
+  useCommunity,
+  useDeleteCommunity,
+  useMe,
+  useRemoveCommunity,
+  useUnreadMessages,
+} from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
@@ -34,6 +40,9 @@ export default function CommunityScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const remove = useDeleteCommunity();
   const unreadMessages = useUnreadMessages(id);
+  const isAdmin = useMe().data?.isAdmin ?? false;
+  const takeDown = useRemoveCommunity();
+  const [confirmTakeDown, setConfirmTakeDown] = useState(false);
 
   if (!community.data)
     return <QueryFallback query={community} notFound="This community no longer exists." />;
@@ -72,6 +81,16 @@ export default function CommunityScreen() {
                           params: { type: 'community', id: c.id },
                         }),
                     },
+                    // Buddy team: take down anything that breaks the rules.
+                    ...(isAdmin
+                      ? [
+                          {
+                            label: 'Remove (Buddy team)',
+                            destructive: true,
+                            onPress: () => setConfirmTakeDown(true),
+                          },
+                        ]
+                      : []),
                   ]
             }
           />
@@ -230,6 +249,28 @@ export default function CommunityScreen() {
                   if (router.canGoBack()) router.back();
                   else router.replace('/communities');
                   toast('Community deleted.');
+                },
+                onError: (err) => toast(errorMessage(err)),
+              }),
+          },
+        ]}
+      />
+      <ConfirmDialog
+        visible={confirmTakeDown}
+        onClose={() => setConfirmTakeDown(false)}
+        title={`Remove ${c.name}?`}
+        message="It’s deleted for breaking the community rules, with its chat. Activities posted in it stay up on their own; remove those separately if needed."
+        cancelLabel="Keep it"
+        actions={[
+          {
+            label: 'Remove',
+            destructive: true,
+            onPress: () =>
+              takeDown.mutate(c.id, {
+                onSuccess: () => {
+                  if (router.canGoBack()) router.back();
+                  else router.replace('/communities');
+                  toast('Community removed.');
                 },
                 onError: (err) => toast(errorMessage(err)),
               }),

@@ -4,6 +4,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { signInWithGoogle } from '@/api/auth';
 import { errorMessage } from '@/api/client';
+import { useServerConfig } from '@/api/queries';
 import { PressableScale } from '@/components/ui';
 import { CONTROL_FONT_SCALE } from '@/theme';
 
@@ -33,10 +34,13 @@ function GoogleG() {
 
 /**
  * "Continue with Google", then an "or" rule above the email field. Signing in
- * updates the session, and the root navigator takes it from there.
+ * updates the session, and the root navigator takes it from there. Shown only
+ * when the server has Google sign-in set up.
  */
 export function GoogleSignIn({ className }: { className?: string }) {
   const google = useMutation({ mutationFn: signInWithGoogle });
+  const config = useServerConfig();
+  if (!config.data?.signIn.google) return null;
   return (
     <View className={className}>
       <PressableScale

@@ -9,12 +9,12 @@ import {
 import { PortalHost } from '@rn-primitives/portal';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider, usePathname } from 'expo-router';
+import { DarkTheme, type ErrorBoundaryProps, Stack, ThemeProvider, usePathname } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import { queryClient, useMe } from '@/api/queries';
 import { ToastHost } from '@/components/ui';
 import { useHydrated } from '@/hooks/useHydrated';
 import { activityPathFrom } from '@/lib/pendingLink';
+import { reportError, withSentry } from '@/lib/sentry';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
@@ -48,7 +49,9 @@ const navTheme = {
   },
 };
 
-export default function RootLayout() {
+export default withSentry(RootLayout);
+
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Geist_400Regular,
     Geist_500Medium,
@@ -80,6 +83,32 @@ export default function RootLayout() {
         </KeyboardProvider>
       </GestureHandlerRootView>
     </QueryClientProvider>
+  );
+}
+
+/**
+ * Shown instead of a blank screen when something breaks while drawing. Plain
+ * views only: the providers above may be what failed.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    reportError(error);
+  }, [error]);
+  return (
+    <View className="flex-1 items-center justify-center bg-bg px-edge">
+      <StatusBar style="light" />
+      <Text className="text-center font-display text-title2 text-ink">Something went wrong</Text>
+      <Text className="mt-2 text-center font-sans text-subhead leading-subhead text-muted">
+        Buddy hit a problem showing this screen. Trying again usually fixes it.
+      </Text>
+      <Pressable
+        onPress={() => void retry()}
+        accessibilityRole="button"
+        className="mt-6 h-12 items-center justify-center rounded-full bg-lime px-7 active:opacity-80"
+      >
+        <Text className="font-sans-semibold text-body text-bg">Try again</Text>
+      </Pressable>
+    </View>
   );
 }
 

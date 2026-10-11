@@ -37,3 +37,17 @@ export const adminStats = z.object({
   daily: z.array(z.object({ day: z.string(), signups: count, activities: count })),
 });
 export type AdminStats = z.infer<typeof adminStats>;
+
+/** Admin → People: anyone on Buddy, found by name or email. */
+export const adminPerson = z.object({
+  id: z.uuid(),
+  name: z.string(),
+  email: z.string(),
+  avatarUrl: z.string().nullable(),
+  /** ISO time they signed up. */
+  joinedAt: z.string(),
+  suspended: z.boolean(),
+});
+export type AdminPerson = z.infer<typeof adminPerson>;
+
+export const adminPeopleQuery = z.object({ q: z.string().trim().min(2).max(80) });

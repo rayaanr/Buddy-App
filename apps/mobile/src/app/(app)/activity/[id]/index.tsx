@@ -25,6 +25,8 @@ import {
   useFeedback,
   useJoinActivity,
   useLeaveActivity,
+  useMe,
+  useRemoveActivity,
   useUnreadMessages,
   useWaitlist,
 } from '@/api/queries';
@@ -95,6 +97,9 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const { top } = useScreenInsets();
   const started = useHasPassed(a.startsAt);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const isAdmin = useMe().data?.isAdmin ?? false;
+  const removeActivity = useRemoveActivity();
+  const [confirmRemove, setConfirmRemove] = useState(false);
   // Hosts can change or call off an activity until it starts.
   const canManage = a.viewer.hosting && !a.cancelled && !started;
 
@@ -172,7 +177,20 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               }),
           },
         ]),
+    // Buddy team: take down anything that breaks the rules, reported or not.
+    ...(isAdmin && !a.viewer.hosting && !a.cancelled
+      ? [{ label: 'Remove (Buddy team)', destructive: true, onPress: () => setConfirmRemove(true) }]
+      : []),
   ];
+  const onRemove = () =>
+    removeActivity.mutate(a.id, {
+      onSuccess: () => {
+        if (router.canGoBack()) router.back();
+        else router.replace('/');
+        toast('Activity removed. Everyone going was told.');
+      },
+      onError: (err) => toast(errorMessage(err)),
+    });
 
   const onCancel = (stopRepeating = false) =>
     cancel.mutate(
@@ -438,6 +456,14 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               ]
             : [{ label: 'Cancel activity', destructive: true, onPress: () => onCancel() }]
         }
+      />
+      <ConfirmDialog
+        visible={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        title="Remove this activity?"
+        message="It’s cancelled for breaking the community rules, and stops repeating. Everyone going gets a notification."
+        cancelLabel="Keep it"
+        actions={[{ label: 'Remove', destructive: true, onPress: onRemove }]}
       />
     </View>
   );

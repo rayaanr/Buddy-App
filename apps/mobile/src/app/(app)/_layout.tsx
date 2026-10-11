@@ -1,8 +1,8 @@
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 
-import { syncPushToken, useOpenFromNotifications } from '@/api/push';
-import { useMe, usePicks } from '@/api/queries';
+import { syncPushToken, useAppIconBadge, useOpenFromNotifications } from '@/api/push';
+import { useMe, usePicks, useUnreadMessages } from '@/api/queries';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
@@ -63,6 +63,7 @@ export default function AppLayout() {
     void syncPushToken();
   }, []);
   useOpenFromNotifications();
+  useAppIconBadge(useUnreadMessages());
   const slide = useScreenAnimation();
 
   return (
