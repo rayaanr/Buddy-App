@@ -212,6 +212,9 @@ export default function DiscoverScreen() {
               fallback={me.data?.place.location ?? { lat: 6.9271, lng: 79.8612 }}
               // What's left of the screen under the filters, above the tab bar.
               height={Math.max(380, windowHeight - top(58) - 290 - TAB_BAR_HEIGHT)}
+              onExpand={() =>
+                router.push({ pathname: '/map', params: { filter, q: isSearch ? searching : '' } })
+              }
             />
           )}
         </View>

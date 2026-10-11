@@ -84,6 +84,7 @@ export default function AppLayout() {
         name="picks"
         options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
       />
+      <Stack.Screen name="map" options={{ animation: 'fade' }} />
       <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen
         name="new-poll"

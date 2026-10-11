@@ -1,5 +1,5 @@
 import * as AlertDialog from '@rn-primitives/alert-dialog';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 
 import { cn } from '@/lib/cn';
@@ -33,18 +33,15 @@ export function ConfirmDialog({
   // Side by side only when both buttons fit on one line.
   const stacked =
     actions.length > 1 || [cancelLabel, ...actions.map((a) => a.label)].some((l) => l.length > 12);
+  // The primitives' own Pressables with fixed styles: a style function
+  // passed through `asChild` is dropped on phones. Flattened, as the web
+  // version hands the style straight to the page.
   const cancel = (
-    <AlertDialog.Cancel asChild>
-      <Pressable
-        style={({ pressed }) => [
-          styles.button,
-          styles.cancel,
-          !stacked && styles.half,
-          pressed && styles.pressed,
-        ]}
-      >
-        <Text className="font-sans-semibold text-[15.5px] text-ink">{cancelLabel}</Text>
-      </Pressable>
+    <AlertDialog.Cancel
+      style={StyleSheet.flatten([styles.button, styles.cancel, !stacked && styles.half])}
+      className="active:opacity-80"
+    >
+      <Text className="font-sans-semibold text-[15.5px] text-ink">{cancelLabel}</Text>
     </AlertDialog.Cancel>
   );
 
@@ -72,24 +69,24 @@ export function ConfirmDialog({
                 <View className={cn('mt-6 gap-2.5', !stacked && 'flex-row')}>
                   {stacked ? null : cancel}
                   {actions.map((a) => (
-                    <AlertDialog.Action key={a.label} asChild onPress={a.onPress}>
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.button,
-                          a.destructive ? styles.destructive : styles.primary,
-                          !stacked && styles.half,
-                          pressed && styles.pressed,
-                        ]}
+                    <AlertDialog.Action
+                      key={a.label}
+                      onPress={a.onPress}
+                      style={StyleSheet.flatten([
+                        styles.button,
+                        a.destructive ? styles.destructive : styles.primary,
+                        !stacked && styles.half,
+                      ])}
+                      className="active:opacity-80"
+                    >
+                      <Text
+                        className={cn(
+                          'text-center font-sans-semibold text-[15.5px]',
+                          a.destructive ? 'text-ink' : 'text-bg',
+                        )}
                       >
-                        <Text
-                          className={cn(
-                            'text-center font-sans-semibold text-[15.5px]',
-                            a.destructive ? 'text-ink' : 'text-bg',
-                          )}
-                        >
-                          {a.label}
-                        </Text>
-                      </Pressable>
+                        {a.label}
+                      </Text>
                     </AlertDialog.Action>
                   ))}
                   {stacked ? cancel : null}
@@ -131,5 +128,4 @@ const styles = StyleSheet.create({
   cancel: { backgroundColor: colors.surface },
   primary: { backgroundColor: colors.lime },
   destructive: { backgroundColor: colors.danger },
-  pressed: { opacity: 0.8 },
 });

@@ -20,6 +20,7 @@ import List from 'lucide-react-native/icons/list';
 import LocateFixed from 'lucide-react-native/icons/locate-fixed';
 import MapIconSvg from 'lucide-react-native/icons/map';
 import MapPin from 'lucide-react-native/icons/map-pin';
+import Maximize from 'lucide-react-native/icons/maximize-2';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
 import Compass from 'lucide-react-native/icons/compass';
 import Copy from 'lucide-react-native/icons/copy';
@@ -146,6 +147,11 @@ export const PollIcon = icon(
   ChartBar,
   { size: 24, color: colors.ink, strokeWidth: 1.9 },
   'PollIcon',
+);
+export const MaximizeIcon = icon(
+  Maximize,
+  { size: 18, color: colors.ink, strokeWidth: 2 },
+  'MaximizeIcon',
 );
 export const BellOffIcon = icon(
   BellOff,

@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@rn-primitives/dropdown-menu';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
 
 import { cn } from '@/lib/cn';
@@ -57,30 +57,24 @@ export function Menu({ items, label, trigger, tone = 'solid', align = 'end' }: M
               style={styles.card}
             >
               {items.map((item, i) => (
-                // asChild: our Pressable is the item, so its pressed style applies everywhere.
+                // The primitive's own Pressable with fixed styles: a style
+                // function passed through `asChild` is dropped on phones.
                 <DropdownMenu.Item
                   key={item.label}
-                  asChild
                   onPress={item.onPress}
                   textValue={item.label}
+                  style={StyleSheet.flatten([styles.item, i > 0 && styles.divider])}
+                  className="active:bg-surface"
                 >
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.item,
-                      i > 0 && styles.divider,
-                      pressed && styles.pressed,
-                    ]}
+                  {item.icon ? <View className="w-5 items-center">{item.icon}</View> : null}
+                  <Text
+                    className={cn(
+                      'font-sans-medium text-[15.5px]',
+                      item.destructive ? 'text-danger' : 'text-ink',
+                    )}
                   >
-                    {item.icon ? <View className="w-5 items-center">{item.icon}</View> : null}
-                    <Text
-                      className={cn(
-                        'font-sans-medium text-[15.5px]',
-                        item.destructive ? 'text-danger' : 'text-ink',
-                      )}
-                    >
-                      {item.label}
-                    </Text>
-                  </Pressable>
+                    {item.label}
+                  </Text>
                 </DropdownMenu.Item>
               ))}
             </Animated.View>
@@ -117,5 +111,4 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
-  pressed: { backgroundColor: colors.surface },
 });

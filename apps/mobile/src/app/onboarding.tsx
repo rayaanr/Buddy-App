@@ -1,8 +1,6 @@
 import {
-  EARLIEST_BIRTH_YEAR,
   GENDER_LABELS,
   GENDERS,
-  latestBirthYear,
   LIMITS,
   placeLabel,
   type Availability,
@@ -17,8 +15,8 @@ import { Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
+import { BirthYearField, validBirthYear } from '@/components/onboarding/BirthYearField';
 import { AvailabilityChips, InterestGrid } from '@/components/onboarding/InterestPicker';
-import { Wheel } from '@/components/create/Wheel';
 import { TownField } from '@/components/places/TownField';
 import {
   AnimatedView,
@@ -39,13 +37,6 @@ import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
 
 const STEPS = 4;
-
-// Birth years on the wheel, newest first (18 and over only).
-const YEARS = Array.from({ length: latestBirthYear() - EARLIEST_BIRTH_YEAR + 1 }, (_, k) =>
-  String(latestBirthYear() - k),
-);
-/** Where the wheel starts: someone in their mid-twenties. */
-const DEFAULT_YEAR_INDEX = 7;
 
 /**
  * First run, right after the emailed code: name, about you (gender, birth
@@ -68,9 +59,7 @@ function Steps({ me }: { me: Me }) {
   const [interests, setInterests] = useState<Interest[]>(me.interests);
   const [availability, setAvailability] = useState<Availability[]>(me.availability);
   const [gender, setGender] = useState<Gender | null>(me.gender);
-  const [yearIndex, setYearIndex] = useState(
-    me.birthYear ? Math.max(0, YEARS.indexOf(String(me.birthYear))) : DEFAULT_YEAR_INDEX,
-  );
+  const [year, setYear] = useState(me.birthYear ? String(me.birthYear) : '');
   const enter = useEnterOnChange(step);
 
   const last = step === STEPS - 1;
@@ -115,11 +104,11 @@ function Steps({ me }: { me: Me }) {
     {
       title: 'A bit about you',
       hint: 'Only you see these. Buddy is for people 18 and over.',
-      canContinue: !!gender,
+      canContinue: !!gender && validBirthYear(year) !== null,
       required: true,
       save: (): UpdateMeInput => ({
         ...(gender && { gender }),
-        birthYear: Number(YEARS[yearIndex]),
+        ...(validBirthYear(year) && { birthYear: validBirthYear(year)! }),
       }),
       body: (
         <>
@@ -134,16 +123,8 @@ function Steps({ me }: { me: Me }) {
               />
             ))}
           </View>
-          <SectionLabel className="mb-2 mt-7">Born in</SectionLabel>
-          <View className="items-center rounded-[20px] bg-surface py-2">
-            <Wheel
-              values={YEARS}
-              index={yearIndex}
-              onChange={setYearIndex}
-              label="Birth year"
-              width={140}
-            />
-          </View>
+          <SectionLabel className="mb-2 mt-7">Birth year</SectionLabel>
+          <BirthYearField value={year} onChange={setYear} />
         </>
       ),
     },

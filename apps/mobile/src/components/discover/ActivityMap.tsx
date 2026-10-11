@@ -6,7 +6,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 
 import { ActivityRow } from '@/components/activity/ActivityCards';
-import { IconButton } from '@/components/ui';
+import { IconButton, MaximizeIcon } from '@/components/ui';
 import { MAP_ATTRIBUTION } from '@/config';
 import { availabilityColor } from '@/lib/activity';
 import { fitPoints, fromWorldPixel, tilesAround, worldPixel } from '@/lib/maps';
@@ -23,18 +23,32 @@ interface ActivityMapProps {
   /** Where to look when there's nothing to show (e.g. the home town). */
   fallback: Location;
   height: number;
+  /** Fills the screen: no rounded corners, the picked activity floats over the map. */
+  fullScreen?: boolean;
+  /** Space taken by the status bar and home indicator, in full screen. */
+  insets?: { top: number; bottom: number };
+  /** Shows a button to open the map full screen. */
+  onExpand?: () => void;
 }
 
 /**
- * Discover as a map: a pin per activity, drag to look around, + / − to zoom.
+ * Discover as a map: a pin per activity. Drag to look around; pinch,
+ * double-tap or + / − to zoom.
  * Drawn from map tiles like the activity page's map (the same on iPhone,
  * Android and web, no API key). Tapping a pin shows the activity below.
  */
-export function ActivityMap({ activities, fallback, height }: ActivityMapProps) {
+export function ActivityMap({
+  activities,
+  fallback,
+  height,
+  fullScreen,
+  insets = { top: 0, bottom: 0 },
+  onExpand,
+}: ActivityMapProps) {
   const [width, setWidth] = useState(0);
   const [view, setView] = useState<{ center: Location; zoom: number } | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
-  const mapHeight = height - 116;
+  const mapHeight = fullScreen ? height : height - 116;
 
   // Fit everything in once the map knows its size (and when the list changes).
   const [fittedFor, setFittedFor] = useState('');
@@ -53,8 +67,10 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
   // Dragging moves the drawn map; letting go re-centres on where it was dragged to.
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
+  // Pinching scales the drawn map; letting go snaps to the nearest zoom level.
+  const scale = useSharedValue(1);
   const moved = useAnimatedStyle(() => ({
-    transform: [{ translateX: tx.get() }, { translateY: ty.get() }],
+    transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: scale.get() }],
   }));
   const settle = (dx: number, dy: number) =>
     setView((v) => {
@@ -66,7 +82,8 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
   useLayoutEffect(() => {
     tx.set(0);
     ty.set(0);
-  }, [view, tx, ty]);
+    scale.set(1);
+  }, [view, tx, ty, scale]);
   const pan = Gesture.Pan()
     .minDistance(4)
     .onUpdate((e) => {
@@ -77,15 +94,33 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
       runOnJS(settle)(e.translationX, e.translationY);
     });
 
-  const zoomBy = (step: number) =>
-    setView((v) => (v ? { ...v, zoom: Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.zoom + step)) } : v));
+  const zoomBy = (step: number) => {
+    if (!view) return scale.set(1);
+    const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, view.zoom + step));
+    // Already as far as it goes: just undo the pinch.
+    if (zoom === view.zoom) return scale.set(1);
+    setView({ ...view, zoom });
+  };
+  const pinch = Gesture.Pinch()
+    .onUpdate((e) => {
+      scale.set(e.scale);
+    })
+    .onEnd((e) => {
+      runOnJS(zoomBy)(Math.round(Math.log2(Math.max(0.01, e.scale))));
+    });
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      runOnJS(zoomBy)(1);
+    });
+  const gestures = Gesture.Simultaneous(pan, pinch, doubleTap);
 
   const selected = activities.find((a) => a.id === picked) ?? null;
 
   if (!view || !width) {
     return (
       <View
-        style={[styles.map, { height: mapHeight }]}
+        style={[styles.map, fullScreen && styles.full, { height: mapHeight }]}
         onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}
       />
     );
@@ -104,10 +139,10 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
   return (
     <View>
       <View
-        style={[styles.map, { height: mapHeight }]}
+        style={[styles.map, fullScreen && styles.full, { height: mapHeight }]}
         onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}
       >
-        <GestureDetector gesture={pan}>
+        <GestureDetector gesture={gestures}>
           <Animated.View style={[StyleSheet.absoluteFill, moved]}>
             {tiles.map((t) => (
               <Image
@@ -150,7 +185,17 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
             })}
           </Animated.View>
         </GestureDetector>
-        <View style={styles.zoom}>
+        {onExpand ? (
+          <View style={styles.expand}>
+            <IconButton
+              tone="glass"
+              icon={<MaximizeIcon />}
+              label="Full-screen map"
+              onPress={onExpand}
+            />
+          </View>
+        ) : null}
+        <View style={[styles.zoom, { top: insets.top + 12 }]}>
           <IconButton
             tone="glass"
             icon={<Text style={styles.zoomText}>+</Text>}
@@ -166,7 +211,11 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
             disabled={view.zoom <= MIN_ZOOM}
           />
         </View>
-        <Text style={styles.credit} numberOfLines={1} accessible={false}>
+        <Text
+          style={[styles.credit, fullScreen && { bottom: insets.bottom + 6 }]}
+          numberOfLines={1}
+          accessible={false}
+        >
           {MAP_ATTRIBUTION}
         </Text>
         {!activities.length ? (
@@ -175,9 +224,17 @@ export function ActivityMap({ activities, fallback, height }: ActivityMapProps) 
           </View>
         ) : null}
       </View>
-      <View className="mt-3" style={{ minHeight: 104 }}>
-        {selected ? <ActivityRow activity={selected} /> : null}
-      </View>
+      {fullScreen ? (
+        selected ? (
+          <View style={[styles.floating, { bottom: insets.bottom + 22 }]}>
+            <ActivityRow activity={selected} />
+          </View>
+        ) : null
+      ) : (
+        <View className="mt-3" style={{ minHeight: 104 }}>
+          {selected ? <ActivityRow activity={selected} /> : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -204,7 +261,10 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   pinDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.bg },
-  zoom: { position: 'absolute', right: 12, top: 12, gap: 8 },
+  full: { borderRadius: 0 },
+  zoom: { position: 'absolute', right: 12, gap: 8 },
+  expand: { position: 'absolute', left: 12, top: 12 },
+  floating: { position: 'absolute', left: 14, right: 14 },
   zoomText: { color: colors.ink, fontSize: 22, lineHeight: 24 },
   credit: {
     position: 'absolute',

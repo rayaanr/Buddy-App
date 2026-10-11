@@ -1,8 +1,6 @@
 import {
-  EARLIEST_BIRTH_YEAR,
   GENDER_LABELS,
   GENDERS,
-  latestBirthYear,
   LIMITS,
   type Availability,
   type Gender,
@@ -15,6 +13,11 @@ import { Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
+import {
+  BirthYearField,
+  birthYearProblem,
+  validBirthYear,
+} from '@/components/onboarding/BirthYearField';
 import { AvailabilityChips, InterestGrid } from '@/components/onboarding/InterestPicker';
 import {
   Button,
@@ -28,7 +31,6 @@ import {
   TextField,
 } from '@/components/ui';
 import { PhotoButton } from '@/components/create/PhotoButton';
-import { Wheel } from '@/components/create/Wheel';
 import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { toast } from '@/store/ui';
@@ -54,11 +56,6 @@ interface Saved {
   birthYear: number | null;
 }
 
-// Birth years on the wheel, newest first (18 and over only).
-const YEARS = Array.from({ length: latestBirthYear() - EARLIEST_BIRTH_YEAR + 1 }, (_, k) =>
-  String(latestBirthYear() - k),
-);
-
 function EditProfileForm({ me }: { me: Saved }) {
   const update = useUpdateMe();
   const [name, setName] = useState(me.name);
@@ -69,9 +66,7 @@ function EditProfileForm({ me }: { me: Saved }) {
   const [interests, setInterests] = useState(me.interests);
   const [availability, setAvailability] = useState(me.availability);
   const [gender, setGender] = useState(me.gender);
-  const [yearIndex, setYearIndex] = useState(
-    me.birthYear ? Math.max(0, YEARS.indexOf(String(me.birthYear))) : -1,
-  );
+  const [year, setYear] = useState(me.birthYear ? String(me.birthYear) : '');
 
   const save = () => {
     if (update.isPending || uploading) return;
@@ -83,7 +78,7 @@ function EditProfileForm({ me }: { me: Saved }) {
         interests,
         availability,
         ...(gender && { gender }),
-        ...(yearIndex >= 0 && { birthYear: Number(YEARS[yearIndex]) }),
+        ...(validBirthYear(year) && { birthYear: validBirthYear(year)! }),
         ...(photo.key !== undefined && { avatarKey: photo.key }),
       },
       {
@@ -148,6 +143,7 @@ function EditProfileForm({ me }: { me: Saved }) {
         <Text className="mb-3 font-sans text-[13px] leading-[18px] text-muted">
           Never shown on your profile.
         </Text>
+        <Text className="mb-2 font-sans text-[13.5px] text-muted">Gender</Text>
         <View className="flex-row flex-wrap gap-2" role="radiogroup" accessibilityLabel="Gender">
           {GENDERS.map((g) => (
             <Chip
@@ -158,21 +154,14 @@ function EditProfileForm({ me }: { me: Saved }) {
             />
           ))}
         </View>
-        <View className="mt-3 items-center rounded-[20px] bg-surface py-2">
-          <Wheel
-            values={YEARS}
-            index={Math.max(0, yearIndex)}
-            onChange={setYearIndex}
-            label="Birth year"
-            width={140}
-          />
-        </View>
+        <Text className="mb-2 mt-4 font-sans text-[13.5px] text-muted">Birth year</Text>
+        <BirthYearField value={year} onChange={setYear} tone="inset" />
       </KeyboardAwareScrollView>
 
       <Footer>
         <Button
           label={update.isPending ? 'Saving…' : 'Save'}
-          inactive={update.isPending || uploading}
+          inactive={update.isPending || uploading || !!birthYearProblem(year)}
           onPress={save}
         />
       </Footer>

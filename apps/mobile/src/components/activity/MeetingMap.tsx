@@ -11,6 +11,10 @@ import { toast } from '@/store/ui';
 import { colors } from '@/theme';
 
 const HEIGHT = 150;
+
+/** The buttons under the map (Directions, and e.g. Add to calendar beside it). */
+export const MAP_ACTION =
+  'h-12 flex-row items-center justify-center gap-2 rounded-2xl bg-surface active:opacity-80';
 /** Street level: a few blocks around the meeting point. */
 const ZOOM = 15;
 
@@ -18,7 +22,7 @@ interface MeetingMapProps {
   location: Location;
   /** The meeting point's name, for the maps app's pin. */
   place: string;
-  /** Shown beside "Directions", e.g. "Add to calendar". */
+  /** Shown beside "Directions" (give it flex-1 and MAP_ACTION), e.g. "Add to calendar". */
   children?: React.ReactNode;
 }
 
@@ -36,9 +40,9 @@ export function MeetingMap({ location, place, children }: MeetingMapProps) {
   const tiles = width ? tilesAround(location, ZOOM, width, HEIGHT) : [];
 
   const directions = (
-    <View className="flex-row items-center gap-2">
+    <View className={MAP_ACTION}>
       <MapPinIcon color={colors.lime} />
-      <Text className="font-sans-medium text-[14px] text-lime">Directions</Text>
+      <Text className="font-sans-semibold text-[14.5px] text-ink">Directions</Text>
     </View>
   );
 
@@ -77,24 +81,25 @@ export function MeetingMap({ location, place, children }: MeetingMapProps) {
         </Text>
       </Pressable>
 
-      <View className="mt-3 flex-row items-center gap-6">
-        {apps.length > 1 ? (
-          <Menu
-            label="Directions"
-            align="start"
-            trigger={directions}
-            items={apps.map((app) => ({ label: app.label, onPress: () => void open(app.url) }))}
-          />
-        ) : (
-          <Pressable
-            onPress={() => void open(apps[0]!.url)}
-            accessibilityRole="button"
-            hitSlop={8}
-            className="active:opacity-70"
-          >
-            {directions}
-          </Pressable>
-        )}
+      <View className="mt-2.5 flex-row gap-2.5">
+        <View className="flex-1">
+          {apps.length > 1 ? (
+            <Menu
+              label="Directions"
+              align="start"
+              trigger={directions}
+              items={apps.map((app) => ({ label: app.label, onPress: () => void open(app.url) }))}
+            />
+          ) : (
+            <Pressable
+              onPress={() => void open(apps[0]!.url)}
+              accessibilityRole="button"
+              className="active:opacity-70"
+            >
+              {directions}
+            </Pressable>
+          )}
+        </View>
         {children}
       </View>
     </View>

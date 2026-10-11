@@ -52,7 +52,7 @@ import {
   successHaptic,
   useEnterOnChange,
 } from '@/components/ui';
-import { MeetingMap } from '@/components/activity/MeetingMap';
+import { MAP_ACTION, MeetingMap } from '@/components/activity/MeetingMap';
 import { MembersSheet } from '@/components/activity/MembersSheet';
 import { useHasPassed } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -283,11 +283,10 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               <Pressable
                 onPress={() => void addToCalendar(a)}
                 accessibilityRole="button"
-                hitSlop={8}
-                className="flex-row items-center gap-2 active:opacity-70"
+                className={cn('flex-1', MAP_ACTION)}
               >
-                <CalendarIcon size={16} color={colors.lime} />
-                <Text className="font-sans-medium text-[14px] text-lime">Add to calendar</Text>
+                <CalendarIcon size={18} color={colors.lime} />
+                <Text className="font-sans-semibold text-[14.5px] text-ink">Add to calendar</Text>
               </Pressable>
             ) : null}
           </MeetingMap>
