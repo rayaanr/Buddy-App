@@ -37,3 +37,15 @@ export const SHARE_URL = (process.env.EXPO_PUBLIC_SHARE_URL ?? API_URL).replace(
 /** Public pages the stores require the app to link to (served by the API). */
 export const PRIVACY_URL = `${API_URL}/privacy`;
 export const TERMS_URL = `${API_URL}/terms`;
+
+/**
+ * Map tiles for meeting-point previews: any {z}/{x}/{y} raster tile URL.
+ * Defaults to CARTO's dark basemap (OpenStreetMap data), which matches the
+ * app. CARTO's free tier is for low traffic: before launch, set
+ * EXPO_PUBLIC_MAP_TILES to a paid or self-hosted source (MapTiler, Stadia…)
+ * and EXPO_PUBLIC_MAP_ATTRIBUTION to its credit line.
+ */
+export const MAP_TILES =
+  process.env.EXPO_PUBLIC_MAP_TILES ?? 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png';
+export const MAP_ATTRIBUTION =
+  process.env.EXPO_PUBLIC_MAP_ATTRIBUTION ?? '© OpenStreetMap contributors © CARTO';

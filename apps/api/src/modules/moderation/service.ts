@@ -91,7 +91,7 @@ interface Resolved {
   /** Activities cancelled along the way, for the caller to announce. */
   cancelled: { id: string; result: ChangeResult }[];
   /** A removed chat message, for the caller to take out of open chats. */
-  removedMessage: { id: string; activityId: string } | null;
+  removedMessage: { id: string; activityId: string | null; communityId: string | null } | null;
   /** A removed community's photos, for the caller to clean up. */
   removedPhotos: string[];
 }
@@ -119,7 +119,11 @@ export async function resolveReport(
         const [message] = await tx
           .delete(messages)
           .where(eq(messages.id, report.messageId))
-          .returning({ id: messages.id, activityId: messages.activityId });
+          .returning({
+            id: messages.id,
+            activityId: messages.activityId,
+            communityId: messages.communityId,
+          });
         out.removedMessage = message ?? null;
       } else if (report.activityId) {
         const [row] = await tx

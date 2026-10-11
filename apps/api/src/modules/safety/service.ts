@@ -18,7 +18,7 @@ import type { Mailer } from '../../lib/mailer';
 import type { Urls } from '../../lib/urls';
 import type { Logger } from '../../logger';
 import { visibleTo } from '../activities/queries';
-import { requireMember } from '../chat/service';
+import { requireMember, roomOf } from '../chat/service';
 
 async function userExists(db: Db, id: string) {
   const [row] = await db.select({ id: user.id }).from(user).where(eq(user.id, id));
@@ -72,16 +72,23 @@ export async function createReport(db: Db, reporterId: string, input: CreateRepo
 
   if (input.messageId) {
     const [msg] = await db
-      .select({ activityId: messages.activityId, senderId: messages.senderId, kind: messages.kind })
+      .select({
+        activityId: messages.activityId,
+        communityId: messages.communityId,
+        senderId: messages.senderId,
+        kind: messages.kind,
+      })
       .from(messages)
       .where(eq(messages.id, input.messageId));
     if (!msg) throw notFound('Message');
-    await requireMember(db, msg.activityId, reporterId).catch(() => {
+    await requireMember(db, roomOf(msg), reporterId).catch(() => {
       throw notFound('Message');
     });
     if (msg.kind === 'system') throw badRequest('System messages can’t be reported');
     if (!msg.senderId) throw badRequest('This person deleted their account');
     targetUserId = msg.senderId;
+    // Not the community: a report must never read as one about the whole
+    // community (whose removal deletes it) once the message is gone.
     activityId = msg.activityId;
     messageId = input.messageId;
   } else if (input.activityId) {

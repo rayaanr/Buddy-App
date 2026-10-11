@@ -57,6 +57,9 @@ export const LIMITS = {
   /** Furthest ahead an activity can be scheduled. */
   maxDaysAhead: 90,
   messageMax: 2000,
+  /** People one invite can go to, and the note's length. */
+  invitesMax: 20,
+  inviteNoteMax: 200,
   communityNameMin: 3,
   communityNameMax: 40,
   communityAboutMax: 500,

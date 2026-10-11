@@ -57,6 +57,7 @@ export const keys = {
   unread: ['notifications', 'unread'] as const,
   user: (id: string) => ['users', id] as const,
   messages: (activityId: string) => ['chat', activityId] as const,
+  invitees: (activityId: string) => ['activities', 'invitees', activityId] as const,
   blocked: ['blocked'] as const,
 };
 
@@ -236,6 +237,32 @@ export function useRemoveGuest(activityId: string) {
         }),
       ),
     onSuccess: (detail) => refreshActivityLists(qc, detail),
+  });
+}
+
+/** People you could invite to an activity (you've been at one together). */
+export const useInvitees = (activityId: string) =>
+  useQuery({
+    queryKey: keys.invitees(activityId),
+    queryFn: async () =>
+      (await unwrap(api.activities[':id'].invitees.$get({ param: { id: activityId } }))).people,
+  });
+
+export function useInvite(activityId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (json: { userIds: string[]; note?: string }) =>
+      unwrap(api.activities[':id'].invites.$post({ param: { id: activityId }, json })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.invitees(activityId) }),
+  });
+}
+
+export function useMuteCommunityChat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, muted }: { id: string; muted: boolean }) =>
+      unwrap(api.communities[':id'].mute.$post({ param: { id }, json: { muted } })),
+    onSuccess: (detail) => qc.setQueryData(keys.community(detail.id), detail),
   });
 }
 

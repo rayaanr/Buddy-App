@@ -5,6 +5,7 @@ import {
   firstName,
   whenLong,
   feedQuery,
+  inviteInput,
   muteInput,
   removeGuestInput,
   myActivitiesQuery,
@@ -48,6 +49,7 @@ import {
   removeGuest,
   updateActivity,
 } from './service';
+import { findInvitees, invite } from './invites';
 
 const HISTORY_LIMIT = 10;
 const FROM_COMMUNITIES_LIMIT = 20;
@@ -279,6 +281,33 @@ export function activityRoutes(deps: Deps) {
             channelId: 'reminders',
           });
           return c.json(await getActivityDetail(db, urls, id, me.id));
+        },
+      )
+
+      // People you could invite (you've been at an activity together).
+      .get('/:id/invitees', idParam(), async (c) =>
+        c.json({ people: await findInvitees(db, urls, c.req.param('id'), currentUser(c).id) }),
+      )
+
+      // Invite them: each gets a notification, with your note if you wrote one.
+      .post(
+        '/:id/invites',
+        limit({ name: 'invites', limit: 20, windowMs: HOUR, by: 'user' }),
+        idParam(),
+        validate('json', inviteInput),
+        async (c) => {
+          const me = currentUser(c);
+          const id = c.req.param('id');
+          const { userIds, note } = c.req.valid('json');
+          const { invited, activity } = await invite(db, urls, id, me.id, userIds);
+          const when = whenLong(activity.startsAt);
+          void push.notifyUsers(invited, {
+            title: `${firstName(me.name)} invited you to ${activity.title}`,
+            body: note ? `“${note}” · ${when}` : `${when} at ${activity.place}`,
+            data: { activityId: id },
+            channelId: 'reminders',
+          });
+          return c.json({ invited: invited.length });
         },
       )
 

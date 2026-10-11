@@ -33,8 +33,18 @@ const NativeWebSocket = WebSocket as unknown as new (
   options?: { headers: Record<string, string> },
 ) => WebSocket;
 
-const wsUrl = (activityId: string) =>
-  `${API_URL.replace(/^http/, 'ws')}/v1/activities/${activityId}/chat/ws`;
+/** A group chat: an activity's (everyone going) or a community's (its members). */
+export interface ChatRoom {
+  kind: 'activity' | 'community';
+  id: string;
+}
+
+const wsUrl = ({ kind, id }: ChatRoom) =>
+  `${API_URL.replace(/^http/, 'ws')}/v1/${kind === 'activity' ? 'activities' : 'communities'}/${id}/chat/ws`;
+
+/** The chat's HTTP endpoints (the same for both kinds). */
+const endpoints = ({ kind }: ChatRoom) =>
+  kind === 'activity' ? api.activities[':id'].chat : api.communities[':id'].chat;
 
 /** Inserts or replaces messages by id, keeping oldest-first order. */
 function merge(list: ChatMessage[], incoming: ChatMessage[]) {
@@ -46,17 +56,18 @@ function merge(list: ChatMessage[], incoming: ChatMessage[]) {
 }
 
 /**
- * Live group chat for one activity: history over HTTP, live events over a
+ * Live group chat for an activity or a community: history over HTTP, live events over a
  * WebSocket (with reconnect and catch-up), optimistic sends with retry,
  * typing indicators and read receipts.
  */
-export function useChat(activityId: string, myId: string | undefined) {
+export function useChat(room: ChatRoom, myId: string | undefined) {
   const qc = useQueryClient();
-  const key = keys.messages(activityId);
+  const roomId = room.id;
+  const key = keys.messages(roomId);
+  const chat = endpoints(room);
   const history = useQuery({
     queryKey: key,
-    queryFn: () =>
-      unwrap(api.activities[':id'].chat.messages.$get({ param: { id: activityId }, query: {} })),
+    queryFn: () => unwrap(chat.messages.$get({ param: { id: roomId }, query: {} })),
   });
 
   const [pending, setPending] = useState<Map<string, { message: ChatMessage; failed: boolean }>>(
@@ -75,7 +86,7 @@ export function useChat(activityId: string, myId: string | undefined) {
     (fn: (page: MessagesPage) => MessagesPage) =>
       qc.setQueryData<MessagesPage>(key, (page) => (page ? fn(page) : page)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [qc, activityId],
+    [qc, roomId],
   );
 
   // ── Live connection ──────────────────────────────────────────────────
@@ -90,7 +101,7 @@ export function useChat(activityId: string, myId: string | undefined) {
       const after = page?.messages.at(-1)?.id;
       if (!after) return void qc.invalidateQueries({ queryKey: key });
       const missed = await unwrap(
-        api.activities[':id'].chat.messages.$get({ param: { id: activityId }, query: { after } }),
+        chat.messages.$get({ param: { id: roomId }, query: { after } }),
       ).catch(() => null);
       if (missed) {
         update((p) => ({
@@ -103,7 +114,7 @@ export function useChat(activityId: string, myId: string | undefined) {
     const connect = async () => {
       const cookie = await sessionCookie();
       if (closedByUs) return;
-      const ws = new NativeWebSocket(wsUrl(activityId), undefined, {
+      const ws = new NativeWebSocket(wsUrl(room), undefined, {
         headers: cookie ? { cookie } : {},
       });
       socket.current = ws;
@@ -178,7 +189,7 @@ export function useChat(activityId: string, myId: string | undefined) {
       disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activityId]);
+  }, [roomId]);
 
   // Hide "is typing…" after a few seconds without a new signal.
   useEffect(() => {
@@ -198,22 +209,18 @@ export function useChat(activityId: string, myId: string | undefined) {
     const id = latestFromOthers?.id;
     if (!id || id === lastMarked.current) return;
     lastMarked.current = id;
-    void unwrap(
-      api.activities[':id'].chat.read.$post({ param: { id: activityId }, json: { messageId: id } }),
-    ).catch(() => {
+    void unwrap(chat.read.$post({ param: { id: roomId }, json: { messageId: id } })).catch(() => {
       lastMarked.current = null;
     });
-  }, [activityId, latestFromOthers?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, latestFromOthers?.id]);
 
   // ── Sending ──────────────────────────────────────────────────────────
   const post = useCallback(
     async (id: string, body: string) => {
       try {
         const message = await unwrap(
-          api.activities[':id'].chat.messages.$post({
-            param: { id: activityId },
-            json: { id, body },
-          }),
+          chat.messages.$post({ param: { id: roomId }, json: { id, body } }),
         );
         update((p) => ({ ...p, messages: merge(p.messages, [message]) }));
         setPending((prev) => {
@@ -231,7 +238,8 @@ export function useChat(activityId: string, myId: string | undefined) {
         });
       }
     },
-    [activityId, update],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roomId, update],
   );
 
   const send = useCallback(
@@ -241,7 +249,8 @@ export function useChat(activityId: string, myId: string | undefined) {
       const id = randomUUID();
       const message: ChatMessage = {
         id,
-        activityId,
+        activityId: room.kind === 'activity' ? roomId : null,
+        communityId: room.kind === 'community' ? roomId : null,
         kind: 'user',
         sender: { id: myId, name: '', avatarUrl: null },
         body,
@@ -250,7 +259,8 @@ export function useChat(activityId: string, myId: string | undefined) {
       setPending((prev) => new Map(prev).set(id, { message, failed: false }));
       void post(id, body);
     },
-    [activityId, myId, post],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roomId, myId, post],
   );
 
   /** Same id as the first attempt, so the server never stores it twice. */

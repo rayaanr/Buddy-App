@@ -34,13 +34,13 @@ type ReportTarget = 'user' | 'message' | 'activity' | 'community';
 
 /**
  * Report a person, a chat message, an activity or a community, optionally blocking the
- * person too. Params: `type` and `id` of what's reported, plus `activityId`
- * for a message. Names and the message text come from what the app already
+ * person too. Params: `type` and `id` of what's reported, plus `chatId`
+ * (the activity or community) for a message. Names and the message text come from what the app already
  * loaded, never from the link, so a crafted link can't mislabel the report.
  */
 export default function ReportScreen() {
   const { top } = useScreenInsets();
-  const p = useLocalSearchParams<{ type: ReportTarget; id: string; activityId?: string }>();
+  const p = useLocalSearchParams<{ type: ReportTarget; id: string; chatId?: string }>();
   const qc = useQueryClient();
   const report = useReport();
   const setBlocked = useSetBlocked();
@@ -49,10 +49,8 @@ export default function ReportScreen() {
   const [alsoBlock, setAlsoBlock] = useState(p.type === 'message');
 
   const message =
-    p.type === 'message' && p.activityId
-      ? qc
-          .getQueryData<MessagesPage>(keys.messages(p.activityId))
-          ?.messages.find((m) => m.id === p.id)
+    p.type === 'message' && p.chatId
+      ? qc.getQueryData<MessagesPage>(keys.messages(p.chatId))?.messages.find((m) => m.id === p.id)
       : undefined;
   const person =
     p.type === 'message'

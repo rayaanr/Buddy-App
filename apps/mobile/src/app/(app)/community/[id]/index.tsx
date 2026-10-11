@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
-import { useCommunity, useDeleteCommunity } from '@/api/queries';
+import { useCommunity, useDeleteCommunity, useMuteCommunityChat } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
@@ -32,11 +32,24 @@ export default function CommunityScreen() {
   const { top } = useScreenInsets();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const remove = useDeleteCommunity();
+  const mute = useMuteCommunityChat();
 
   if (!community.data)
     return <QueryFallback query={community} notFound="This community no longer exists." />;
   const c = community.data;
   const others = c.memberCount - c.members.length;
+  const onMute = () =>
+    mute.mutate(
+      { id: c.id, muted: !c.chatMuted },
+      {
+        onSuccess: (detail) =>
+          toast(detail.chatMuted ? 'Group chat muted.' : 'Group chat unmuted.'),
+        onError: (err) => toast(errorMessage(err)),
+      },
+    );
+  const muteItem = c.joined
+    ? [{ label: c.chatMuted ? 'Unmute group chat' : 'Mute group chat', onPress: onMute }]
+    : [];
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ paddingBottom: 30 }}>
@@ -50,6 +63,7 @@ export default function CommunityScreen() {
             items={
               c.isCreator
                 ? [
+                    ...muteItem,
                     {
                       label: 'Edit community',
                       onPress: () => router.push(`/community/${c.id}/edit`),
@@ -61,6 +75,7 @@ export default function CommunityScreen() {
                     },
                   ]
                 : [
+                    ...muteItem,
                     {
                       label: 'Report community',
                       destructive: true,
@@ -96,12 +111,21 @@ export default function CommunityScreen() {
               <TickIcon size={14} color={colors.lime} />
               <Text className="font-sans-medium text-[13.5px] text-lime">You’re a member</Text>
             </View>
-            <Button
-              label="Host an activity"
-              size="md"
-              onPress={() => router.push({ pathname: '/create', params: { communityId: c.id } })}
-              className="mt-4"
-            />
+            <View className="mt-4 flex-row gap-2.5">
+              <Button
+                label="Group chat"
+                size="md"
+                onPress={() => router.push(`/community/${c.id}/chat`)}
+                className="flex-1"
+              />
+              <Button
+                label="Host an activity"
+                variant="outline"
+                size="md"
+                onPress={() => router.push({ pathname: '/create', params: { communityId: c.id } })}
+                className="flex-1"
+              />
+            </View>
           </>
         ) : (
           <Button

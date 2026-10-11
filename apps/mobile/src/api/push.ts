@@ -127,15 +127,14 @@ export function useOpenFromNotifications() {
       if (!Notifications || cancelled) return;
       const open = (response: import('expo-notifications').NotificationResponse | null) => {
         const data = response?.notification.request.content.data as
-          { activityId?: string; screen?: string } | undefined;
+          { activityId?: string; communityId?: string; screen?: string } | undefined;
         // Only ever from our own server, but it becomes a route: accept only an id.
-        if (!data?.activityId || !UUID_RE.test(data.activityId)) return;
+        const id = data?.activityId ?? data?.communityId;
+        if (!id || !UUID_RE.test(id)) return;
         Notifications.clearLastNotificationResponse();
-        router.push(
-          data.screen === 'chat'
-            ? `/activity/${data.activityId}/chat`
-            : `/activity/${data.activityId}`,
-        );
+        const chat = data!.screen === 'chat';
+        if (data!.activityId) router.push(chat ? `/activity/${id}/chat` : `/activity/${id}`);
+        else router.push(chat ? `/community/${id}/chat` : `/community/${id}`);
       };
       open(Notifications.getLastNotificationResponse());
       const sub = Notifications.addNotificationResponseReceivedListener(open);

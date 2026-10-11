@@ -69,7 +69,8 @@ function open(n: AppNotification) {
   const { activityId, communityId, screen } = n.data;
   if (activityId)
     router.push(screen === 'chat' ? `/activity/${activityId}/chat` : `/activity/${activityId}`);
-  else if (communityId) router.push(`/community/${communityId}`);
+  else if (communityId)
+    router.push(screen === 'chat' ? `/community/${communityId}/chat` : `/community/${communityId}`);
 }
 
 function Row({ notification: n }: { notification: AppNotification }) {

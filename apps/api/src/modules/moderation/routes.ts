@@ -8,6 +8,7 @@ import { forbidden } from '../../lib/errors';
 import { forgetPhotos } from '../../lib/photos';
 import { idParam, validate } from '../../lib/validate';
 import { createAnnouncer } from '../activities/announce';
+import { roomOf } from '../chat/service';
 import { liftSuspension, listReports, resolveReport } from './service';
 
 /** Moderators act on reports from the app (Settings → Moderation). */
@@ -39,7 +40,7 @@ export function moderationRoutes(deps: Deps) {
       await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, removedPhotos);
       for (const a of cancelled) await announce(a.id, me.id, a.result);
       if (removedMessage) {
-        hub.publish(removedMessage.activityId, { type: 'removed', messageId: removedMessage.id });
+        hub.publish(roomOf(removedMessage).id, { type: 'removed', messageId: removedMessage.id });
       }
       logger.info({ reportId: id, moderatorId: me.id, ...input }, 'Report resolved');
       return c.json({ ok: true });

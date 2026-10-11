@@ -100,6 +100,11 @@ export async function getCommunity(
     .from(communities)
     .where(eq(communities.id, id));
 
+  const [mine] = await db
+    .select({ chatMuted: communityMembers.chatMuted })
+    .from(communityMembers)
+    .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, viewerId)));
+
   const members = await db
     .select({
       id: user.id,
@@ -136,6 +141,7 @@ export async function getCommunity(
     })),
     upcoming: upcomingActivities,
     isCreator: info?.createdBy === viewerId,
+    chatMuted: mine?.chatMuted ?? false,
     place: await requirePlace(db, summary.placeId),
   };
 }
@@ -280,6 +286,16 @@ async function requireCreator(db: Db, id: string, userId: string) {
 }
 
 /** Everyone in the community (minus anyone blocked either way), creator first. */
+/** Mutes or unmutes a community's chat notifications (members only). */
+export async function muteCommunityChat(db: Db, id: string, userId: string, muted: boolean) {
+  const [row] = await db
+    .update(communityMembers)
+    .set({ chatMuted: muted })
+    .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, userId)))
+    .returning({ id: communityMembers.communityId });
+  if (!row) throw notFound('Community');
+}
+
 export async function listCommunityMembers(db: Db, urls: Urls, id: string, viewerId: string) {
   await requireCommunity(db, id);
   const rows = await db

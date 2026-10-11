@@ -30,6 +30,8 @@ export const communityDetail = communitySummary.extend({
   upcoming: z.array(activitySummary),
   /** You started it, so you can edit it. */
   isCreator: z.boolean(),
+  /** You turned off notifications from its group chat. */
+  chatMuted: z.boolean(),
   /** Its town in full (for editing). */
   place,
 });

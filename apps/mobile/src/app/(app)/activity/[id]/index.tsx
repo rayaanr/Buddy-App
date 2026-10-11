@@ -41,6 +41,7 @@ import {
   IconButton,
   Menu,
   type MenuItem,
+  PeopleIcon,
   Photo,
   PressableScale,
   QueryFallback,
@@ -49,6 +50,7 @@ import {
   successHaptic,
   useEnterOnChange,
 } from '@/components/ui';
+import { MeetingMap } from '@/components/activity/MeetingMap';
 import { MembersSheet } from '@/components/activity/MembersSheet';
 import { useHasPassed } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -252,19 +254,31 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             />
             <InfoTile label="Where" value={a.place} sub={`${a.area} · ${distanceLabel(a)}`} />
           </View>
-          {canAddToCalendar && !a.cancelled && new Date(a.startsAt) > new Date() ? (
-            <Pressable
-              onPress={() => void addToCalendar(a)}
-              accessibilityRole="button"
-              hitSlop={8}
-              className="mt-3 flex-row items-center gap-2 self-start active:opacity-70"
-            >
-              <CalendarIcon size={16} color={colors.lime} />
-              <Text className="font-sans-medium text-[14px] text-lime">Add to calendar</Text>
-            </Pressable>
-          ) : null}
+          <MeetingMap location={a.location} place={a.place}>
+            {canAddToCalendar && !a.cancelled && new Date(a.startsAt) > new Date() ? (
+              <Pressable
+                onPress={() => void addToCalendar(a)}
+                accessibilityRole="button"
+                hitSlop={8}
+                className="flex-row items-center gap-2 active:opacity-70"
+              >
+                <CalendarIcon size={16} color={colors.lime} />
+                <Text className="font-sans-medium text-[14px] text-lime">Add to calendar</Text>
+              </Pressable>
+            ) : null}
+          </MeetingMap>
 
           <Attendance activity={a} canRemove={canManage} />
+          {isIn && !a.cancelled && !started ? (
+            <PressableScale
+              onPress={() => router.push(`/activity/${a.id}/invite`)}
+              accessibilityRole="button"
+              className="mt-2.5 h-12 flex-row items-center justify-center gap-2 rounded-2xl border border-outline"
+            >
+              <PeopleIcon size={18} color={colors.lime} />
+              <Text className="font-sans-semibold text-[15px] text-ink">Invite friends</Text>
+            </PressableScale>
+          ) : null}
 
           <PressableScale
             disabled={a.viewer.hosting || isDeletedAccount(a.host)}

@@ -162,3 +162,19 @@ export const pick = z.object({
   reason: z.string(),
 });
 export type Pick = z.infer<typeof pick>;
+
+/** Someone you could invite: you've been at an activity together. */
+export const invitee = userSummary.extend({
+  /** The last activity you were both at, e.g. "Sunday long run". */
+  met: z.string(),
+  /** Already invited to this one (by anyone). */
+  invited: z.boolean(),
+});
+export type Invitee = z.infer<typeof invitee>;
+
+export const inviteInput = z.object({
+  userIds: z.array(z.uuid()).min(1).max(LIMITS.invitesMax),
+  /** A personal line for the notification, e.g. "Come, it's an easy pace!". */
+  note: z.string().trim().max(LIMITS.inviteNoteMax).optional(),
+});
+export type InviteInput = z.infer<typeof inviteInput>;
