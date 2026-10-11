@@ -4,7 +4,6 @@ import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import ArrowDown from 'lucide-react-native/icons/arrow-down';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Bell from 'lucide-react-native/icons/bell';
-import BellOff from 'lucide-react-native/icons/bell-off';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
@@ -35,6 +34,8 @@ import Trash from 'lucide-react-native/icons/trash';
 import User from 'lucide-react-native/icons/user';
 import Users from 'lucide-react-native/icons/users';
 import X from 'lucide-react-native/icons/x';
+import Volume2 from 'lucide-react-native/icons/volume-2';
+import VolumeOff from 'lucide-react-native/icons/volume-off';
 
 import { colors } from '@/theme';
 
@@ -153,10 +154,16 @@ export const MaximizeIcon = icon(
   { size: 18, color: colors.ink, strokeWidth: 2 },
   'MaximizeIcon',
 );
-export const BellOffIcon = icon(
-  BellOff,
+/** A muted chat. */
+export const MutedIcon = icon(
+  VolumeOff,
   { size: 14, color: colors.subtle, strokeWidth: 2 },
-  'BellOffIcon',
+  'MutedIcon',
+);
+export const UnmuteIcon = icon(
+  Volume2,
+  { size: 20, color: colors.ink, strokeWidth: 1.8 },
+  'UnmuteIcon',
 );
 export const ChatIcon = icon(
   MessageCircle,

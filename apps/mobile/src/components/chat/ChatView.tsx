@@ -35,7 +35,6 @@ import {
   AnimatedView,
   BackButton,
   ArrowDownIcon,
-  BellOffIcon,
   Avatar,
   CloseIcon,
   ConfirmDialog,
@@ -44,6 +43,7 @@ import {
   IconButton,
   KeyboardScreen,
   LoadError,
+  MutedIcon,
   Loading,
   Menu,
   PencilIcon,
@@ -379,7 +379,7 @@ export function ChatView({
                   {title}
                 </Text>
                 <View className="mt-0.5 flex-row items-center gap-1.5">
-                  {muted ? <BellOffIcon size={13} accessibilityLabel="Muted" /> : null}
+                  {muted ? <MutedIcon size={13} accessibilityLabel="Muted" /> : null}
                   <Text className="flex-1 font-sans text-[13px] text-muted" numberOfLines={1}>
                     {subtitle}
                   </Text>

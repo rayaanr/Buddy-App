@@ -7,8 +7,6 @@ import { useChats } from '@/api/queries';
 import { useToggleMute } from '@/components/chat/useToggleMute';
 import {
   Avatar,
-  BellIcon,
-  BellOffIcon,
   Chip,
   CloseIcon,
   CountBadge,
@@ -16,11 +14,13 @@ import {
   holdHaptic,
   IconButton,
   LoadError,
+  MutedIcon,
   Loading,
   MapPinIcon,
   PeopleIcon,
   Refresh,
   ScreenHeader,
+  UnmuteIcon,
 } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
@@ -70,7 +70,7 @@ export default function ChatsScreen() {
             {selected.title}
           </Text>
           <IconButton
-            icon={selected.muted ? <BellIcon /> : <BellOffIcon size={20} color={colors.ink} />}
+            icon={selected.muted ? <UnmuteIcon /> : <MutedIcon size={20} color={colors.ink} />}
             label={selected.muted ? 'Unmute' : 'Mute'}
             onPress={() => {
               toggleMute({ kind: selected.kind, id: selected.id }, !selected.muted);
@@ -222,7 +222,7 @@ function Row({
           >
             {preview(c)}
           </Text>
-          {c.muted ? <BellOffIcon /> : null}
+          {c.muted ? <MutedIcon /> : null}
           <CountBadge count={c.unread} muted={c.muted} />
         </View>
       </View>
