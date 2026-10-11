@@ -4,7 +4,8 @@
   "packageManager": "bun@1.4.2",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "e2e"
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -22,6 +23,7 @@
     "knip": "bunx knip@6.38.0",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter '*' test",
+    "e2e": "bun run --filter @buddy/e2e e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

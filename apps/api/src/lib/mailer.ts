@@ -1,3 +1,5 @@
+import { appendFile } from 'node:fs/promises';
+
 import { EMAIL_LOGO } from '../brand/email-logo';
 import type { Env } from '../env';
 import type { Logger } from '../logger';
@@ -30,14 +32,19 @@ function resendMailer(apiKey: string, from: string, logger: Logger): Mailer {
   };
 }
 
-/** Development fallback: writes the email to the log so codes can be copied from the terminal. */
-function logMailer(logger: Logger): Mailer {
+/**
+ * Development fallback: writes the email to the log so codes can be copied
+ * from the terminal, and to DEV_OUTBOX (one JSON line each) if set, where the
+ * browser tests read their sign-in codes.
+ */
+function logMailer(logger: Logger, outbox?: string): Mailer {
   return {
     async send(mail) {
       logger.warn(
         { to: mail.to, subject: mail.subject, text: mail.text },
         'Email not sent (no RESEND_API_KEY)',
       );
+      if (outbox) await appendFile(outbox, `${JSON.stringify(mail)}\n`);
     },
   };
 }
@@ -45,7 +52,7 @@ function logMailer(logger: Logger): Mailer {
 export function createMailer(env: Env, logger: Logger): Mailer {
   return env.RESEND_API_KEY
     ? resendMailer(env.RESEND_API_KEY, env.EMAIL_FROM, logger)
-    : logMailer(logger);
+    : logMailer(logger, env.DEV_OUTBOX);
 }
 
 /**

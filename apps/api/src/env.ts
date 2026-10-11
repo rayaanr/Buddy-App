@@ -45,6 +45,8 @@ const schema = z
     /** Without a key, sign-in codes are written to the log instead (development only). */
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().default('Buddy <hello@example.com>'),
+    /** Without RESEND_API_KEY, also append each email to this file (the browser tests read codes from it). */
+    DEV_OUTBOX: z.string().optional(),
     /** Shown on the privacy policy and terms pages for questions and data requests. */
     CONTACT_EMAIL: z.email().default('hello@example.com'),
     /** Where new reports are emailed. Without it they're only logged. */
