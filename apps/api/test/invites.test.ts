@@ -101,6 +101,12 @@ describe('inviting people', () => {
     expect(again.body.invited).toBe(0);
     expect((await invitees(id, host.headers)).body.people[0]!.invited).toBe(true);
 
+    // The activity page says who invited them.
+    const seen = await t.call<ActivityDetail>(`/v1/activities/${id}`, { headers: friend.headers });
+    expect(seen.body.invitedBy).toMatchObject({ id: host.userId, name: 'Kavindu Perera' });
+    const own = await t.call<ActivityDetail>(`/v1/activities/${id}`, { headers: host.headers });
+    expect(own.body.invitedBy).toBeNull();
+
     // Once they join, they're not on the list any more.
     await t.call(`/v1/activities/${id}/membership`, { method: 'POST', headers: friend.headers });
     expect((await invitees(id, host.headers)).body.people).toEqual([]);

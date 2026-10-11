@@ -3,6 +3,7 @@ import type { LucideIcon, LucideProps } from 'lucide-react-native';
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Bell from 'lucide-react-native/icons/bell';
+import BellOff from 'lucide-react-native/icons/bell-off';
 import Calendar from 'lucide-react-native/icons/calendar';
 import Camera from 'lucide-react-native/icons/camera';
 import Check from 'lucide-react-native/icons/check';
@@ -14,6 +15,7 @@ import Clock from 'lucide-react-native/icons/clock';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
 import LocateFixed from 'lucide-react-native/icons/locate-fixed';
 import MapPin from 'lucide-react-native/icons/map-pin';
+import MessageCircle from 'lucide-react-native/icons/message-circle';
 import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Pencil from 'lucide-react-native/icons/pencil';
@@ -113,6 +115,16 @@ export const ShareIcon = icon(
   'ShareIcon',
 );
 export const BellIcon = icon(Bell, { size: 20, color: colors.ink, strokeWidth: 1.8 }, 'BellIcon');
+export const BellOffIcon = icon(
+  BellOff,
+  { size: 14, color: colors.subtle, strokeWidth: 2 },
+  'BellOffIcon',
+);
+export const ChatIcon = icon(
+  MessageCircle,
+  { size: 20, color: colors.ink, strokeWidth: 1.8 },
+  'ChatIcon',
+);
 export const SearchIcon = icon(
   Search,
   { size: 18, color: colors.muted, strokeWidth: 2 },

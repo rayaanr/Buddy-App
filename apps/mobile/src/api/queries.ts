@@ -57,6 +57,7 @@ export const keys = {
   unread: ['notifications', 'unread'] as const,
   user: (id: string) => ['users', id] as const,
   messages: (activityId: string) => ['chat', activityId] as const,
+  chats: ['chats'] as const,
   invitees: (activityId: string) => ['activities', 'invitees', activityId] as const,
   blocked: ['blocked'] as const,
 };
@@ -473,6 +474,24 @@ export function useLiftSuspension() {
       unwrap(api.admin.suspensions[':id'].$delete({ param: { id: userId } })),
     onSuccess: () => refreshAfterModeration(qc),
   });
+}
+
+// ── Chats ────────────────────────────────────────────────────────────────
+
+/** Every group chat you're in, newest first; checked every half minute. */
+export const useChats = () =>
+  useQuery({
+    queryKey: keys.chats,
+    queryFn: async () => (await unwrap(api.chats.$get())).chats,
+    refetchInterval: 30_000,
+  });
+
+/** Unread messages: in one chat (by activity or community id), or in all of them. */
+export function useUnreadMessages(id?: string) {
+  const chats = useChats().data ?? [];
+  return id
+    ? (chats.find((c) => c.id === id)?.unread ?? 0)
+    : chats.reduce((sum, c) => sum + (c.muted ? 0 : c.unread), 0);
 }
 
 // ── Notifications (the bell on Discover) ─────────────────────────────────

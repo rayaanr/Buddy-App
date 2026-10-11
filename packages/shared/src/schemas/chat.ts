@@ -60,3 +60,31 @@ export const registerPushTokenInput = z.object({
   /** Expo push token, e.g. "ExponentPushToken[xxxx]". */
   token: z.string().regex(/^Expo(nent)?PushToken\[.+\]$/),
 });
+
+/** A row on the Chats screen: one of your group chats, with what's new in it. */
+export const chatPreview = z.object({
+  kind: z.enum(['activity', 'community']),
+  /** The activity's or community's id. */
+  id: z.uuid(),
+  title: z.string(),
+  /** The activity's cover or the community's logo. */
+  imageUrl: z.url().nullable(),
+  /** When the activity starts (null for communities). */
+  startsAt: isoDateTime.nullable(),
+  cancelled: z.boolean(),
+  /** You turned its notifications off. */
+  muted: z.boolean(),
+  lastMessage: z
+    .object({
+      kind: z.enum(['user', 'system']),
+      /** Null for system lines and deleted accounts. */
+      senderName: z.string().nullable(),
+      body: z.string(),
+      mine: z.boolean(),
+      createdAt: isoDateTime,
+    })
+    .nullable(),
+  /** Messages from others since you last read it. */
+  unread: z.number().int(),
+});
+export type ChatPreview = z.infer<typeof chatPreview>;

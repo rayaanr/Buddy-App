@@ -3,7 +3,13 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { useFeed, useFromCommunities, useMe, useUnreadNotifications } from '@/api/queries';
+import {
+  useFeed,
+  useFromCommunities,
+  useMe,
+  useUnreadMessages,
+  useUnreadNotifications,
+} from '@/api/queries';
 import {
   ActivityHeroCard,
   ActivityHeroSkeleton,
@@ -14,6 +20,8 @@ import {
 import {
   AnimatedView,
   BellIcon,
+  ChatIcon,
+  CountBadge,
   ChevronDownIcon,
   Chip,
   EmptyState,
@@ -41,6 +49,7 @@ export default function DiscoverScreen() {
   const isSearch = searching.length >= 2;
   const me = useMe();
   const unread = useUnreadNotifications().data ?? 0;
+  const unreadMessages = useUnreadMessages();
   const feed = useFeed(filter, isSearch ? searching : '');
   const fromCommunities = useFromCommunities();
 
@@ -111,6 +120,14 @@ export default function DiscoverScreen() {
             label="Picked for you"
             onPress={() => router.push({ pathname: '/picks', params: { from: 'button' } })}
           />
+          <View>
+            <IconButton
+              icon={<ChatIcon />}
+              label={unreadMessages ? `Chats, ${unreadMessages} unread` : 'Chats'}
+              onPress={() => router.push('/chats')}
+            />
+            <CountBadge count={unreadMessages} className="absolute -right-1 -top-1" />
+          </View>
           <View>
             <IconButton
               icon={<BellIcon />}

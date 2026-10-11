@@ -1,4 +1,4 @@
-import { serverEvent, type ChatMessage, type MessagesPage } from '@buddy/shared';
+import { serverEvent, type ChatMessage, type ChatPreview, type MessagesPage } from '@buddy/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -209,9 +209,16 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     const id = latestFromOthers?.id;
     if (!id || id === lastMarked.current) return;
     lastMarked.current = id;
-    void unwrap(chat.read.$post({ param: { id: roomId }, json: { messageId: id } })).catch(() => {
-      lastMarked.current = null;
-    });
+    void unwrap(chat.read.$post({ param: { id: roomId }, json: { messageId: id } }))
+      // Read: clear its unread count (Chats list, badges) straight away.
+      .then(() =>
+        qc.setQueryData<ChatPreview[]>(keys.chats, (list) =>
+          list?.map((c) => (c.id === roomId ? { ...c, unread: 0 } : c)),
+        ),
+      )
+      .catch(() => {
+        lastMarked.current = null;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, latestFromOthers?.id]);
 

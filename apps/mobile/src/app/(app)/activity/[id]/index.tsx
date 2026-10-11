@@ -25,6 +25,7 @@ import {
   useJoinActivity,
   useLeaveActivity,
   useMuteChat,
+  useUnreadMessages,
   useWaitlist,
 } from '@/api/queries';
 import {
@@ -81,6 +82,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const waitlist = useWaitlist();
   const mute = useMuteChat();
   const cancel = useCancelActivity();
+  const unreadMessages = useUnreadMessages(a.id);
   const { top } = useScreenInsets();
   const started = useHasPassed(a.startsAt);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -246,6 +248,16 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             </PressableScale>
           ) : null}
 
+          {a.invitedBy && !isIn && !a.cancelled ? (
+            <View className="mt-4 flex-row items-center gap-3 rounded-2xl border border-lime-panel-border bg-lime-panel px-3.5 py-3">
+              <Avatar uri={a.invitedBy.avatarUrl ?? undefined} name={a.invitedBy.name} size={36} />
+              <Text className="flex-1 font-sans text-[14.5px] leading-[20px] text-ink-soft">
+                <Text className="font-sans-semibold text-lime">{firstName(a.invitedBy.name)}</Text>{' '}
+                invited you. Join below if you’re in.
+              </Text>
+            </View>
+          ) : null}
+
           <View className="mt-5 flex-row gap-[9px]">
             <InfoTile
               label="When"
@@ -374,7 +386,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
           {isIn ? (
             <>
               <Button
-                label="Open group chat"
+                label={unreadMessages ? `Group chat · ${unreadMessages} new` : 'Open group chat'}
                 onPress={() => router.push(`/activity/${a.id}/chat`)}
                 className="flex-1"
               />

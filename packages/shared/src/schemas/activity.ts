@@ -56,6 +56,8 @@ export const activityDetail = activitySummary.extend({
   /** Up to five people going, host first. */
   attendees: z.array(userSummary),
   host: userSummary.extend({ hostedCount: z.number().int() }),
+  /** Who invited you to it, if someone did. */
+  invitedBy: userSummary.nullable(),
 });
 export type ActivityDetail = z.infer<typeof activityDetail>;
 

@@ -14,6 +14,7 @@ import type { Peer } from '../../realtime/hub';
 import { blockedIds } from '../safety/blocks';
 import { communityMembers } from '../../db/schema';
 import type { PushMessage } from '../../lib/push';
+import { listChats } from './list';
 import { listMessages, markRead, requireMember, type Room, sendMessage } from './service';
 
 const HEARTBEAT_MS = 30_000;
@@ -192,4 +193,11 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
         }),
       )
   );
+}
+
+/** GET /v1/chats: all your group chats, for the Chats screen and unread badges. */
+export function chatListRoutes(deps: Deps) {
+  return new Hono<AppEnv>()
+    .use(requireUser)
+    .get('/', async (c) => c.json({ chats: await listChats(deps.db, currentUser(c).id) }));
 }

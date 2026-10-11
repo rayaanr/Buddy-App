@@ -1,11 +1,12 @@
 import type { ChatMessage } from '@buddy/shared';
 import { router } from 'expo-router';
-import { type ReactElement, useCallback, useMemo, useState } from 'react';
-import { FlatList, Text, TextInput, View, type ListRenderItem } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Platform, Text, TextInput, View, type ListRenderItem } from 'react-native';
 
 import { type ChatRoom, useChat } from '@/api/chat';
 import { ApiRequestError } from '@/api/client';
-import { useMe } from '@/api/queries';
+import { keys, useMe } from '@/api/queries';
 import {
   AnimatedView,
   BackButton,
@@ -21,6 +22,13 @@ import { colors } from '@/theme';
 import { enterMessage } from '@/theme/motion';
 import { MessageBubble, toChatRows, type ChatRow } from './MessageBubble';
 import { TypingIndicator } from './TypingIndicator';
+
+/**
+ * New messages slide in on phones. Not on web: there, the animation takes the
+ * row out of the (inverted) list's layout once it ends, and the next message
+ * overlaps it.
+ */
+const animateNew = Platform.OS !== 'web';
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -46,6 +54,9 @@ export function ChatView({
   const me = useMe();
   const chat = useChat(room, me.data?.id);
   const { top } = useScreenInsets();
+  const qc = useQueryClient();
+  // Leaving the chat: its unread count on the Chats list is now out of date.
+  useEffect(() => () => void qc.invalidateQueries({ queryKey: keys.chats }), [qc]);
 
   // Newest first: the list is inverted, so the latest message sits at the
   // bottom and stays there as messages arrive, without scrolling by hand.
@@ -66,7 +77,9 @@ export function ChatView({
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item }) => (
       <AnimatedView
-        entering={openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined}
+        entering={
+          animateNew && openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined
+        }
       >
         <MessageBubble row={item} onRetry={retry} onReport={reportMessage} />
       </AnimatedView>

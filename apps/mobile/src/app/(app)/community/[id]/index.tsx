@@ -3,7 +3,12 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
-import { useCommunity, useDeleteCommunity, useMuteCommunityChat } from '@/api/queries';
+import {
+  useCommunity,
+  useDeleteCommunity,
+  useMuteCommunityChat,
+  useUnreadMessages,
+} from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
@@ -33,6 +38,7 @@ export default function CommunityScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const remove = useDeleteCommunity();
   const mute = useMuteCommunityChat();
+  const unreadMessages = useUnreadMessages(id);
 
   if (!community.data)
     return <QueryFallback query={community} notFound="This community no longer exists." />;
@@ -113,7 +119,7 @@ export default function CommunityScreen() {
             </View>
             <View className="mt-4 flex-row gap-2.5">
               <Button
-                label="Group chat"
+                label={unreadMessages ? `Group chat · ${unreadMessages} new` : 'Group chat'}
                 size="md"
                 onPress={() => router.push(`/community/${c.id}/chat`)}
                 className="flex-1"

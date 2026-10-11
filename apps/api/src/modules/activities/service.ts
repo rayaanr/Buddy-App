@@ -19,10 +19,12 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db, Tx } from '../../db/client';
 import {
   activities,
+  activityInvites,
   activityMembers,
   activityRemovals,
   activityWaitlist,
   messages,
+  profiles,
   user,
 } from '../../db/schema';
 import { conflict, forbidden, HttpError, notFound } from '../../lib/errors';
@@ -80,7 +82,32 @@ export async function getActivityDetail(
       ...summary.host,
       hostedCount: isDeletedAccount(summary.host) ? 0 : await countHosted(db, summary.host.id),
     },
+    invitedBy: await findInviter(db, urls, id, viewerId),
   };
+}
+
+/** Who invited the viewer to an activity (unless either has since blocked the other). */
+async function findInviter(db: Db | Tx, urls: Urls, activityId: string, viewerId: string) {
+  const [row] = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      avatarKey: profiles.avatarKey,
+      avatarUrl: profiles.avatarUrl,
+    })
+    .from(activityInvites)
+    .innerJoin(user, eq(user.id, activityInvites.inviterId))
+    .leftJoin(profiles, eq(profiles.userId, user.id))
+    .where(
+      and(
+        eq(activityInvites.activityId, activityId),
+        eq(activityInvites.inviteeId, viewerId),
+        notBlockedBetween(viewerId, activityInvites.inviterId),
+      ),
+    );
+  return row
+    ? { id: row.id, name: row.name, avatarUrl: urls.avatar(row.avatarKey, row.avatarUrl) }
+    : null;
 }
 
 /** Start times must be in the future and within LIMITS.maxDaysAhead days. */

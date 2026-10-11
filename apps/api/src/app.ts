@@ -12,7 +12,7 @@ import { HttpError } from './lib/errors';
 import { clientIp } from './lib/rate-limit';
 import { activityRoutes } from './modules/activities/routes';
 import { brandRoutes } from './modules/brand/routes';
-import { chatRoutes } from './modules/chat/routes';
+import { chatListRoutes, chatRoutes } from './modules/chat/routes';
 import { communityRoutes } from './modules/communities/routes';
 import { legalRoutes } from './modules/legal/routes';
 import { meRoutes } from './modules/me/routes';
@@ -111,6 +111,7 @@ export function createApp(deps: Deps) {
     })
     .use(loadSession(deps))
     .route('/me', meRoutes(deps))
+    .route('/chats', chatListRoutes(deps))
     .route('/activities/:id/chat', chatRoutes(deps, 'activity'))
     .route('/communities/:id/chat', chatRoutes(deps, 'community'))
     .route('/activities', activityRoutes(deps))
