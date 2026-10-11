@@ -63,6 +63,8 @@ export async function extendSeries({ db, push }: { db: Db; push: PushSender }) {
           location: latest.location,
           capacity: latest.capacity,
           description: latest.description,
+          costLkr: latest.costLkr,
+          bring: latest.bring,
           coverUrl: latest.coverUrl,
           seriesId: latest.seriesId,
           repeatsWeekly: true,

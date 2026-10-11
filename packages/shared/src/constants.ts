@@ -76,6 +76,11 @@ export const LIMITS = {
   /** Furthest ahead an activity can be scheduled. */
   maxDaysAhead: 90,
   messageMax: 2000,
+  /** How long after sending a message can still be edited. */
+  messageEditMinutes: 15,
+  /** Per person, in rupees. */
+  costMaxLkr: 100_000,
+  bringMax: 200,
   /** People one message can @mention. */
   mentionsMax: 20,
   pollQuestionMax: 200,

@@ -20,6 +20,7 @@ interface Row extends Record<string, unknown> {
   lm_body: string | null;
   lm_image: string | null;
   lm_question: string | null;
+  lm_deleted: boolean | null;
   lm_sender: string | null;
   lm_name: string | null;
   lm_at: Date | null;
@@ -47,7 +48,8 @@ export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]
     select 'activity' as kind, a.id, a.title, a.cover_url as image_url, a.starts_at,
            a.cancelled_at is not null as cancelled, m.chat_muted as muted, m.joined_at,
            lm.kind as lm_kind, lm.body as lm_body, lm.image_key as lm_image,
-           lm.poll->>'question' as lm_question, lm.sender_id as lm_sender,
+           lm.poll->>'question' as lm_question, lm.deleted_at is not null as lm_deleted,
+           lm.sender_id as lm_sender,
            su.name as lm_name, lm.created_at as lm_at,
            (select count(*)::int from messages x
              where x.activity_id = a.id and ${fromOthers}
@@ -67,7 +69,8 @@ export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]
     union all
 
     select 'community', c.id, c.name, c.logo_url, null, false, m.chat_muted, m.joined_at,
-           lm.kind, lm.body, lm.image_key, lm.poll->>'question', lm.sender_id, su.name,
+           lm.kind, lm.body, lm.image_key, lm.poll->>'question', lm.deleted_at is not null,
+           lm.sender_id, su.name,
            lm.created_at,
            (select count(*)::int from messages x
              where x.community_id = c.id and ${fromOthers}

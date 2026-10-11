@@ -69,6 +69,7 @@ export default function UserProfileScreen() {
             <View className="mt-5 flex-row gap-2">
               <StatTile value={u.hostedCount} label="Hosted" />
               <StatTile value={u.joinedCount} label="Joined" />
+              <StatTile value={u.wouldGoAgain} label="Would go again" />
             </View>
 
             <View className="mb-2.5 mt-6 flex-row justify-between">

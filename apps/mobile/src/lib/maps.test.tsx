@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { mapsApps, tilesAround, worldPixel } from './maps';
+import { fitPoints, fromWorldPixel, mapsApps, tilesAround, worldPixel } from './maps';
 
 describe('map tiles', () => {
   it('puts a point on the world map', () => {
@@ -42,5 +42,24 @@ describe('directions', () => {
     expect(mapsApps(at, 'Galle Face', 'android')[0]!.url).toBe(
       'geo:6.9,79.86?q=6.9,79.86(Galle%20Face)',
     );
+  });
+});
+
+describe('map maths', () => {
+  it('turns pixels back into places', () => {
+    const colombo = { lat: 6.9271, lng: 79.8612 };
+    const back = fromWorldPixel(worldPixel(colombo, 14), 14);
+    expect(back.lat).toBeCloseTo(colombo.lat, 6);
+    expect(back.lng).toBeCloseTo(colombo.lng, 6);
+  });
+
+  it('zooms out until every point fits', () => {
+    const near = [
+      { lat: 6.9271, lng: 79.8612 },
+      { lat: 6.93, lng: 79.865 },
+    ];
+    const far = [...near, { lat: 7.2906, lng: 80.6337 }]; // Kandy
+    expect(fitPoints(near, 360, 400)!.zoom).toBeGreaterThan(fitPoints(far, 360, 400)!.zoom);
+    expect(fitPoints([], 360, 400)).toBeNull();
   });
 });

@@ -12,6 +12,8 @@ export interface SelectedMessage {
   mine: boolean;
   /** Where on screen it was long-pressed (y), to float the reactions beside it. */
   y: number;
+  /** When it was long-pressed (whether it can still be edited is judged then). */
+  at: number;
 }
 
 interface ReactionBarProps {

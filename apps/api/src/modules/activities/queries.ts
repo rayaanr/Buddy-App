@@ -5,6 +5,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import type { Db, Tx } from '../../db/client';
 import type { LatLng } from '../../db/geography';
 import {
+  activityFeedback,
   activities,
   activityMembers,
   activityWaitlist,
@@ -95,6 +96,7 @@ export async function findActivitySummaries(
       location: activities.location,
       capacity: activities.capacity,
       coverUrl: activities.coverUrl,
+      costLkr: activities.costLkr,
       cancelledAt: activities.cancelledAt,
       repeatsWeekly: activities.repeatsWeekly,
       hostId: user.id,
@@ -148,6 +150,7 @@ export async function findActivitySummaries(
     goingCount: r.goingCount,
     waitingCount: r.waitingCount,
     coverUrl: r.coverUrl,
+    costLkr: r.costLkr,
     host:
       r.hostId && r.hostName
         ? {
@@ -263,5 +266,14 @@ export async function countHosted(db: Db | Tx, userId: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(activities)
     .where(eq(activities.hostId, userId));
+  return row?.n ?? 0;
+}
+
+/** Guests who said they'd go again with this host. */
+export async function countWouldGoAgain(db: Db | Tx, hostId: string) {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(activityFeedback)
+    .where(and(eq(activityFeedback.hostId, hostId), eq(activityFeedback.wouldGoAgain, true)));
   return row?.n ?? 0;
 }

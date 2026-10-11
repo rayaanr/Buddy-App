@@ -51,6 +51,11 @@ export interface Draft {
   pin: Pin | null;
   spots: number;
   notes: string;
+  /** Free, paid (per person), or not said. */
+  cost: 'free' | 'paid' | null;
+  /** Rupees per person, as typed. */
+  price: string;
+  bring: string;
   /** Post a new one each week. */
   repeat: boolean;
 }
@@ -65,6 +70,9 @@ export const newDraft = (): Draft => ({
   pin: null,
   spots: 6,
   notes: '',
+  cost: null,
+  price: '',
+  bring: '',
   repeat: false,
 });
 
@@ -77,6 +85,8 @@ export function draftFrom(
     place: string;
     capacity: number;
     description: string;
+    costLkr: number | null;
+    bring: string;
     repeatsWeekly: boolean;
     location: { lat: number; lng: number };
     area: string;
@@ -96,6 +106,9 @@ export function draftFrom(
     pin: { ...a.location, label: a.area },
     spots: a.capacity,
     notes: a.description,
+    cost: a.costLkr === null ? null : a.costLkr === 0 ? 'free' : 'paid',
+    price: a.costLkr ? String(a.costLkr) : '',
+    bring: a.bring,
     repeat: a.repeatsWeekly,
   };
 }
@@ -111,6 +124,9 @@ interface ActivityValues {
   location?: { lat: number; lng: number };
   capacity: number;
   description: string;
+  /** Per person in rupees: 0 free, null not said. */
+  costLkr: number | null;
+  bring: string;
   repeatsWeekly: boolean;
   /** Posted in this community (New activity only). */
   communityId?: string;
@@ -173,8 +189,15 @@ export function ActivityForm({
   const openPicker = (kind: 'date' | 'time') => setPicker((p) => ({ kind, key: p.key + 1 }));
   const closePicker = () => setPicker((p) => ({ ...p, kind: null }));
   const inPast = startsAt <= now;
+  const price = Number.parseInt(draft.price.replace(/[^0-9]/g, ''), 10);
+  const priceMissing = draft.cost === 'paid' && !(price > 0 && price <= LIMITS.costMaxLkr);
   const ready =
-    !!draft.title.trim() && !!draft.where.trim() && !inPast && !pending && !cover.uploading;
+    !!draft.title.trim() &&
+    !!draft.where.trim() &&
+    !inPast &&
+    !priceMissing &&
+    !pending &&
+    !cover.uploading;
 
   const submit = () => {
     if (!ready) return;
@@ -187,6 +210,8 @@ export function ActivityForm({
       location: draft.pin ? { lat: draft.pin.lat, lng: draft.pin.lng } : undefined,
       capacity: draft.spots,
       description: draft.notes.trim(),
+      costLkr: draft.cost === 'free' ? 0 : draft.cost === 'paid' ? price : null,
+      bring: draft.bring.trim(),
       repeatsWeekly: draft.repeat,
       communityId,
     });
@@ -315,10 +340,55 @@ export function ActivityForm({
           </View>
         </View>
 
+        <View className="mt-3 rounded-2xl bg-surface py-3 pl-4 pr-3">
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="font-sans-semibold text-[15.5px] text-ink">Cost</Text>
+              <Text className="mt-0.5 font-sans text-[13px] text-muted">Per person</Text>
+            </View>
+            <View className="flex-row gap-2">
+              {(['free', 'paid'] as const).map((c) => (
+                <Chip
+                  key={c}
+                  label={c === 'free' ? 'Free' : 'Paid'}
+                  selected={draft.cost === c}
+                  // Tap again to leave it unsaid.
+                  onPress={() => set({ cost: draft.cost === c ? null : c })}
+                />
+              ))}
+            </View>
+          </View>
+          {draft.cost === 'paid' ? (
+            <View className="mt-3 flex-row items-center gap-2 pr-1">
+              <Text className="font-sans-medium text-[15.5px] text-muted">Rs</Text>
+              <TextField
+                value={draft.price}
+                onChangeText={(t) => set({ price: t.replace(/[^0-9]/g, '').slice(0, 6) })}
+                placeholder="2,500"
+                keyboardType="number-pad"
+                size="md"
+                tone="inset"
+                className="flex-1"
+                accessibilityLabel="Cost per person, in rupees"
+              />
+            </View>
+          ) : null}
+        </View>
+
+        <TextField
+          value={draft.bring}
+          onChangeText={(bring) => set({ bring })}
+          placeholder="What to bring? Water, a racket…"
+          maxLength={LIMITS.bringMax}
+          size="md"
+          className="mt-3"
+          accessibilityLabel="What to bring"
+        />
+
         <TextField
           value={draft.notes}
           onChangeText={(notes) => set({ notes })}
-          placeholder="Anything people should know? Level, what to bring, where to meet."
+          placeholder="Anything else? Level, where exactly to meet."
           multiline
           textAlignVertical="top"
           size="md"

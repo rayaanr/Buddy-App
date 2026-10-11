@@ -1,4 +1,10 @@
-import { type ChatMessage, isDeletedAccount, messageSummary, type Reaction } from '@buddy/shared';
+import {
+  type ChatMessage,
+  isDeletedAccount,
+  LIMITS,
+  messageSummary,
+  type Reaction,
+} from '@buddy/shared';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +16,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import {
   BackHandler,
@@ -27,18 +34,24 @@ import { keys, useMe } from '@/api/queries';
 import {
   AnimatedView,
   BackButton,
+  ArrowDownIcon,
   CloseIcon,
+  ConfirmDialog,
+  CopyIcon,
   IconButton,
   KeyboardScreen,
   LoadError,
   Loading,
   Menu,
+  PencilIcon,
   PressableScale,
   ReplyIcon,
+  TrashIcon,
 } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
+import { colors } from '@/theme';
 import { enterMessage } from '@/theme/motion';
 import { type ChatPerson, Composer } from './Composer';
 import { ReactionBar, type SelectedMessage } from './ReactionBar';
@@ -114,9 +127,25 @@ export function ChatView({
     return () => sub.remove();
   }, [selected]);
   const [replyTo, setReplyTo] = useState<ChatDraft['replyTo']>();
+  // Your message being edited in the box, and the one about to be deleted.
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const [deleting, setDeleting] = useState<ChatMessage | null>(null);
   // A quoted message just jumped to, briefly lit up.
   const [highlighted, setHighlighted] = useState<string | null>(null);
   const list = useRef<FlatList<ChatRow>>(null);
+  // Scrolled up a way: a ↓ button jumps back to the newest message.
+  const [showJump, setShowJump] = useState(false);
+  // Where "new messages" starts, fixed when the chat opens (reading it doesn't move it).
+  const [unread, setUnread] = useState<{ from: string; count: number } | null | undefined>();
+  if (unread === undefined && !chat.isLoading && !chat.error) {
+    const since = chat.myReadUpTo;
+    const fresh = since
+      ? chat.items.filter(
+          (i) => !i.mine && i.message.kind === 'user' && i.message.createdAt > since,
+        )
+      : [];
+    setUnread(fresh.length ? { from: fresh[0]!.message.id, count: fresh.length } : null);
+  }
   const { retry, vote, react, send } = chat;
   const onVote = useCallback(
     (messageId: string, optionIds: string[]) =>
@@ -129,7 +158,8 @@ export function ChatView({
     [react],
   );
   const onActions = useCallback(
-    (message: ChatMessage, mine: boolean, y: number) => setSelected({ message, mine, y }),
+    (message: ChatMessage, mine: boolean, y: number) =>
+      setSelected({ message, mine, y, at: Date.now() }),
     [],
   );
   const onReply = useCallback(
@@ -162,6 +192,14 @@ export function ChatView({
   const selectedSender = selected?.message.sender;
   const canReport =
     !!selected && !selected.mine && !!selectedSender && !isDeletedAccount(selectedSender);
+  // Your text (or caption) for a few minutes after sending; polls stay as they are.
+  const canEdit =
+    !!selected &&
+    selected.mine &&
+    !!selected.message.body &&
+    !selected.message.poll &&
+    selected.at - new Date(selected.message.createdAt).getTime() <
+      LIMITS.messageEditMinutes * 60_000;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item }) => (
       <AnimatedView
@@ -174,6 +212,7 @@ export function ChatView({
             : undefined
         }
       >
+        {unread?.from === item.message.id ? <NewMessages count={unread.count} /> : null}
         <MessageBubble
           row={item}
           myId={myId}
@@ -189,6 +228,7 @@ export function ChatView({
     ),
     [
       openedWith,
+      unread,
       highlighted,
       selectedId,
       myId,
@@ -243,6 +283,37 @@ export function ChatView({
               onPress={() => setSelected(null)}
             />
             <View className="flex-1" />
+            {selected.message.body ? (
+              <IconButton
+                icon={<CopyIcon />}
+                label="Copy text"
+                onPress={() => {
+                  void Clipboard.setStringAsync(selected.message.body).then(() => toast('Copied.'));
+                  setSelected(null);
+                }}
+              />
+            ) : null}
+            {canEdit ? (
+              <IconButton
+                icon={<PencilIcon size={18} color={colors.ink} />}
+                label="Edit message"
+                onPress={() => {
+                  setEditing(selected.message);
+                  setReplyTo(undefined);
+                  setSelected(null);
+                }}
+              />
+            ) : null}
+            {selected.mine ? (
+              <IconButton
+                icon={<TrashIcon />}
+                label="Delete message"
+                onPress={() => {
+                  setDeleting(selected.message);
+                  setSelected(null);
+                }}
+              />
+            ) : null}
             <IconButton
               icon={<ReplyIcon />}
               label="Reply"
@@ -294,36 +365,60 @@ export function ChatView({
           <LoadError error={chat.error} onRetry={() => void chat.refetch()} />
         </View>
       ) : (
-        <FlatList
-          ref={list}
-          inverted
-          data={rows}
-          keyExtractor={(r) => r.message.id}
-          renderItem={renderItem}
-          // Inverted: paddingTop is the visual bottom.
-          contentContainerStyle={{
-            paddingHorizontal: 18,
-            paddingTop: 18,
-            paddingBottom: 14,
-            gap: 6,
-          }}
-          // Reading older messages: new ones don't yank the view down. Near
-          // the bottom: it follows the conversation.
-          maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 80 }}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          // Inverted: the header shows at the bottom, the footer at the top.
-          ListHeaderComponent={chat.typingName ? <TypingIndicator name={chat.typingName} /> : null}
-          ListFooterComponent={banner ?? null}
-          // Jumping to a quote far up: get near it, then try again once it's laid out.
-          onScrollToIndexFailed={({ index, averageItemLength }) => {
-            list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
-            setTimeout(
-              () => list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true }),
-              120,
-            );
-          }}
-        />
+        <View className="flex-1">
+          <FlatList
+            ref={list}
+            inverted
+            data={rows}
+            keyExtractor={(r) => r.message.id}
+            renderItem={renderItem}
+            // Inverted: paddingTop is the visual bottom.
+            contentContainerStyle={{
+              paddingHorizontal: 18,
+              paddingTop: 18,
+              paddingBottom: 14,
+              gap: 6,
+            }}
+            // Reading older messages: new ones don't yank the view down. Near
+            // the bottom: it follows the conversation.
+            maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 80 }}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            // Inverted: the header shows at the bottom, the footer at the top.
+            ListHeaderComponent={
+              chat.typingName ? <TypingIndicator name={chat.typingName} /> : null
+            }
+            // Inverted: the "end" is the top, where older messages are.
+            onEndReached={() => void chat.loadEarlier()}
+            onEndReachedThreshold={0.4}
+            onScroll={(e) => setShowJump(e.nativeEvent.contentOffset.y > 600)}
+            scrollEventThrottle={100}
+            ListFooterComponent={
+              <>
+                {chat.loadingEarlier ? <Loading className="py-3" /> : null}
+                {chat.hasMore ? null : (banner ?? null)}
+              </>
+            }
+            // Jumping to a quote far up: get near it, then try again once it's laid out.
+            onScrollToIndexFailed={({ index, averageItemLength }) => {
+              list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
+              setTimeout(
+                () => list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true }),
+                120,
+              );
+            }}
+          />
+          {showJump ? (
+            <View style={styles.jump}>
+              <IconButton
+                icon={<ArrowDownIcon />}
+                label="Jump to the latest messages"
+                onPress={() => list.current?.scrollToOffset({ offset: 0, animated: true })}
+                className="border border-line"
+              />
+            </View>
+          ) : null}
+        </View>
       )}
 
       <Composer
@@ -331,9 +426,19 @@ export function ChatView({
         myId={me.data?.id}
         people={people}
         onSend={(draft) => {
+          if (editing) {
+            const id = editing.id;
+            setEditing(null);
+            void chat
+              .edit(id, draft.body, draft.mentions?.map((m) => m.id) ?? [])
+              .catch((err: unknown) => toast(errorMessage(err)));
+            return;
+          }
           send({ ...draft, replyTo });
           setReplyTo(undefined);
         }}
+        editing={editing}
+        onCancelEdit={() => setEditing(null)}
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(undefined)}
         onTyping={chat.notifyTyping}
@@ -343,6 +448,22 @@ export function ChatView({
         }
       />
       <PhotoViewer url={viewing} onClose={() => setViewing(null)} />
+      <ConfirmDialog
+        visible={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Delete this message?"
+        message="It’s replaced by “This message was deleted” for everyone."
+        actions={[
+          {
+            label: 'Delete',
+            destructive: true,
+            onPress: () => {
+              const id = deleting!.id;
+              void chat.remove(id).catch((err: unknown) => toast(errorMessage(err)));
+            },
+          },
+        ]}
+      />
       {selected ? (
         <ReactionBar
           selected={selected}
@@ -356,7 +477,21 @@ export function ChatView({
   );
 }
 
+/** The line above the first message that arrived since you last read the chat. */
+function NewMessages({ count }: { count: number }) {
+  return (
+    <View className="my-2 flex-row items-center gap-3" accessibilityRole="header">
+      <View className="h-px flex-1 bg-lime/30" />
+      <Text className="font-sans-semibold text-[12.5px] text-lime">
+        {count === 1 ? '1 new message' : `${count} new messages`}
+      </Text>
+      <View className="h-px flex-1 bg-lime/30" />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  jump: { position: 'absolute', right: 16, bottom: 12 },
   // A message you long-pressed, or a quoted one you jumped to.
   // Full width, past the list's side padding.
   highlight: {

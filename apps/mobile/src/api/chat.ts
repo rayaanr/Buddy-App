@@ -10,6 +10,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState } from 'react-native';
 
 import { API_URL } from '@/config';
@@ -100,6 +101,9 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
   });
 
   const [pending, setPending] = useState<Map<string, Pending>>(new Map());
+  // Unsent messages survive closing the app: saved per chat, sent again on return.
+  const savedKey = `buddy.unsent.${roomId}`;
+  const restored = useRef(false);
   const [typing, setTyping] = useState<{ name: string; until: number } | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const lastTypingSent = useRef(0);
@@ -132,6 +136,7 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
       ).catch(() => null);
       if (missed) {
         update((p) => ({
+          ...p,
           messages: merge(p.messages, missed.messages),
           othersReadUpTo: missed.othersReadUpTo ?? p.othersReadUpTo,
         }));
@@ -167,6 +172,9 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
           }
         } else if (event.type === 'typing') {
           setTyping({ name: event.user.name.split(' ')[0]!, until: Date.now() + TYPING_SHOW_MS });
+        } else if (event.type === 'updated') {
+          // Edited or deleted by its sender.
+          update((p) => ({ ...p, messages: merge(p.messages, [event.message]) }));
         } else if (event.type === 'reactions') {
           update((p) => ({
             ...p,
@@ -348,6 +356,8 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
           : null,
         replyTo: draft.replyTo ?? null,
         reactions: [],
+        editedAt: null,
+        deleted: false,
         createdAt: new Date().toISOString(),
       };
       const item: Pending = { message, failed: false, draft: { ...draft, body } };
@@ -357,6 +367,39 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [roomId, myId, post],
   );
+
+  // Bring back what hadn't gone through last time, and try it again.
+  useEffect(() => {
+    let cancelled = false;
+    void AsyncStorage.getItem(savedKey)
+      .then((raw) => {
+        if (cancelled || !raw) return;
+        const items = JSON.parse(raw) as Pending[];
+        setPending((prev) => {
+          const next = new Map(prev);
+          for (const item of items) next.set(item.message.id, { ...item, failed: false });
+          return next;
+        });
+        for (const item of items) void post({ ...item, failed: false });
+      })
+      .catch(() => {})
+      .finally(() => {
+        restored.current = true;
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedKey]);
+  useEffect(() => {
+    if (!restored.current) return;
+    const items = [...pending.values()];
+    void (
+      items.length
+        ? AsyncStorage.setItem(savedKey, JSON.stringify(items))
+        : AsyncStorage.removeItem(savedKey)
+    ).catch(() => {});
+  }, [pending, savedKey]);
 
   /** Same id as the first attempt, so the server never stores it twice. */
   const retry = useCallback(
@@ -415,6 +458,58 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
       socket.current.send(JSON.stringify({ type: 'typing' }));
     }
   }, []);
+
+  // ── History ──────────────────────────────────────────────────────────
+  const [loadingEarlier, setLoadingEarlier] = useState(false);
+  /** Fetches the messages before the oldest one shown (scrolling up). */
+  const loadEarlier = useCallback(async () => {
+    const page = qc.getQueryData<MessagesPage>(key);
+    const oldest = page?.messages[0]?.id;
+    if (!page?.hasMore || !oldest || loadingEarlier) return;
+    setLoadingEarlier(true);
+    try {
+      const older = await unwrap(
+        chat.messages.$get({ param: { id: roomId }, query: { before: oldest, limit: '50' } }),
+      );
+      update((p) => ({
+        ...p,
+        messages: merge(p.messages, older.messages),
+        hasMore: older.hasMore,
+      }));
+    } catch {
+      // Scrolling up again tries again.
+    } finally {
+      setLoadingEarlier(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, loadingEarlier, update]);
+
+  /** Changes your message's text (for a few minutes after sending). */
+  const edit = useCallback(
+    async (messageId: string, body: string, mentions: string[]) => {
+      const message = await unwrap(
+        chat.messages[':messageId'].$patch({
+          param: { id: roomId, messageId },
+          json: { body, mentions },
+        }),
+      );
+      update((p) => ({ ...p, messages: merge(p.messages, [message]) }));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roomId, update],
+  );
+
+  /** Deletes your message; it shows as deleted for everyone. */
+  const remove = useCallback(
+    async (messageId: string) => {
+      const message = await unwrap(
+        chat.messages[':messageId'].$delete({ param: { id: roomId, messageId } }),
+      );
+      update((p) => ({ ...p, messages: merge(p.messages, [message]) }));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roomId, update],
+  );
 
   /** Reacts to a message (null takes it back); shows straight away. */
   const react = useCallback(
@@ -479,6 +574,13 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
 
   return {
     items,
+    hasMore: history.data?.hasMore ?? false,
+    loadingEarlier,
+    loadEarlier,
+    /** How far you had read when the chat loaded, for the "new messages" line. */
+    myReadUpTo: history.data?.myReadUpTo ?? null,
+    edit,
+    remove,
     isLoading: history.isLoading,
     error: history.error,
     refetch: history.refetch,

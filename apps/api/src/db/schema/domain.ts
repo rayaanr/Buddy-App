@@ -158,6 +158,10 @@ export const activities = pgTable(
     location: geographyPoint().notNull(),
     capacity: integer().notNull(),
     description: text().notNull().default(''),
+    /** Per person in rupees: 0 is free, null not said. */
+    costLkr: integer(),
+    /** What to bring, e.g. "Water, a racket if you have one". */
+    bring: text().notNull().default(''),
     coverUrl: text(),
     /** Set when the host calls it off. */
     cancelledAt: timestamp({ withTimezone: true }),
@@ -178,6 +182,7 @@ export const activities = pgTable(
     // One occurrence per series per start time, so the job can't double-post.
     uniqueIndex('activities_series_starts_at_idx').on(t.seriesId, t.startsAt),
     check('activities_capacity_check', sql`${t.capacity} between 2 and 30`),
+    check('activities_cost_check', sql`${t.costLkr} is null or ${t.costLkr} between 0 and 100000`),
     check(
       'activities_group_check',
       sql`${t.group} in ('Social', 'Sports', 'Running', 'Creative', 'Food')`,
@@ -318,6 +323,10 @@ export const messages = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::uuid[]`),
+    /** The sender changed the text (within MESSAGE_EDIT_MINUTES). */
+    editedAt: timestamp({ withTimezone: true }),
+    /** The sender deleted it: its content is cleared and it shows as deleted. */
+    deletedAt: timestamp({ withTimezone: true }),
     /** The message this one replies to (cleared if that one is deleted). */
     replyToId: uuid().references((): AnyPgColumn => messages.id, { onDelete: 'set null' }),
     /** A poll: its question and options (votes are in poll_votes). */
@@ -337,6 +346,31 @@ export const messages = pgTable(
     index('messages_sender_idx').on(t.senderId),
     check('messages_kind_check', sql`${t.kind} in ('user', 'system')`),
     check('messages_chat_check', sql`(${t.activityId} is null) <> (${t.communityId} is null)`),
+  ],
+);
+
+/**
+ * After an activity, each guest can say (privately) whether they'd go again
+ * with that host. Hosts only ever see the total.
+ */
+export const activityFeedback = pgTable(
+  'activity_feedback',
+  {
+    activityId: uuid()
+      .notNull()
+      .references(() => activities.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** The host at the time, for their "would go again" total. */
+    hostId: uuid().references(() => user.id, { onDelete: 'cascade' }),
+    wouldGoAgain: boolean().notNull(),
+    ...timestamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.activityId, t.userId] }),
+    index('activity_feedback_host_idx').on(t.hostId),
+    index('activity_feedback_user_idx').on(t.userId),
   ],
 );
 

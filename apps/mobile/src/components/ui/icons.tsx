@@ -1,6 +1,7 @@
 import type { LucideIcon, LucideProps } from 'lucide-react-native';
 // One import per icon keeps the rest of Lucide out of the bundle.
 import ArrowLeft from 'lucide-react-native/icons/arrow-left';
+import ArrowDown from 'lucide-react-native/icons/arrow-down';
 import ArrowRight from 'lucide-react-native/icons/arrow-right';
 import Bell from 'lucide-react-native/icons/bell';
 import BellOff from 'lucide-react-native/icons/bell-off';
@@ -13,10 +14,13 @@ import ChevronLeft from 'lucide-react-native/icons/chevron-left';
 import ChevronRight from 'lucide-react-native/icons/chevron-right';
 import Clock from 'lucide-react-native/icons/clock';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
+import List from 'lucide-react-native/icons/list';
 import LocateFixed from 'lucide-react-native/icons/locate-fixed';
+import MapIconSvg from 'lucide-react-native/icons/map';
 import MapPin from 'lucide-react-native/icons/map-pin';
 import MessageCircle from 'lucide-react-native/icons/message-circle';
 import Compass from 'lucide-react-native/icons/compass';
+import Copy from 'lucide-react-native/icons/copy';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
@@ -24,6 +28,7 @@ import Reply from 'lucide-react-native/icons/reply';
 import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
+import Trash from 'lucide-react-native/icons/trash';
 import User from 'lucide-react-native/icons/user';
 import Users from 'lucide-react-native/icons/users';
 import X from 'lucide-react-native/icons/x';
@@ -117,6 +122,19 @@ export const ShareIcon = icon(
 );
 export const BellIcon = icon(Bell, { size: 20, color: colors.ink, strokeWidth: 1.8 }, 'BellIcon');
 export const ReplyIcon = icon(Reply, { size: 20, color: colors.ink, strokeWidth: 2 }, 'ReplyIcon');
+export const CopyIcon = icon(Copy, { size: 19, color: colors.ink, strokeWidth: 1.9 }, 'CopyIcon');
+export const TrashIcon = icon(
+  Trash,
+  { size: 19, color: colors.ink, strokeWidth: 1.9 },
+  'TrashIcon',
+);
+export const ArrowDownIcon = icon(
+  ArrowDown,
+  { size: 20, color: colors.ink, strokeWidth: 2 },
+  'ArrowDownIcon',
+);
+export const ListIcon = icon(List, { size: 18, color: colors.ink, strokeWidth: 2 }, 'ListIcon');
+export const MapIcon = icon(MapIconSvg, { size: 18, color: colors.ink, strokeWidth: 2 }, 'MapIcon');
 export const BellOffIcon = icon(
   BellOff,
   { size: 14, color: colors.subtle, strokeWidth: 2 },

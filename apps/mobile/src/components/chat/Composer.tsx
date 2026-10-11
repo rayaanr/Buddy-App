@@ -1,9 +1,17 @@
-import { firstName } from '@buddy/shared';
+import { type ChatMessage, firstName } from '@buddy/shared';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import type { ChatDraft } from '@/api/chat';
-import { Avatar, CloseIcon, Menu, PlusIcon, PressableScale, ReplyIcon } from '@/components/ui';
+import {
+  Avatar,
+  CloseIcon,
+  Menu,
+  PencilIcon,
+  PlusIcon,
+  PressableScale,
+  ReplyIcon,
+} from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
@@ -25,6 +33,9 @@ interface ComposerProps {
   /** Picks a photo and sends it with this caption; resolves true if one was sent. */
   onPhoto: (caption: string, mentions: ChatDraft['mentions']) => Promise<boolean>;
   onPoll: () => void;
+  /** Your message being edited: its text fills the box, and Send saves it. */
+  editing: ChatMessage | null;
+  onCancelEdit: () => void;
   /** The message being replied to, shown above the box until sent or cancelled. */
   replyTo?: ChatDraft['replyTo'];
   onCancelReply: () => void;
@@ -49,6 +60,8 @@ export function Composer({
   onPoll,
   replyTo,
   onCancelReply,
+  editing,
+  onCancelEdit,
 }: ComposerProps) {
   const { bottom } = useScreenInsets();
   const [text, setText] = useState('');
@@ -61,6 +74,22 @@ export function Composer({
   useEffect(() => {
     if (replyTo) input.current?.focus();
   }, [replyTo]);
+  // Chose Edit: the message's text in the box, its tags kept (set while
+  // rendering, the React way to follow a prop).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  if ((editing?.id ?? null) !== editingId) {
+    setEditingId(editing?.id ?? null);
+    if (editing) {
+      setText(editing.body);
+      setCursor(editing.body.length);
+      setTagged(
+        editing.mentions.map((m) => people.find((p) => p.id === m.id) ?? { ...m, avatarUrl: null }),
+      );
+    }
+  }
+  useEffect(() => {
+    if (editing) input.current?.focus();
+  }, [editing]);
   const canSend = ready && !!text.trim();
 
   const query = mentionQuery(text.slice(0, cursor));
@@ -111,7 +140,30 @@ export function Composer({
 
   return (
     <View className="border-t border-line">
-      {replyTo ? (
+      {editing ? (
+        <View className="flex-row items-center gap-3 border-b border-line bg-surface px-[18px] py-2.5">
+          <PencilIcon size={17} color={colors.lime} />
+          <View className="min-w-0 flex-1 border-l-[3px] border-lime pl-2.5">
+            <Text className="font-sans-semibold text-[13px] text-lime">Editing message</Text>
+            <Text className="font-sans text-[13px] text-muted" numberOfLines={1}>
+              {editing.body}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              onCancelEdit();
+              reset();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel editing"
+            hitSlop={8}
+            className="h-8 w-8 items-center justify-center rounded-full active:bg-surface-raised"
+          >
+            <CloseIcon color={colors.muted} />
+          </Pressable>
+        </View>
+      ) : null}
+      {replyTo && !editing ? (
         <View className="flex-row items-center gap-3 border-b border-line bg-surface px-[18px] py-2.5">
           <ReplyIcon size={18} color={colors.lime} />
           <View className="min-w-0 flex-1 border-l-[3px] border-lime pl-2.5">
@@ -151,19 +203,21 @@ export function Composer({
       ) : null}
 
       <View className="flex-row gap-2 px-3.5 pt-3" style={{ paddingBottom: bottom(28) }}>
-        <Menu
-          label="Add a photo or a poll"
-          align="start"
-          trigger={
-            <View className="h-[50px] w-[50px] items-center justify-center rounded-full bg-surface">
-              <PlusIcon color={colors.ink} size={22} />
-            </View>
-          }
-          items={[
-            { label: 'Photo', onPress: () => void photo() },
-            { label: 'Poll', onPress: onPoll },
-          ]}
-        />
+        {editing ? null : (
+          <Menu
+            label="Add a photo or a poll"
+            align="start"
+            trigger={
+              <View className="h-[50px] w-[50px] items-center justify-center rounded-full bg-surface">
+                <PlusIcon color={colors.ink} size={22} />
+              </View>
+            }
+            items={[
+              { label: 'Photo', onPress: () => void photo() },
+              { label: 'Poll', onPress: onPoll },
+            ]}
+          />
+        )}
         <TextInput
           value={text}
           onChangeText={(t) => {
@@ -199,7 +253,7 @@ export function Composer({
           <Text
             className={cn('font-sans-semibold text-[15px]', canSend ? 'text-bg' : 'text-muted')}
           >
-            Send
+            {editing ? 'Save' : 'Send'}
           </Text>
         </PressableScale>
       </View>

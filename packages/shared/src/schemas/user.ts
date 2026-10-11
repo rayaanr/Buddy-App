@@ -74,6 +74,8 @@ export const publicProfile = z.object({
   commonInterests: z.array(interest),
   memberSince: isoDateTime,
   hostedCount: z.number().int(),
+  /** Guests who said they'd go again with them. */
+  wouldGoAgain: z.number().int(),
   joinedCount: z.number().int(),
   hosting: z.array(activitySummary),
   /** You blocked this person: their activities and messages are hidden from you. */

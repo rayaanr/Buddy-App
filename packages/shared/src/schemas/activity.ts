@@ -34,6 +34,8 @@ export const activitySummary = z.object({
   /** People waiting for a spot (the activity is full). */
   waitingCount: z.number().int(),
   coverUrl: z.url().nullable(),
+  /** Per person in rupees: 0 is free, null when the host didn't say. */
+  costLkr: z.number().int().nullable(),
   host: userSummary,
   community: z.object({ id: z.uuid(), name: z.string() }).nullable(),
   viewer: z.object({
@@ -55,7 +57,15 @@ export const activityDetail = activitySummary.extend({
   description: z.string(),
   /** Up to five people going, host first. */
   attendees: z.array(userSummary),
-  host: userSummary.extend({ hostedCount: z.number().int() }),
+  /** What to bring, e.g. "Water, a racket if you have one" (may be empty). */
+  bring: z.string(),
+  host: userSummary.extend({
+    hostedCount: z.number().int(),
+    /** Guests who said they'd go again with this host, across all their activities. */
+    wouldGoAgain: z.number().int(),
+  }),
+  /** "Would you go again?": asked of guests once it's over (null: not asked). */
+  feedback: z.object({ mine: z.boolean().nullable() }).nullable(),
   /** Who invited you to it, if someone did. */
   invitedBy: userSummary.nullable(),
 });
@@ -103,6 +113,9 @@ export const createActivityInput = z.object({
   location: meetingPoint.optional(),
   capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
   description: z.string().trim().max(LIMITS.descriptionMax).default(''),
+  /** Per person in rupees: 0 is free, null leaves it unsaid. */
+  costLkr: z.number().int().min(0).max(LIMITS.costMaxLkr).nullable().default(null),
+  bring: z.string().trim().max(LIMITS.bringMax).default(''),
   /** Key returned by the upload endpoint, if a cover photo was uploaded. */
   coverKey: z.string().optional(),
   repeatsWeekly: z.boolean().default(false),
@@ -122,6 +135,9 @@ export const updateActivityInput = z
     location: meetingPoint,
     capacity: z.number().int().min(LIMITS.capacityMin).max(LIMITS.capacityMax),
     description: z.string().trim().max(LIMITS.descriptionMax),
+    /** Per person in rupees: 0 is free, null leaves it unsaid. */
+    costLkr: z.number().int().min(0).max(LIMITS.costMaxLkr).nullable(),
+    bring: z.string().trim().max(LIMITS.bringMax),
     /** A new uploaded cover; null goes back to the stock photo for the type. */
     coverKey: z.string().nullable(),
     /** Turning it off stops the whole series after this one. */
@@ -180,3 +196,6 @@ export const inviteInput = z.object({
   note: z.string().trim().max(LIMITS.inviteNoteMax).optional(),
 });
 export type InviteInput = z.infer<typeof inviteInput>;
+
+/** A guest's private answer after an activity. */
+export const feedbackInput = z.object({ wouldGoAgain: z.boolean() });

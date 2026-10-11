@@ -81,3 +81,10 @@ export function ordinal(n: number) {
 
 /** "Colombo 07, Sri Lanka". */
 export const locationLabel = (area: string) => `${area}, Sri Lanka`;
+
+/** "Free", "Rs 2,500", or null when the host didn't say. */
+export function costLabel({ costLkr }: { costLkr: number | null }) {
+  if (costLkr === null) return null;
+  if (costLkr === 0) return 'Free';
+  return `Rs ${String(costLkr).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+}

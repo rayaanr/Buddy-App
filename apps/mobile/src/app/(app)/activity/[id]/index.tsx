@@ -22,6 +22,7 @@ import { ApiRequestError, errorMessage } from '@/api/client';
 import {
   useActivity,
   useCancelActivity,
+  useFeedback,
   useJoinActivity,
   useLeaveActivity,
   useMuteChat,
@@ -55,7 +56,16 @@ import { MeetingMap } from '@/components/activity/MeetingMap';
 import { MembersSheet } from '@/components/activity/MembersSheet';
 import { useHasPassed } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { distanceLabel, hueFor, ordinal, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
+import {
+  costLabel,
+  distanceLabel,
+  hueFor,
+  ordinal,
+  spotsLabel,
+  spotsLeft,
+  whenLong,
+} from '@/lib/activity';
+import { cn } from '@/lib/cn';
 import { addToCalendar, canAddToCalendar } from '@/lib/calendar';
 import { shareActivity } from '@/lib/share';
 import { toast } from '@/store/ui';
@@ -123,6 +133,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const hosted = a.host.hostedCount;
   const hostMeta = [
     `Hosted ${hosted} ${hosted === 1 ? 'activity' : 'activities'}`,
+    a.host.wouldGoAgain ? `${a.host.wouldGoAgain} would go again` : null,
     a.community?.name,
   ]
     .filter(Boolean)
@@ -237,6 +248,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               </Text>
             </View>
           ) : null}
+          {a.feedback && !isDeletedAccount(a.host) ? <WouldGoAgain activity={a} /> : null}
           {a.community ? (
             <PressableScale
               onPress={() => router.push(`/community/${a.community!.id}`)}
@@ -279,6 +291,17 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               </Pressable>
             ) : null}
           </MeetingMap>
+
+          {costLabel(a) || a.bring ? (
+            <View className="mt-2.5 rounded-[18px] bg-surface px-4 py-1">
+              {costLabel(a) ? (
+                <DetailRow label="Cost" value={a.costLkr ? `${costLabel(a)} per person` : 'Free'} />
+              ) : null}
+              {a.bring ? (
+                <DetailRow label="Bring" value={a.bring} divider={!!costLabel(a)} />
+              ) : null}
+            </View>
+          ) : null}
 
           <Attendance activity={a} canRemove={canManage} />
           {isIn && !a.cancelled && !started ? (
@@ -427,6 +450,67 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             : [{ label: 'Cancel activity', destructive: true, onPress: () => onCancel() }]
         }
       />
+    </View>
+  );
+}
+
+function DetailRow({ label, value, divider }: { label: string; value: string; divider?: boolean }) {
+  return (
+    <View className={cn('flex-row gap-4 py-3', divider && 'border-t border-divider')}>
+      <Text className="w-14 font-sans text-[14px] text-muted">{label}</Text>
+      <Text className="flex-1 font-sans-medium text-[15px] leading-[21px] text-ink">{value}</Text>
+    </View>
+  );
+}
+
+/** After the activity: a private "would you go again?" about the host. */
+function WouldGoAgain({ activity: a }: { activity: ActivityDetail }) {
+  const feedback = useFeedback(a.id);
+  const mine = a.feedback?.mine ?? null;
+  const host = firstName(a.host.name);
+  const answer = (yes: boolean) =>
+    feedback.mutate(yes, {
+      onSuccess: () => {
+        successHaptic();
+        toast(yes ? `Thanks. ${host} will be glad to hear it.` : 'Thanks for saying.');
+      },
+      onError: (err) => toast(errorMessage(err)),
+    });
+  return (
+    <View className="mt-4 rounded-[18px] border border-lime-panel-border bg-lime-panel p-4">
+      <Text className="font-sans-semibold text-[16px] text-ink">
+        Would you go again with {host}?
+      </Text>
+      <Text className="mt-1 font-sans text-[13.5px] leading-[19px] text-muted">
+        Private: {host} only sees how many people said yes, never who.
+      </Text>
+      <View className="mt-3.5 flex-row gap-2.5">
+        {[
+          { yes: true, label: '👍 Yes' },
+          { yes: false, label: 'Not really' },
+        ].map((o) => (
+          <Pressable
+            key={o.label}
+            onPress={() => answer(o.yes)}
+            disabled={feedback.isPending}
+            role="radio"
+            aria-checked={mine === o.yes}
+            className={cn(
+              'h-11 flex-1 items-center justify-center rounded-full border active:opacity-80',
+              mine === o.yes ? 'border-lime bg-lime' : 'border-outline',
+            )}
+          >
+            <Text
+              className={cn(
+                'font-sans-semibold text-[15px]',
+                mine === o.yes ? 'text-bg' : 'text-ink',
+              )}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }

@@ -15,6 +15,44 @@ export function worldPixel({ lat, lng }: Location, z: number) {
   };
 }
 
+/** The reverse of worldPixel: the point at a pixel of the world map at zoom `z`. */
+export function fromWorldPixel({ x, y }: { x: number; y: number }, z: number): Location {
+  const size = TILE * 2 ** z;
+  const n = Math.PI - (2 * Math.PI * y) / size;
+  return {
+    lat: (180 / Math.PI) * Math.atan(Math.sinh(n)),
+    lng: (x / size) * 360 - 180,
+  };
+}
+
+/**
+ * The closest zoom (up to `max`) at which all points fit in a width × height
+ * box with `padding` around them, and the centre of those points.
+ */
+export function fitPoints(
+  points: Location[],
+  width: number,
+  height: number,
+  { padding = 48, max = 15, min = 7 } = {},
+) {
+  if (!points.length) return null;
+  const lats = points.map((p) => p.lat);
+  const lngs = points.map((p) => p.lng);
+  const center = {
+    lat: (Math.min(...lats) + Math.max(...lats)) / 2,
+    lng: (Math.min(...lngs) + Math.max(...lngs)) / 2,
+  };
+  for (let z = max; z > min; z--) {
+    const xs = points.map((p) => worldPixel(p, z).x);
+    const ys = points.map((p) => worldPixel(p, z).y);
+    const fits =
+      Math.max(...xs) - Math.min(...xs) <= width - padding * 2 &&
+      Math.max(...ys) - Math.min(...ys) <= height - padding * 2;
+    if (fits) return { center, zoom: z };
+  }
+  return { center, zoom: min };
+}
+
 export interface Tile {
   key: string;
   url: string;

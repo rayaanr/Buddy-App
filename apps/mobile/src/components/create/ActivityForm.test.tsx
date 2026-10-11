@@ -14,6 +14,8 @@ const activity = {
   place: 'Court 2',
   capacity: 8,
   description: 'Bring water.',
+  costLkr: 2500,
+  bring: 'Water',
   repeatsWeekly: true,
   location: { lat: 6.8985, lng: 79.8555 },
   area: 'Colombo 3',
@@ -26,6 +28,9 @@ describe('draftFrom (editing an activity)', () => {
     expect(draft).toMatchObject({
       title: 'Padel',
       type: 'Food & markets',
+      cost: 'paid',
+      price: '2500',
+      bring: 'Water',
       day: 'Tmrw',
       customDay: null,
       time: '18:30',

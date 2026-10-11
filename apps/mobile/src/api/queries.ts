@@ -258,6 +258,18 @@ export function useInvite(activityId: string) {
   });
 }
 
+/** After an activity: would you go again with this host? (private) */
+export function useFeedback(activityId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (wouldGoAgain: boolean) =>
+      unwrap(
+        api.activities[':id'].feedback.$post({ param: { id: activityId }, json: { wouldGoAgain } }),
+      ),
+    onSuccess: (detail) => qc.setQueryData(keys.activity(detail.id), detail),
+  });
+}
+
 export function useMuteCommunityChat() {
   const qc = useQueryClient();
   return useMutation({

@@ -1,5 +1,6 @@
 import {
   clientEvent,
+  editMessageInput,
   firstName,
   markReadInput,
   messageSummary,
@@ -26,6 +27,8 @@ import { communityMembers } from '../../db/schema';
 import type { PushMessage } from '../../lib/push';
 import { listChats } from './list';
 import {
+  deleteMessage,
+  editMessage,
   listMessages,
   markRead,
   react,
@@ -150,6 +153,53 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
         }
         return c.json(message, created ? 201 : 200);
       })
+
+      // Change your message's text (for a few minutes after sending).
+      .patch(
+        '/messages/:messageId',
+        sending,
+        validate('param', z.object({ id: z.uuid(), messageId: z.uuid() })),
+        validate('json', editMessageInput),
+        async (c) => {
+          const me = currentUser(c);
+          const room = roomOf(c.req.param('id')!);
+          const message = await editMessage(
+            db,
+            urls,
+            room,
+            me.id,
+            c.req.valid('param').messageId,
+            c.req.valid('json'),
+          );
+          const blocked = await blockedIds(db, me.id);
+          hub.publish(room.id, { type: 'updated', message }, { except: blocked });
+          return c.json(message);
+        },
+      )
+
+      // Delete your message (it shows as "This message was deleted").
+      .delete(
+        '/messages/:messageId',
+        validate('param', z.object({ id: z.uuid(), messageId: z.uuid() })),
+        async (c) => {
+          const me = currentUser(c);
+          const room = roomOf(c.req.param('id')!);
+          const { message, removedPhoto } = await deleteMessage(
+            db,
+            urls,
+            room,
+            me.id,
+            c.req.valid('param').messageId,
+          );
+          if (removedPhoto && storage) {
+            await storage
+              .remove([removedPhoto])
+              .catch((err: unknown) => logger.error({ err }, 'Could not delete chat photo'));
+          }
+          hub.publish(room.id, { type: 'updated', message });
+          return c.json(message);
+        },
+      )
 
       // React to a message (or change or take back your reaction).
       .post(

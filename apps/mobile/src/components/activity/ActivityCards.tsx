@@ -18,6 +18,7 @@ import {
   lastMessagePreview,
   leftLabel,
   spotsLabel,
+  costLabel,
   whenLabel,
 } from '@/lib/activity';
 
@@ -43,6 +44,11 @@ export function ActivityHeroCard({ activity: a }: { activity: Activity }) {
         <View className="absolute right-3.5 top-3.5 h-7 justify-center rounded-[14px] bg-lime px-[11px]">
           <Text className="font-sans-semibold text-[13px] text-bg">{whenLabel(a)}</Text>
         </View>
+        {costLabel(a) ? (
+          <View className="absolute left-3.5 top-3.5 h-7 justify-center rounded-[14px] bg-[rgba(11,12,11,0.6)] px-[11px]">
+            <Text className="font-sans-semibold text-[13px] text-ink">{costLabel(a)}</Text>
+          </View>
+        ) : null}
         <View className="absolute inset-x-[18px] bottom-[18px]">
           <Eyebrow>{a.category}</Eyebrow>
           <Heading size="card" className="mt-2.5">
@@ -120,7 +126,7 @@ export function ActivityRow({ activity: a, thumb = 96, meta = 'availability' }: 
                 big ? 'font-sans text-[14px] text-muted' : 'font-sans text-[13px] text-muted'
               }
             >
-              {a.area}
+              {[a.area, costLabel(a)].filter(Boolean).join(' · ')}
             </Text>
             <Text
               className={big ? 'font-sans text-[14px]' : 'font-sans text-[13px]'}

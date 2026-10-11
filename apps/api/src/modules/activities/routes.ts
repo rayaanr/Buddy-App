@@ -5,6 +5,7 @@ import {
   firstName,
   whenLong,
   feedQuery,
+  feedbackInput,
   inviteInput,
   muteInput,
   removeGuestInput,
@@ -48,6 +49,7 @@ import {
   myActivities,
   removeGuest,
   updateActivity,
+  giveFeedback,
 } from './service';
 import { findInvitees, invite } from './invites';
 
@@ -309,6 +311,19 @@ export function activityRoutes(deps: Deps) {
           });
           return c.json({ invited: invited.length });
         },
+      )
+
+      // After it: would you go again with this host? (private; hosts see a total)
+      .post('/:id/feedback', joins, idParam(), validate('json', feedbackInput), async (c) =>
+        c.json(
+          await giveFeedback(
+            db,
+            urls,
+            c.req.param('id'),
+            currentUser(c).id,
+            c.req.valid('json').wouldGoAgain,
+          ),
+        ),
       )
 
       // Mute or unmute this activity's group chat notifications (members only).

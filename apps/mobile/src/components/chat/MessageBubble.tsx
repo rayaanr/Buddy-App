@@ -90,8 +90,8 @@ export const MessageBubble = memo(function MessageBubble({
     return <Text className="my-1.5 self-center font-sans text-[12.5px] text-subtle">{m.body}</Text>;
   }
 
-  // Only saved messages can be reacted or replied to.
-  const saved = status !== 'sending' && status !== 'failed';
+  // Only saved messages can be reacted or replied to; deleted ones are just a line.
+  const saved = status !== 'sending' && status !== 'failed' && !m.deleted;
   const longPress = saved
     ? (e: GestureResponderEvent) => onActions(m, mine, e.nativeEvent.pageY)
     : undefined;
@@ -207,6 +207,17 @@ function Content({
   onLongPress?: (e: GestureResponderEvent) => void;
   onJumpTo: (messageId: string) => void;
 }) {
+  if (m.deleted)
+    return (
+      <Text
+        className={cn(
+          'font-sans text-[14.5px] italic leading-[20px]',
+          mine ? 'text-bg/70' : 'text-subtle',
+        )}
+      >
+        {mine ? 'You deleted this message' : 'This message was deleted'}
+      </Text>
+    );
   if (m.poll)
     return (
       <PollCard
@@ -254,6 +265,16 @@ function Content({
           }
         >
           <MessageText body={m.body} mentions={m.mentions} mine={mine} />
+          {m.editedAt ? (
+            <Text
+              className={cn(
+                'mt-0.5 self-end font-sans text-[11px]',
+                mine ? 'text-bg/60' : 'text-subtle',
+              )}
+            >
+              Edited
+            </Text>
+          ) : null}
         </View>
       ) : null}
     </>

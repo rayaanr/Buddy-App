@@ -20,6 +20,7 @@ import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { Db, Tx } from '../../db/client';
 import {
   activities,
+  activityFeedback,
   activityInvites,
   activityMembers,
   activityRemovals,
@@ -37,7 +38,13 @@ import { requireCommunityMember } from '../communities/service';
 import { homePlace, nearestPlace, originFor } from '../profiles/service';
 import { blockedBetween, notBlockedBetween } from '../safety/blocks';
 import type { ChangeResult } from './announce';
-import { countHosted, findActivitySummaries, findAttendees, upcoming } from './queries';
+import {
+  countHosted,
+  countWouldGoAgain,
+  findActivitySummaries,
+  findAttendees,
+  upcoming,
+} from './queries';
 
 const GROUP_CATEGORY: Record<ActivityGroup, string> = {
   Social: 'SOCIAL',
@@ -72,19 +79,73 @@ export async function getActivityDetail(
   });
   if (!summary) throw notFound('Activity');
   const [extra] = await db
-    .select({ description: activities.description })
+    .select({ description: activities.description, bring: activities.bring })
     .from(activities)
     .where(eq(activities.id, id));
   return {
     ...summary,
     description: extra?.description ?? '',
+    bring: extra?.bring ?? '',
     attendees: await findAttendees(db, urls, id, viewerId),
     host: {
       ...summary.host,
       hostedCount: isDeletedAccount(summary.host) ? 0 : await countHosted(db, summary.host.id),
+      wouldGoAgain: isDeletedAccount(summary.host)
+        ? 0
+        : await countWouldGoAgain(db, summary.host.id),
     },
+    feedback: await feedbackFor(db, summary, viewerId),
     invitedBy: await findInviter(db, urls, id, viewerId),
   };
+}
+
+/** Guests can say whether they'd go again once an activity has started, for 30 days. */
+const FEEDBACK_DAYS = 30;
+
+const canGiveFeedback = (a: {
+  startsAt: string;
+  cancelled: boolean;
+  viewer: { joined: boolean };
+}) =>
+  a.viewer.joined &&
+  !a.cancelled &&
+  new Date(a.startsAt).getTime() <= Date.now() &&
+  Date.now() - new Date(a.startsAt).getTime() < FEEDBACK_DAYS * 86_400_000;
+
+/** The viewer's "would you go again?" for this activity: null when it isn't theirs to answer. */
+async function feedbackFor(
+  db: Db | Tx,
+  a: { id: string; startsAt: string; cancelled: boolean; viewer: { joined: boolean } },
+  viewerId: string,
+) {
+  if (!canGiveFeedback(a)) return null;
+  const [row] = await db
+    .select({ wouldGoAgain: activityFeedback.wouldGoAgain })
+    .from(activityFeedback)
+    .where(and(eq(activityFeedback.activityId, a.id), eq(activityFeedback.userId, viewerId)));
+  return { mine: row?.wouldGoAgain ?? null };
+}
+
+/** Records (or changes) a guest's private "would go again" for an activity's host. */
+export async function giveFeedback(
+  db: Db,
+  urls: Urls,
+  activityId: string,
+  viewerId: string,
+  wouldGoAgain: boolean,
+) {
+  const detail = await getActivityDetail(db, urls, activityId, viewerId);
+  if (!detail.feedback || isDeletedAccount(detail.host)) {
+    throw forbidden('You can say this once you’ve been to the activity');
+  }
+  await db
+    .insert(activityFeedback)
+    .values({ activityId, userId: viewerId, hostId: detail.host.id, wouldGoAgain })
+    .onConflictDoUpdate({
+      target: [activityFeedback.activityId, activityFeedback.userId],
+      set: { wouldGoAgain },
+    });
+  return getActivityDetail(db, urls, activityId, viewerId);
 }
 
 /** Who invited the viewer to an activity (unless either has since blocked the other). */
@@ -165,6 +226,8 @@ export async function createActivity(
         location: where.location,
         capacity: input.capacity,
         description: input.description,
+        costLkr: input.costLkr ?? null,
+        bring: input.bring ?? '',
         coverUrl: urls.fromKey(input.coverKey) ?? stockCover(input.group),
         ...(input.repeatsWeekly && { seriesId: randomUUID(), repeatsWeekly: true }),
         communityId: input.communityId ?? null,
@@ -449,6 +512,8 @@ export async function updateActivity(
     const patch = {
       title: input.title,
       description: input.description,
+      costLkr: input.costLkr,
+      bring: input.bring,
       capacity: input.capacity,
       place: input.place,
       ...(where && { location: where.location, placeId: where.placeId, area: where.area }),
@@ -636,6 +701,7 @@ export async function myActivities(
       body: messages.body,
       imageKey: messages.imageKey,
       poll: messages.poll,
+      deletedAt: messages.deletedAt,
       senderId: messages.senderId,
       senderName: user.name,
     })
@@ -662,11 +728,13 @@ export async function myActivities(
         ? {
             kind: m.kind as 'user' | 'system',
             senderName: m.senderName ?? DELETED_ACCOUNT.name,
-            body: messageSummary({
-              body: m.body,
-              hasImage: !!m.imageKey,
-              pollQuestion: m.poll?.question,
-            }),
+            body: m.deletedAt
+              ? 'Message deleted'
+              : messageSummary({
+                  body: m.body,
+                  hasImage: !!m.imageKey,
+                  pollQuestion: m.poll?.question,
+                }),
             mine: m.senderId === userId,
           }
         : null,

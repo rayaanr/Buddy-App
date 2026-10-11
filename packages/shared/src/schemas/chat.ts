@@ -38,6 +38,10 @@ export const chatMessage = z.object({
     .nullable(),
   /** Who reacted with what, most used first. */
   reactions: z.array(z.object({ emoji: z.enum(REACTIONS), userIds: z.array(z.string()) })),
+  /** When the sender last changed the text. */
+  editedAt: isoDateTime.nullable(),
+  /** The sender deleted it: shown as "This message was deleted", content gone. */
+  deleted: z.boolean(),
   createdAt: isoDateTime,
 });
 export type ChatMessage = z.infer<typeof chatMessage>;
@@ -45,6 +49,8 @@ export type ChatMessage = z.infer<typeof chatMessage>;
 export const messagesQuery = z.object({
   /** Return messages after this one (catch-up after reconnecting). */
   after: z.uuid().optional(),
+  /** Return the messages just before this one (scrolling back through history). */
+  before: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 
@@ -53,6 +59,10 @@ export const messagesPage = z.object({
   messages: z.array(chatMessage),
   /** Latest point any other member has read to; drives "Seen". */
   othersReadUpTo: isoDateTime.nullable(),
+  /** How far you had read, for the "new messages" line. */
+  myReadUpTo: isoDateTime.nullable(),
+  /** There are older messages than these (load them with `before`). */
+  hasMore: z.boolean(),
 });
 export type MessagesPage = z.infer<typeof messagesPage>;
 
@@ -88,6 +98,12 @@ export type SendMessageInput = z.infer<typeof sendMessageInput>;
 /** Your answer to a poll; it replaces any earlier one (none clears it). */
 export const voteInput = z.object({ optionIds: z.array(z.string()).max(LIMITS.pollOptionsMax) });
 
+/** Changing your message's text (within LIMITS.messageEditMinutes). */
+export const editMessageInput = z.object({
+  body: z.string().trim().min(1).max(LIMITS.messageMax),
+  mentions: z.array(z.uuid()).max(LIMITS.mentionsMax).default([]),
+});
+
 /** Your reaction to a message; null takes it back. */
 export const reactInput = z.object({ emoji: z.enum(REACTIONS).nullable() });
 
@@ -103,6 +119,8 @@ export const serverEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('read'), userId: z.string(), upTo: isoDateTime }),
   /** Someone voted: the poll's new totals. */
   z.object({ type: z.literal('poll'), messageId: z.string(), poll: chatPoll }),
+  /** A message was edited or deleted by its sender: its new state. */
+  z.object({ type: z.literal('updated'), message: chatMessage }),
   /** Someone reacted: the message's reactions now. */
   z.object({
     type: z.literal('reactions'),

@@ -7,7 +7,13 @@ import { activities, activityMembers, blocks, places, profiles, user } from '../
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { idParam } from '../../lib/validate';
-import { countHosted, findActivitySummaries, notCancelled, upcoming } from '../activities/queries';
+import {
+  countHosted,
+  countWouldGoAgain,
+  findActivitySummaries,
+  notCancelled,
+  upcoming,
+} from '../activities/queries';
 import { originFor } from '../profiles/service';
 import { blockUser, unblockUser } from '../safety/service';
 
@@ -33,7 +39,7 @@ export function userRoutes({ db, urls }: Deps) {
       // Someone who blocked you looks the same as someone who doesn't exist.
       if (!row || row.blockedYou) throw notFound('Person');
 
-      const [[mine], [joined], hosting, hostedCount] = await Promise.all([
+      const [[mine], [joined], hosting, hostedCount, wouldGoAgain] = await Promise.all([
         db
           .select({ interests: profiles.interests })
           .from(profiles)
@@ -48,6 +54,7 @@ export function userRoutes({ db, urls }: Deps) {
           where: [upcoming(), notCancelled(), eq(activities.hostId, id)],
         }),
         countHosted(db, id),
+        countWouldGoAgain(db, id),
       ]);
 
       const interests = row.profile.interests as Interest[];
@@ -62,6 +69,7 @@ export function userRoutes({ db, urls }: Deps) {
         commonInterests: id === viewer.id ? [] : interests.filter((i) => viewerInterests.has(i)),
         memberSince: row.user.createdAt.toISOString(),
         hostedCount,
+        wouldGoAgain,
         joinedCount: joined?.n ?? 0,
         hosting,
         blockedByYou: row.blockedByYou,

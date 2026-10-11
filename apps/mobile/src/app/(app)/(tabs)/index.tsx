@@ -1,7 +1,7 @@
 import { DISCOVER_FILTERS, type DiscoverFilter } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 
 import {
   useFeed,
@@ -27,8 +27,10 @@ import {
   EmptyState,
   Heading,
   IconButton,
+  ListIcon,
   LoadError,
   LocateIcon,
+  MapIcon,
   MapPinIcon,
   Refresh,
   SearchField,
@@ -36,7 +38,10 @@ import {
 } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
+import { ActivityMap } from '@/components/discover/ActivityMap';
 import { LocationSheet } from '@/components/discover/LocationSheet';
+import { cn } from '@/lib/cn';
+import { colors, TAB_BAR_HEIGHT } from '@/theme';
 import { currentPointIfAllowed } from '@/lib/location';
 import { useDiscoverStore } from '@/store/discover';
 import { fadeIn } from '@/theme/motion';
@@ -44,6 +49,9 @@ import { fadeIn } from '@/theme/motion';
 export default function DiscoverScreen() {
   const { top } = useScreenInsets();
   const [filter, setFilter] = useState<DiscoverFilter>('All');
+  // The results as a list, or as pins on a map.
+  const [view, setView] = useState<'list' | 'map'>('list');
+  const { height: windowHeight } = useWindowDimensions();
   const [search, setSearch] = useState('');
   const searching = useDebounced(search.trim(), 300);
   const isSearch = searching.length >= 2;
@@ -91,6 +99,8 @@ export default function DiscoverScreen() {
   return (
     <ScrollView
       className="flex-1 bg-bg"
+      // On the map, dragging moves the map, not the page.
+      scrollEnabled={view === 'list'}
       contentContainerStyle={{ paddingTop: top(58), paddingBottom: 24 }}
       refreshControl={
         <Refresh
@@ -144,13 +154,36 @@ export default function DiscoverScreen() {
         </View>
       </View>
       <Heading className="mt-0.5 px-[22px]">What’s happening</Heading>
-      <View className="mt-3.5 px-[22px]">
-        <SearchField
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search padel, Galle, food walk…"
-          label="Search activities"
-        />
+      <View className="mt-3.5 flex-row items-center gap-2.5 px-[22px]">
+        <View className="flex-1">
+          <SearchField
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search padel, Galle, food walk…"
+            label="Search activities"
+          />
+        </View>
+        <View className="flex-row rounded-full bg-surface p-1" role="tablist">
+          {(['list', 'map'] as const).map((v) => (
+            <Pressable
+              key={v}
+              onPress={() => setView(v)}
+              role="tab"
+              aria-selected={view === v}
+              accessibilityLabel={v === 'list' ? 'Show as a list' : 'Show on a map'}
+              className={cn(
+                'h-10 w-11 items-center justify-center rounded-full',
+                view === v && 'bg-lime',
+              )}
+            >
+              {v === 'list' ? (
+                <ListIcon color={view === v ? colors.bg : colors.muted} />
+              ) : (
+                <MapIcon color={view === v ? colors.bg : colors.muted} />
+              )}
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <ScrollView
@@ -169,7 +202,22 @@ export default function DiscoverScreen() {
         ))}
       </ScrollView>
 
-      {showCommunityRow ? (
+      {view === 'map' ? (
+        <View className="px-[22px]">
+          {feed.isLoading || locating ? (
+            <ActivityRowSkeleton />
+          ) : (
+            <ActivityMap
+              activities={results}
+              fallback={me.data?.place.location ?? { lat: 6.9271, lng: 79.8612 }}
+              // What's left of the screen under the filters, above the tab bar.
+              height={Math.max(380, windowHeight - top(58) - 290 - TAB_BAR_HEIGHT)}
+            />
+          )}
+        </View>
+      ) : null}
+
+      {view === 'list' && showCommunityRow ? (
         <>
           <View className="flex-row items-baseline justify-between px-[22px] pb-2.5">
             <Text className="font-sans-semibold text-[17px] text-ink">From your communities</Text>
@@ -189,13 +237,13 @@ export default function DiscoverScreen() {
         </>
       ) : null}
 
-      {widenedTo ? (
+      {view === 'list' && widenedTo ? (
         <Text className="px-[22px] pb-3 font-sans text-[13.5px] leading-[19px] text-muted">
           Not much within {radiusKm} km, so this shows up to {widenedTo} km away, nearest first.
         </Text>
       ) : null}
 
-      <View className="gap-3 px-[22px]">
+      <View className={cn('gap-3 px-[22px]', view === 'map' && 'hidden')}>
         {isSearch && feed.data ? (
           <Text className="font-sans text-[13.5px] text-muted">
             {results.length

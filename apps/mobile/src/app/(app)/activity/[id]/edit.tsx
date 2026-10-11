@@ -39,6 +39,8 @@ export default function EditActivityScreen() {
           ...(v.place !== a.place && { place: v.place }),
           ...(v.capacity !== a.capacity && { capacity: v.capacity }),
           ...(v.description !== a.description && { description: v.description }),
+          ...(v.costLkr !== a.costLkr && { costLkr: v.costLkr }),
+          ...(v.bring !== a.bring && { bring: v.bring }),
           ...(v.repeatsWeekly !== a.repeatsWeekly && { repeatsWeekly: v.repeatsWeekly }),
         };
         // Opened from a link, there's no screen behind it to go back to.

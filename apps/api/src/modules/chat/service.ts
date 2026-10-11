@@ -1,5 +1,6 @@
 import {
   DELETED_ACCOUNT,
+  LIMITS,
   messageSummary,
   REACTIONS,
   type ChatMessage,
@@ -7,7 +8,7 @@ import {
   type Reaction,
   type SendMessageInput,
 } from '@buddy/shared';
-import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, or, sql } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
 import {
@@ -21,6 +22,7 @@ import {
   messages,
   pollVotes,
   profiles,
+  reports,
   user,
 } from '../../db/schema';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
@@ -110,6 +112,7 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
           imageKey: messages.imageKey,
           imageWidth: messages.imageWidth,
           poll: messages.poll,
+          deletedAt: messages.deletedAt,
           senderName: user.name,
         })
         .from(messages)
@@ -145,7 +148,9 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
     : [];
 
   return rows.map((r) => {
-    const imageUrl = r.imageKey ? urls.fromKey(r.imageKey) : null;
+    // Deleted: nothing of it is shown (a reported one keeps its content for moderators).
+    const gone = !!r.deletedAt;
+    const imageUrl = r.imageKey && !gone ? urls.fromKey(r.imageKey) : null;
     return {
       id: r.id,
       activityId: r.activityId,
@@ -157,30 +162,35 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
         : r.kind === 'user'
           ? DELETED_ACCOUNT
           : null,
-      body: r.body,
+      body: gone ? '' : r.body,
       image: imageUrl
         ? { url: imageUrl, width: r.imageWidth ?? 1, height: r.imageHeight ?? 1 }
         : null,
       // The size stays when the photo is deleted for age.
-      photoExpired: !r.imageKey && r.imageWidth !== null,
-      mentions: r.mentions.flatMap((id) => {
+      photoExpired: !gone && !r.imageKey && r.imageWidth !== null,
+      mentions: (gone ? [] : r.mentions).flatMap((id) => {
         const person = byId.get(id);
         return person ? [{ id, name: person.name }] : [];
       }),
-      poll: r.poll
-        ? {
-            question: r.poll.question,
-            multiple: r.poll.multiple,
-            options: r.poll.options.map((o) => ({
-              ...o,
-              voterIds: votes
-                .filter((v) => v.messageId === r.id && v.optionId === o.id)
-                .map((v) => v.userId),
-            })),
-          }
-        : null,
-      replyTo: quoteOf(r.replyToId ? quoteById.get(r.replyToId) : undefined),
-      reactions: groupReactions(reactionRows.filter((x) => x.messageId === r.id)),
+      poll:
+        r.poll && !gone
+          ? {
+              question: r.poll.question,
+              multiple: r.poll.multiple,
+              options: r.poll.options.map((o) => ({
+                ...o,
+                voterIds: votes
+                  .filter((v) => v.messageId === r.id && v.optionId === o.id)
+                  .map((v) => v.userId),
+              })),
+            }
+          : null,
+      replyTo: r.deletedAt ? null : quoteOf(r.replyToId ? quoteById.get(r.replyToId) : undefined),
+      reactions: r.deletedAt
+        ? []
+        : groupReactions(reactionRows.filter((x) => x.messageId === r.id)),
+      editedAt: r.editedAt?.toISOString() ?? null,
+      deleted: !!r.deletedAt,
       createdAt: r.createdAt.toISOString(),
     };
   });
@@ -197,11 +207,13 @@ function quoteOf(
         imageKey: string | null;
         imageWidth: number | null;
         poll: { question: string } | null;
+        deletedAt: Date | null;
         senderName: string | null;
       }
     | undefined,
 ) {
   if (!q) return null;
+  if (q.deletedAt) return { id: q.id, senderName: q.senderName, summary: 'Message deleted' };
   const summary = messageSummary({
     body: q.body,
     hasImage: !!q.imageKey || q.imageWidth !== null,
@@ -266,17 +278,22 @@ export async function listMessages(
   urls: Urls,
   room: Room,
   viewerId: string,
-  { after, limit }: { after?: string; limit: number },
+  { after, before, limit }: { after?: string; before?: string; limit: number },
 ): Promise<MessagesPage> {
   const inRoom = eq(roomColumn(room), room.id);
   const visible = or(isNull(messages.senderId), notBlockedBetween(viewerId, messages.senderId));
-  let rows: MessageRow[];
-  if (after) {
+  const cursorOf = async (id: string) => {
     const [cursor] = await db
       .select({ createdAt: messages.createdAt })
       .from(messages)
-      .where(and(eq(messages.id, after), inRoom));
+      .where(and(eq(messages.id, id), inRoom));
     if (!cursor) throw notFound('Message');
+    return cursor.createdAt;
+  };
+  let rows: MessageRow[];
+  let hasMore = false;
+  if (after) {
+    const at = await cursorOf(after);
     rows = await db
       .select()
       .from(messages)
@@ -284,28 +301,60 @@ export async function listMessages(
         and(
           inRoom,
           visible,
-          or(
-            gt(messages.createdAt, cursor.createdAt),
-            and(eq(messages.createdAt, cursor.createdAt), gt(messages.id, after)),
-          ),
+          or(gt(messages.createdAt, at), and(eq(messages.createdAt, at), gt(messages.id, after))),
         ),
       )
       .orderBy(asc(messages.createdAt), asc(messages.id))
       .limit(limit);
   } else {
-    rows = (
-      await db
-        .select()
-        .from(messages)
-        .where(and(inRoom, visible))
-        .orderBy(desc(messages.createdAt), desc(messages.id))
-        .limit(limit)
-    ).reverse();
+    // The latest `limit` (or those just before `before`); one extra says whether there's more.
+    const at = before ? await cursorOf(before) : null;
+    const newest = await db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          inRoom,
+          visible,
+          at && before
+            ? or(
+                lt(messages.createdAt, at),
+                and(eq(messages.createdAt, at), lt(messages.id, before)),
+              )
+            : undefined,
+        ),
+      )
+      .orderBy(desc(messages.createdAt), desc(messages.id))
+      .limit(limit + 1);
+    hasMore = newest.length > limit;
+    rows = newest.slice(0, limit).reverse();
   }
   return {
     messages: await toChatMessages(db, urls, rows),
     othersReadUpTo: await othersReadUpTo(db, room, viewerId),
+    myReadUpTo: await readUpTo(db, room, viewerId),
+    hasMore,
   };
+}
+
+/** How far the viewer has read this chat. */
+async function readUpTo(db: Db, room: Room, viewerId: string) {
+  const [row] =
+    room.kind === 'activity'
+      ? await db
+          .select({ at: chatReads.lastReadAt })
+          .from(chatReads)
+          .where(and(eq(chatReads.activityId, room.id), eq(chatReads.userId, viewerId)))
+      : await db
+          .select({ at: communityChatReads.lastReadAt })
+          .from(communityChatReads)
+          .where(
+            and(
+              eq(communityChatReads.communityId, room.id),
+              eq(communityChatReads.userId, viewerId),
+            ),
+          );
+  return row?.at.toISOString() ?? null;
 }
 
 /**
@@ -433,6 +482,82 @@ export async function vote(
   return toChatMessage(db, urls, msg);
 }
 
+/** Your own message in this chat, or not found. */
+async function requireOwnMessage(db: Db, room: Room, userId: string, messageId: string) {
+  const [msg] = await db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.id, messageId), eq(roomColumn(room), room.id)));
+  if (!msg || msg.kind !== 'user' || msg.deletedAt) throw notFound('Message');
+  if (msg.senderId !== userId) throw forbidden('You can only change your own messages');
+  return msg;
+}
+
+/**
+ * Changes a message's text, within LIMITS.messageEditMinutes of sending.
+ * Photos keep their photo (the text is the caption); polls can't be edited.
+ */
+export async function editMessage(
+  db: Db,
+  urls: Urls,
+  room: Room,
+  userId: string,
+  messageId: string,
+  input: { body: string; mentions: string[] },
+) {
+  const msg = await requireOwnMessage(db, room, userId, messageId);
+  if (msg.poll) throw badRequest('Polls can’t be edited');
+  if (Date.now() - msg.createdAt.getTime() > LIMITS.messageEditMinutes * 60_000) {
+    throw badRequest(`Messages can only be edited for ${LIMITS.messageEditMinutes} minutes`);
+  }
+  const [row] = await db
+    .update(messages)
+    .set({
+      body: input.body,
+      mentions: await membersAmong(db, room, userId, input.mentions),
+      editedAt: sql`now()`,
+    })
+    .where(eq(messages.id, messageId))
+    .returning();
+  return toChatMessage(db, urls, row!);
+}
+
+/**
+ * Deletes your message: it stays in the chat as "This message was deleted".
+ * Its text, photo and poll are cleared, unless someone reported it and a
+ * moderator hasn't looked yet (then they're kept, hidden, for the review).
+ * Returns the message as it now shows, and the photo to remove from storage.
+ */
+export async function deleteMessage(
+  db: Db,
+  urls: Urls,
+  room: Room,
+  userId: string,
+  messageId: string,
+) {
+  const msg = await requireOwnMessage(db, room, userId, messageId);
+  const [report] = await db
+    .select({ id: reports.id })
+    .from(reports)
+    .where(and(eq(reports.messageId, messageId), eq(reports.status, 'open')))
+    .limit(1);
+  const keep = !!report;
+  const [row] = await db
+    .update(messages)
+    .set({
+      deletedAt: sql`now()`,
+      ...(keep ? {} : { body: '', imageKey: null, mentions: [], poll: null }),
+    })
+    .where(eq(messages.id, messageId))
+    .returning();
+  await db.delete(messageReactions).where(eq(messageReactions.messageId, messageId));
+  if (!keep) await db.delete(pollVotes).where(eq(pollVotes.messageId, messageId));
+  return {
+    message: await toChatMessage(db, urls, row!),
+    removedPhoto: keep ? null : msg.imageKey,
+  };
+}
+
 /** Sets (or with null, removes) your reaction to a message; returns its reactions now. */
 export async function react(
   db: Db,
@@ -442,10 +567,10 @@ export async function react(
   emoji: Reaction | null,
 ) {
   const [msg] = await db
-    .select({ id: messages.id, kind: messages.kind })
+    .select({ id: messages.id, kind: messages.kind, deletedAt: messages.deletedAt })
     .from(messages)
     .where(and(eq(messages.id, messageId), eq(roomColumn(room), room.id)));
-  if (!msg || msg.kind !== 'user') throw notFound('Message');
+  if (!msg || msg.kind !== 'user' || msg.deletedAt) throw notFound('Message');
   if (emoji) {
     await db
       .insert(messageReactions)
