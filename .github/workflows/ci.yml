@@ -43,3 +43,45 @@ jobs:
       - run: bun run knip
       - run: bun run typecheck
       - run: bun run test
+
+  # The web app in a phone-sized browser against a real API and database
+  # (e2e/): sign-in, joining and chatting, hosting, waitlist, admin and more.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: imresamu/postgis:17-3.5-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 7432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      CI: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: Install the browser
+        working-directory: e2e
+        run: bunx playwright install --with-deps chromium
+      - run: bun run e2e
+      # Screenshots and traces of anything that failed.
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/report/
+            e2e/results/
+          retention-days: 7
