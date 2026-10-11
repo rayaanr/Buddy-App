@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useBlocked, useSetBlocked } from '@/api/queries';
-import { Avatar, Button, Heading, LoadError, Loading, ScreenHeader } from '@/components/ui';
+import { Avatar, Button, LoadError, Loading, ScreenHeader } from '@/components/ui';
 import { toast } from '@/store/ui';
 
 /** Profile → Blocked people: everyone you blocked, with a way to unblock. */
@@ -22,13 +22,12 @@ export default function BlockedPeopleScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Blocked people" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
       >
-        <Heading size="page">Blocked people</Heading>
-        <Text className="mt-2 font-sans text-[15px] leading-[22px] text-muted">
+        <Text className="font-sans text-[15px] leading-[22px] text-muted">
           You won’t see each other’s activities or messages, and they can’t view your profile. They
           aren’t told.
         </Text>

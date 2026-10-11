@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
@@ -67,12 +67,22 @@ export function BackButton({ onPress, ...rest }: HeaderButtonProps) {
   );
 }
 
-/** The plain screen header: Back on the left, an optional button on the right. */
-export function ScreenHeader({ right }: { right?: ReactNode }) {
+/**
+ * The plain screen header, one row: Back, the screen's title, and an optional
+ * button on the right.
+ */
+export function ScreenHeader({ title, right }: { title?: string; right?: ReactNode }) {
   const { top } = useScreenInsets();
   return (
-    <View className="flex-row justify-between px-[18px]" style={{ paddingTop: top(56) }}>
+    <View className="flex-row items-center gap-3 px-[18px]" style={{ paddingTop: top(56) }}>
       <BackButton />
+      <Text
+        accessibilityRole="header"
+        numberOfLines={1}
+        className="flex-1 font-display text-[22px] leading-[28px] tracking-[-0.5px] text-ink"
+      >
+        {title ?? ''}
+      </Text>
       {right}
     </View>
   );

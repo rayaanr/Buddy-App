@@ -9,7 +9,6 @@ import { signOut, useMe, useUpdateMe } from '@/api/queries';
 import {
   ChevronRightIcon,
   ConfirmDialog,
-  Heading,
   ScreenHeader,
   SectionLabel,
   Toggle,
@@ -33,14 +32,12 @@ export default function SettingsScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Settings" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
       >
-        <Heading size="page">Settings</Heading>
-
-        <SectionLabel className="mb-1 mt-7">Account</SectionLabel>
+        <SectionLabel className="mb-1 mt-2">Account</SectionLabel>
         <View className="flex-row items-center justify-between border-b border-divider py-3.5">
           <Text className="font-sans text-[15.5px] text-ink">Email</Text>
           <Text className="font-sans text-[15px] text-muted" numberOfLines={1}>

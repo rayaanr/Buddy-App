@@ -9,7 +9,6 @@ import { AvailabilityChips, InterestGrid } from '@/components/onboarding/Interes
 import {
   Button,
   Footer,
-  Heading,
   KeyboardAwareScrollView,
   KeyboardScreen,
   QueryFallback,
@@ -73,13 +72,11 @@ function EditProfileForm({ me }: { me: Saved }) {
 
   return (
     <KeyboardScreen className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Edit profile" />
       <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 24 }}
       >
-        <Heading size="page">Edit profile</Heading>
-
         <PhotoButton image={photo} name={name || me.name} shape="circle" size={96} noun="photo" />
 
         <SectionLabel className="mb-2 mt-6">Name</SectionLabel>

@@ -8,7 +8,6 @@ import {
   BellOffIcon,
   CountBadge,
   EmptyState,
-  Heading,
   LoadError,
   Loading,
   Refresh,
@@ -22,7 +21,7 @@ export default function ChatsScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Chats" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
@@ -30,8 +29,7 @@ export default function ChatsScreen() {
           <Refresh refreshing={chats.isRefetching} onRefresh={() => void chats.refetch()} />
         }
       >
-        <Heading size="page">Chats</Heading>
-        <View className="mt-3">
+        <View>
           {chats.isLoading ? <Loading className="py-10" /> : null}
           {chats.error ? (
             <LoadError error={chats.error} onRetry={() => void chats.refetch()} />

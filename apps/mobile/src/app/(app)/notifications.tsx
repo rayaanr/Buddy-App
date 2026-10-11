@@ -7,7 +7,6 @@ import { useMarkNotificationsRead, useNotifications } from '@/api/queries';
 import {
   CalendarIcon,
   EmptyState,
-  Heading,
   LoadError,
   Loading,
   PeopleIcon,
@@ -31,7 +30,7 @@ export default function NotificationsScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Notifications" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
@@ -39,8 +38,7 @@ export default function NotificationsScreen() {
           <Refresh refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />
         }
       >
-        <Heading size="page">Notifications</Heading>
-        <View className="mt-4">
+        <View>
           {list.isLoading ? <Loading className="py-10" /> : null}
           {list.error ? <LoadError error={list.error} onRetry={() => void list.refetch()} /> : null}
           {list.data?.notifications.length === 0 ? (

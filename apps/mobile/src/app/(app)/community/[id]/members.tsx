@@ -8,7 +8,6 @@ import { useCommunity, useCommunityMembers, useMe, useRemoveCommunityMember } fr
 import {
   Avatar,
   ConfirmDialog,
-  Heading,
   LoadError,
   Loading,
   Menu,
@@ -31,14 +30,13 @@ export default function CommunityMembersScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Members" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
       >
-        <Heading size="page">Members</Heading>
         {community.data ? (
-          <Text className="mt-1.5 font-sans text-[14.5px] text-muted">
+          <Text className="font-sans text-[14.5px] text-muted">
             {community.data.name} · {community.data.memberCount}
           </Text>
         ) : null}

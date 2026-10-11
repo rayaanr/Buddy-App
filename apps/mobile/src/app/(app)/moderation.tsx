@@ -16,7 +16,6 @@ import {
   ActionSheet,
   Avatar,
   EmptyState,
-  Heading,
   LoadError,
   Refresh,
   ScreenHeader,
@@ -51,7 +50,7 @@ export default function ModerationScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader />
+      <ScreenHeader title="Moderation" />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
@@ -59,8 +58,7 @@ export default function ModerationScreen() {
           <Refresh refreshing={reports.isRefetching} onRefresh={() => void reports.refetch()} />
         }
       >
-        <Heading size="page">Moderation</Heading>
-        <Text className="mt-1.5 font-sans text-[14px] leading-[20px] text-muted">
+        <Text className="font-sans text-[14px] leading-[20px] text-muted">
           Act on reports within 24 hours. Tap one for what you can do.
         </Text>
         <SegmentedControl
