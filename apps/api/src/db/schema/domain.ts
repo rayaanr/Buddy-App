@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  type AnyPgColumn,
   boolean,
   check,
   index,
@@ -317,6 +318,8 @@ export const messages = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::uuid[]`),
+    /** The message this one replies to (cleared if that one is deleted). */
+    replyToId: uuid().references((): AnyPgColumn => messages.id, { onDelete: 'set null' }),
     /** A poll: its question and options (votes are in poll_votes). */
     poll: jsonb().$type<{
       question: string;
@@ -328,10 +331,31 @@ export const messages = pgTable(
   (t) => [
     index('messages_activity_created_idx').on(t.activityId, t.createdAt, t.id),
     index('messages_community_created_idx').on(t.communityId, t.createdAt, t.id),
+    // Deleting a message clears replies to it.
+    index('messages_reply_to_idx').on(t.replyToId),
     // Deleting an account deletes its messages: without this, a scan of every message.
     index('messages_sender_idx').on(t.senderId),
     check('messages_kind_check', sql`${t.kind} in ('user', 'system')`),
     check('messages_chat_check', sql`(${t.activityId} is null) <> (${t.communityId} is null)`),
+  ],
+);
+
+/** Emoji reactions to chat messages: one per person per message. */
+export const messageReactions = pgTable(
+  'message_reactions',
+  {
+    messageId: uuid()
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    emoji: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.messageId, t.userId] }),
+    index('message_reactions_user_idx').on(t.userId),
   ],
 );
 

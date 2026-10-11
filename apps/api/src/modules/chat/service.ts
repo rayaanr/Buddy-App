@@ -1,7 +1,10 @@
 import {
   DELETED_ACCOUNT,
+  messageSummary,
+  REACTIONS,
   type ChatMessage,
   type MessagesPage,
+  type Reaction,
   type SendMessageInput,
 } from '@buddy/shared';
 import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
@@ -14,6 +17,7 @@ import {
   communities,
   communityChatReads,
   communityMembers,
+  messageReactions,
   messages,
   pollVotes,
   profiles,
@@ -96,6 +100,37 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
     ]),
   );
 
+  // The messages replied to, for their one-line quotes.
+  const replyIds = [...new Set(rows.map((r) => r.replyToId).filter((id): id is string => !!id))];
+  const quoted = replyIds.length
+    ? await db
+        .select({
+          id: messages.id,
+          body: messages.body,
+          imageKey: messages.imageKey,
+          imageWidth: messages.imageWidth,
+          poll: messages.poll,
+          senderName: user.name,
+        })
+        .from(messages)
+        .leftJoin(user, eq(user.id, messages.senderId))
+        .where(inArray(messages.id, replyIds))
+    : [];
+  const quoteById = new Map(quoted.map((q) => [q.id, q]));
+
+  const messageIds = rows.map((r) => r.id);
+  const reactionRows = messageIds.length
+    ? await db
+        .select({
+          messageId: messageReactions.messageId,
+          userId: messageReactions.userId,
+          emoji: messageReactions.emoji,
+        })
+        .from(messageReactions)
+        .where(inArray(messageReactions.messageId, messageIds))
+        .orderBy(asc(messageReactions.createdAt))
+    : [];
+
   const pollIds = rows.filter((r) => r.poll).map((r) => r.id);
   const votes = pollIds.length
     ? await db
@@ -144,9 +179,49 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
             })),
           }
         : null,
+      replyTo: quoteOf(r.replyToId ? quoteById.get(r.replyToId) : undefined),
+      reactions: groupReactions(reactionRows.filter((x) => x.messageId === r.id)),
       createdAt: r.createdAt.toISOString(),
     };
   });
+}
+
+const QUOTE_CHARS = 140;
+
+/** A message replied to, as "Shehani: Court 2 booked…" (or "📷 Photo", "📊 Question"). */
+function quoteOf(
+  q:
+    | {
+        id: string;
+        body: string;
+        imageKey: string | null;
+        imageWidth: number | null;
+        poll: { question: string } | null;
+        senderName: string | null;
+      }
+    | undefined,
+) {
+  if (!q) return null;
+  const summary = messageSummary({
+    body: q.body,
+    hasImage: !!q.imageKey || q.imageWidth !== null,
+    pollQuestion: q.poll?.question,
+  });
+  return {
+    id: q.id,
+    senderName: q.senderName,
+    summary: summary.length > QUOTE_CHARS ? `${summary.slice(0, QUOTE_CHARS)}…` : summary,
+  };
+}
+
+/** Reactions grouped by emoji, most used first (ties: first used first). */
+function groupReactions(rows: { userId: string; emoji: string }[]) {
+  const byEmoji = new Map<string, string[]>();
+  for (const r of rows) byEmoji.set(r.emoji, [...(byEmoji.get(r.emoji) ?? []), r.userId]);
+  return [...byEmoji.entries()]
+    .filter((e): e is [Reaction, string[]] => (REACTIONS as readonly string[]).includes(e[0]))
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([emoji, userIds]) => ({ emoji, userIds }));
 }
 
 export async function toChatMessage(db: Db, urls: Urls, row: MessageRow) {
@@ -254,6 +329,13 @@ export async function sendMessage(
 
   if (input.imageKey) await requireUpload(storage, input.imageKey, 'chat', senderId);
   const mentions = await membersAmong(db, room, senderId, input.mentions);
+  // A reply must point at a message in this chat; anything else is dropped.
+  const [replyTo] = input.replyToId
+    ? await db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(and(eq(messages.id, input.replyToId), eq(roomColumn(room), room.id)))
+    : [];
   const where = room.kind === 'activity' ? { activityId: room.id } : { communityId: room.id };
   const [inserted] = await db
     .insert(messages)
@@ -267,6 +349,7 @@ export async function sendMessage(
       imageWidth: input.imageKey ? (input.imageWidth ?? null) : null,
       imageHeight: input.imageKey ? (input.imageHeight ?? null) : null,
       mentions,
+      replyToId: replyTo?.id ?? null,
       poll: input.poll
         ? {
             question: input.poll.question,
@@ -348,6 +431,41 @@ export async function vote(
     }
   });
   return toChatMessage(db, urls, msg);
+}
+
+/** Sets (or with null, removes) your reaction to a message; returns its reactions now. */
+export async function react(
+  db: Db,
+  room: Room,
+  userId: string,
+  messageId: string,
+  emoji: Reaction | null,
+) {
+  const [msg] = await db
+    .select({ id: messages.id, kind: messages.kind })
+    .from(messages)
+    .where(and(eq(messages.id, messageId), eq(roomColumn(room), room.id)));
+  if (!msg || msg.kind !== 'user') throw notFound('Message');
+  if (emoji) {
+    await db
+      .insert(messageReactions)
+      .values({ messageId, userId, emoji })
+      .onConflictDoUpdate({
+        target: [messageReactions.messageId, messageReactions.userId],
+        set: { emoji, createdAt: sql`now()` },
+      });
+  } else {
+    await db
+      .delete(messageReactions)
+      .where(and(eq(messageReactions.messageId, messageId), eq(messageReactions.userId, userId)));
+  }
+  return groupReactions(
+    await db
+      .select({ userId: messageReactions.userId, emoji: messageReactions.emoji })
+      .from(messageReactions)
+      .where(eq(messageReactions.messageId, messageId))
+      .orderBy(asc(messageReactions.createdAt)),
+  );
 }
 
 /** Moves the reader's position forward (never back) to the given message. */

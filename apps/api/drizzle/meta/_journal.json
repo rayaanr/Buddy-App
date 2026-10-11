@@ -162,6 +162,13 @@
       "when": 1791694834233,
       "tag": "0022_chat_photos_mentions_polls",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791698985391,
+      "tag": "0023_chat_replies_reactions",
+      "breakpoints": true
     }
   ]
 }

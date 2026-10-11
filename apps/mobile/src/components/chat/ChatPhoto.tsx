@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Pressable } from 'react-native';
+import { type GestureResponderEvent, Pressable } from 'react-native';
 
 const WIDTH = 240;
 
@@ -11,13 +11,18 @@ const photoHeight = ({ width, height }: { width: number; height: number }) =>
 export function ChatPhoto({
   image,
   onOpen,
+  onLongPress,
 }: {
   image: { url: string; width: number; height: number };
   onOpen: (url: string) => void;
+  /** The message's actions (the photo takes the touch, so it passes this on). */
+  onLongPress?: (e: GestureResponderEvent) => void;
 }) {
   return (
     <Pressable
       onPress={() => onOpen(image.url)}
+      onLongPress={onLongPress}
+      delayLongPress={350}
       accessibilityRole="imagebutton"
       accessibilityLabel="Photo. Open full screen"
     >

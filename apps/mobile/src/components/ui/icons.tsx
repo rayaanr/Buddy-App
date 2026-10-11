@@ -20,6 +20,7 @@ import Compass from 'lucide-react-native/icons/compass';
 import Ellipsis from 'lucide-react-native/icons/ellipsis';
 import Pencil from 'lucide-react-native/icons/pencil';
 import Plus from 'lucide-react-native/icons/plus';
+import Reply from 'lucide-react-native/icons/reply';
 import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
 import Share from 'lucide-react-native/icons/share';
@@ -115,6 +116,7 @@ export const ShareIcon = icon(
   'ShareIcon',
 );
 export const BellIcon = icon(Bell, { size: 20, color: colors.ink, strokeWidth: 1.8 }, 'BellIcon');
+export const ReplyIcon = icon(Reply, { size: 20, color: colors.ink, strokeWidth: 2 }, 'ReplyIcon');
 export const BellOffIcon = icon(
   BellOff,
   { size: 14, color: colors.subtle, strokeWidth: 2 },

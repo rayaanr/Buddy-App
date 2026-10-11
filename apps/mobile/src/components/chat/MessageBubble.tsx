@@ -1,10 +1,28 @@
-import { clockLabel, isDeletedAccount } from '@buddy/shared';
+import { clockLabel, isDeletedAccount, type Reaction } from '@buddy/shared';
 import { router } from 'expo-router';
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, type ReactNode, useRef } from 'react';
+import {
+  type GestureResponderEvent,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 import type { ChatItem, MessageStatus } from '@/api/chat';
-import { AnimatedView, Avatar, DoubleTickIcon, TickIcon, useEnterOnChange } from '@/components/ui';
+import {
+  AnimatedView,
+  Avatar,
+  DoubleTickIcon,
+  ReplyIcon,
+  selectionHaptic,
+  TickIcon,
+  useEnterOnChange,
+} from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 import { ChatPhoto } from './ChatPhoto';
@@ -46,8 +64,12 @@ interface MessageBubbleProps {
   onRetry: (id: string) => void;
   onVote: (messageId: string, optionIds: string[]) => void;
   onOpenPhoto: (url: string) => void;
-  /** Long-pressing someone else's message offers to report it. */
-  onReport: (message: ChatRow['message']) => void;
+  /** Long-press: reactions, Reply, Report. `y` is where on screen. */
+  onActions: (message: ChatRow['message'], mine: boolean, y: number) => void;
+  onReact: (messageId: string, emoji: Reaction | null) => void;
+  onReply: (message: ChatRow['message']) => void;
+  /** Tapping a quote scrolls to the message it quotes. */
+  onJumpTo: (messageId: string) => void;
 }
 
 /** Memoised: the thread re-renders as messages arrive, but unchanged rows don't. */
@@ -57,7 +79,10 @@ export const MessageBubble = memo(function MessageBubble({
   onRetry,
   onVote,
   onOpenPhoto,
-  onReport,
+  onActions,
+  onReact,
+  onReply,
+  onJumpTo,
 }: MessageBubbleProps) {
   const { message: m, mine, status, startsRun, gap, showMeta } = row;
 
@@ -65,111 +90,122 @@ export const MessageBubble = memo(function MessageBubble({
     return <Text className="my-1.5 self-center font-sans text-[12.5px] text-subtle">{m.body}</Text>;
   }
 
+  // Only saved messages can be reacted or replied to.
+  const saved = status !== 'sending' && status !== 'failed';
+  const longPress = saved
+    ? (e: GestureResponderEvent) => onActions(m, mine, e.nativeEvent.pageY)
+    : undefined;
+  const content = (
+    <Content
+      message={m}
+      mine={mine}
+      myId={myId}
+      // Votes wait until the poll has been saved.
+      onVote={saved ? onVote : undefined}
+      onOpenPhoto={onOpenPhoto}
+      onLongPress={longPress}
+      onJumpTo={onJumpTo}
+    />
+  );
+  const reactions = m.reactions.length ? (
+    <Reactions message={m} myId={myId} mine={mine} onReact={onReact} />
+  ) : null;
+
   if (!mine) {
     const sender = m.sender;
-    // Someone who deleted their account has no profile to open or report.
+    // Someone who deleted their account has no profile to open.
     const person = sender && !isDeletedAccount(sender) ? sender : null;
     return (
-      <View className="max-w-[84%] flex-row items-end gap-2 self-start" style={{ marginTop: gap }}>
-        <Avatar
-          uri={sender?.avatarUrl ?? undefined}
-          name={sender && !isDeletedAccount(sender) ? sender.name : undefined}
-          size={30}
-          hidden={!startsRun}
-          onPress={person ? () => openUser(person.id) : undefined}
-          accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
-        />
-        <View className="min-w-0 shrink gap-[5px]">
-          {startsRun && sender ? (
+      <SwipeToReply onReply={() => onReply(m)} enabled={saved}>
+        <View
+          className="max-w-[84%] flex-row items-end gap-2 self-start"
+          style={{ marginTop: gap }}
+        >
+          <Avatar
+            uri={sender?.avatarUrl ?? undefined}
+            name={sender && !isDeletedAccount(sender) ? sender.name : undefined}
+            size={30}
+            hidden={!startsRun}
+            onPress={person ? () => openUser(person.id) : undefined}
+            accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
+            style={reactions ? { marginBottom: 26 } : undefined}
+          />
+          <View className="min-w-0 shrink gap-[5px]">
+            {startsRun && sender ? (
+              <Pressable
+                disabled={!person}
+                onPress={person ? () => openUser(person.id) : undefined}
+                hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
+                accessibilityRole={person ? 'button' : undefined}
+                accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
+                className="ml-1.5 self-start"
+              >
+                <Text className="font-sans-medium text-[13px] text-muted">{sender.name}</Text>
+              </Pressable>
+            ) : null}
             <Pressable
-              disabled={!person}
-              onPress={person ? () => openUser(person.id) : undefined}
-              hitSlop={{ top: 14, bottom: 14, left: 8, right: 8 }}
-              accessibilityRole={person ? 'button' : undefined}
-              accessibilityLabel={person ? `View ${person.name}’s profile` : undefined}
-              className="ml-1.5 self-start"
+              onLongPress={longPress}
+              delayLongPress={350}
+              accessibilityHint="Long press to react, reply or report"
+              className={cn(
+                'self-start active:opacity-80',
+                !m.poll && 'overflow-hidden rounded-[18px] rounded-bl-md bg-surface',
+                !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
+              )}
             >
-              <Text className="font-sans-medium text-[13px] text-muted">{sender.name}</Text>
+              {content}
             </Pressable>
-          ) : null}
-          <Pressable
-            disabled={!person}
-            onLongPress={() => onReport(m)}
-            delayLongPress={350}
-            accessibilityHint={person ? 'Long press to report this message' : undefined}
-            accessibilityActions={person ? [{ name: 'longpress', label: 'Report message' }] : []}
-            onAccessibilityAction={() => onReport(m)}
-            className={cn(
-              'active:opacity-80',
-              !m.poll && 'overflow-hidden rounded-[18px] rounded-bl-md bg-surface',
-              !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
-            )}
-          >
-            <Content
-              message={m}
-              mine={false}
-              myId={myId}
-              onVote={onVote}
-              onOpenPhoto={onOpenPhoto}
-            />
-          </Pressable>
+            {reactions}
+          </View>
         </View>
-      </View>
+      </SwipeToReply>
     );
   }
 
-  // Only a failed message is a button (tap to retry): wrapping the others in a
-  // disabled one would block their photo and poll taps on web.
-  const bubble = (
-    <View
-      className={cn(
-        !m.poll && 'overflow-hidden rounded-[18px] rounded-br-md bg-lime',
-        !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
-      )}
-      style={{ opacity: status === 'sending' || status === 'failed' ? 0.6 : 1 }}
-    >
-      <Content
-        message={m}
-        mine
-        myId={myId}
-        // Votes wait until the poll has been saved.
-        onVote={status === 'sending' || status === 'failed' ? undefined : onVote}
-        onOpenPhoto={onOpenPhoto}
-      />
-    </View>
-  );
-
   return (
-    <View className="max-w-[78%] items-end self-end" style={{ marginTop: gap }}>
-      {status === 'failed' ? (
+    <SwipeToReply onReply={() => onReply(m)} enabled={saved}>
+      <View className="max-w-[78%] items-end self-end" style={{ marginTop: gap }}>
         <Pressable
-          onPress={() => onRetry(m.id)}
-          accessibilityRole="button"
-          accessibilityHint="Sends the message again"
+          // A failed message is tapped to retry; the rest are long-pressed for actions.
+          onPress={status === 'failed' ? () => onRetry(m.id) : undefined}
+          onLongPress={longPress}
+          delayLongPress={350}
+          accessibilityRole={status === 'failed' ? 'button' : undefined}
+          accessibilityHint={
+            status === 'failed' ? 'Sends the message again' : 'Long press to react or reply'
+          }
+          className={cn(
+            !m.poll && 'overflow-hidden rounded-[18px] rounded-br-md bg-lime',
+            !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
+          )}
+          style={{ opacity: saved ? 1 : 0.6 }}
         >
-          {bubble}
+          {content}
         </Pressable>
-      ) : (
-        bubble
-      )}
-      {showMeta && status ? <MessageMeta status={status} createdAt={m.createdAt} /> : null}
-    </View>
+        {reactions}
+        {showMeta && status ? <MessageMeta status={status} createdAt={m.createdAt} /> : null}
+      </View>
+    </SwipeToReply>
   );
 });
 
-/** What's in a bubble: a photo and/or text (with @mentions), or a poll. */
+/** What's in a bubble: a quote, then a photo and/or text (with @mentions), or a poll. */
 function Content({
   message: m,
   mine,
   myId,
   onVote,
   onOpenPhoto,
+  onLongPress,
+  onJumpTo,
 }: {
   message: ChatRow['message'];
   mine: boolean;
   myId: string | undefined;
   onVote?: (messageId: string, optionIds: string[]) => void;
   onOpenPhoto: (url: string) => void;
+  onLongPress?: (e: GestureResponderEvent) => void;
+  onJumpTo: (messageId: string) => void;
 }) {
   if (m.poll)
     return (
@@ -179,9 +215,21 @@ function Content({
         onVote={onVote ? (ids) => onVote(m.id, ids) : undefined}
       />
     );
+  const quote = m.replyTo ? (
+    <Quote
+      quote={m.replyTo}
+      mine={mine}
+      onPress={() => onJumpTo(m.replyTo!.id)}
+      // Inside a photo bubble the quote needs its own padding.
+      padded={!!(m.image || m.photoExpired)}
+    />
+  ) : null;
   return (
     <>
-      {m.image ? <ChatPhoto image={m.image} onOpen={onOpenPhoto} /> : null}
+      {quote}
+      {m.image ? (
+        <ChatPhoto image={m.image} onOpen={onOpenPhoto} onLongPress={onLongPress} />
+      ) : null}
       {m.photoExpired ? (
         <View
           className={cn(
@@ -200,6 +248,128 @@ function Content({
         </View>
       ) : null}
     </>
+  );
+}
+
+/** The message being replied to, quoted at the top of the bubble. */
+function Quote({
+  quote,
+  mine,
+  padded,
+  onPress,
+}: {
+  quote: NonNullable<ChatRow['message']['replyTo']>;
+  mine: boolean;
+  padded: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Replying to ${quote.senderName ?? 'a message'}: ${quote.summary}. Show it`}
+      className={cn(padded ? 'mx-2 mt-2' : '-mx-1 mb-2', 'max-w-[240px]')}
+    >
+      <View
+        className={cn(
+          'rounded-[10px] border-l-[3px] px-2.5 py-1.5',
+          mine ? 'border-bg/50 bg-black/10' : 'border-lime bg-surface-raised',
+        )}
+      >
+        <Text
+          className={cn('font-sans-semibold text-[12.5px]', mine ? 'text-bg' : 'text-lime')}
+          numberOfLines={1}
+        >
+          {quote.senderName ?? 'Deleted account'}
+        </Text>
+        <Text
+          className={cn('font-sans text-[13px] leading-[18px]', mine ? 'text-bg/80' : 'text-muted')}
+          numberOfLines={2}
+        >
+          {quote.summary}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+/** Reaction pills under a message; tap one to add or take back yours. */
+function Reactions({
+  message: m,
+  myId,
+  mine,
+  onReact,
+}: {
+  message: ChatRow['message'];
+  myId: string | undefined;
+  mine: boolean;
+  onReact: (messageId: string, emoji: Reaction | null) => void;
+}) {
+  return (
+    <View className={cn('-mt-1 flex-row flex-wrap gap-1', mine ? 'justify-end' : 'ml-1')}>
+      {m.reactions.map((r) => {
+        const picked = !!myId && r.userIds.includes(myId);
+        return (
+          <Pressable
+            key={r.emoji}
+            onPress={() => onReact(m.id, picked ? null : r.emoji)}
+            accessibilityRole="button"
+            accessibilityLabel={`${r.emoji} ${r.userIds.length}${picked ? ', yours. Remove' : ''}`}
+            className={cn(
+              'h-[26px] flex-row items-center gap-1 rounded-full border px-2 active:opacity-70',
+              picked ? 'border-lime bg-lime-deep' : 'border-line bg-surface',
+            )}
+          >
+            <Text style={styles.reaction}>{r.emoji}</Text>
+            {r.userIds.length > 1 ? (
+              <Text className="font-sans-semibold text-[12px] text-ink-soft">
+                {r.userIds.length}
+              </Text>
+            ) : null}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Swipe a message right to reply (phones). On web, long-press → Reply does it:
+ * a swipe there would fight text selection.
+ */
+function SwipeToReply({
+  children,
+  onReply,
+  enabled,
+}: {
+  children: ReactNode;
+  onReply: () => void;
+  enabled: boolean;
+}) {
+  const swipeable = useRef<SwipeableMethods>(null);
+  if (Platform.OS === 'web' || !enabled) return children;
+  return (
+    <ReanimatedSwipeable
+      ref={swipeable}
+      friction={2}
+      leftThreshold={56}
+      overshootLeft={false}
+      renderLeftActions={() => (
+        <View className="w-14 items-center justify-center">
+          <ReplyIcon color={colors.lime} />
+        </View>
+      )}
+      onSwipeableWillOpen={(direction) => {
+        if (direction === 'left') {
+          selectionHaptic();
+          onReply();
+        }
+        // Spring back: it's a gesture, not a drawer that stays open.
+        swipeable.current?.close();
+      }}
+    >
+      {children}
+    </ReanimatedSwipeable>
   );
 }
 
@@ -234,5 +404,6 @@ function MessageMeta({ status, createdAt }: { status: MessageStatus; createdAt: 
 
 // Style objects, not classes: NativeWind doesn't style Reanimated views.
 const styles = StyleSheet.create({
+  reaction: { fontSize: 14 },
   meta: { marginRight: 4, marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
 });

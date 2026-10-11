@@ -1,9 +1,9 @@
 import { firstName } from '@buddy/shared';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import type { ChatDraft } from '@/api/chat';
-import { Avatar, Menu, PlusIcon, PressableScale } from '@/components/ui';
+import { Avatar, CloseIcon, Menu, PlusIcon, PressableScale, ReplyIcon } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
@@ -25,6 +25,9 @@ interface ComposerProps {
   /** Picks a photo and sends it with this caption; resolves true if one was sent. */
   onPhoto: (caption: string, mentions: ChatDraft['mentions']) => Promise<boolean>;
   onPoll: () => void;
+  /** The message being replied to, shown above the box until sent or cancelled. */
+  replyTo?: ChatDraft['replyTo'];
+  onCancelReply: () => void;
 }
 
 const MAX_SUGGESTIONS = 5;
@@ -44,6 +47,8 @@ export function Composer({
   onTyping,
   onPhoto,
   onPoll,
+  replyTo,
+  onCancelReply,
 }: ComposerProps) {
   const { bottom } = useScreenInsets();
   const [text, setText] = useState('');
@@ -52,6 +57,10 @@ export function Composer({
   // Set after tagging someone, to put the cursor after their name; released once it's there.
   const [selection, setSelection] = useState<{ start: number; end: number }>();
   const input = useRef<TextInput>(null);
+  // Chose Reply: straight to typing.
+  useEffect(() => {
+    if (replyTo) input.current?.focus();
+  }, [replyTo]);
   const canSend = ready && !!text.trim();
 
   const query = mentionQuery(text.slice(0, cursor));
@@ -102,6 +111,28 @@ export function Composer({
 
   return (
     <View className="border-t border-line">
+      {replyTo ? (
+        <View className="flex-row items-center gap-3 border-b border-line bg-surface px-[18px] py-2.5">
+          <ReplyIcon size={18} color={colors.lime} />
+          <View className="min-w-0 flex-1 border-l-[3px] border-lime pl-2.5">
+            <Text className="font-sans-semibold text-[13px] text-lime" numberOfLines={1}>
+              Replying to {replyTo.senderName ?? 'Deleted account'}
+            </Text>
+            <Text className="font-sans text-[13px] text-muted" numberOfLines={1}>
+              {replyTo.summary}
+            </Text>
+          </View>
+          <Pressable
+            onPress={onCancelReply}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel reply"
+            hitSlop={8}
+            className="h-8 w-8 items-center justify-center rounded-full active:bg-surface-raised"
+          >
+            <CloseIcon color={colors.muted} />
+          </Pressable>
+        </View>
+      ) : null}
       {suggestions.length ? (
         <View className="border-b border-line bg-surface px-3.5 py-1.5">
           {suggestions.map((p) => (

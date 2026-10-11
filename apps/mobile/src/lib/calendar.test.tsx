@@ -1,15 +1,16 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
-const created: unknown[] = [];
+import { addToCalendar } from './calendar';
+
+// jest.mock calls are hoisted above the imports; "mock…" names may be used in them.
+const mockCreated: unknown[] = [];
 jest.mock('expo-calendar/legacy', () => ({
   createEventInCalendarAsync: async (event: unknown) => {
-    created.push(event);
+    mockCreated.push(event);
     return { action: 'saved' };
   },
 }));
 jest.mock('@/api/auth-client', () => ({ authClient: {}, sessionCookie: async () => null }));
-
-import { addToCalendar } from './calendar';
 
 describe('addToCalendar', () => {
   it('fills in the phone’s new-event screen with the activity', async () => {
@@ -21,8 +22,8 @@ describe('addToCalendar', () => {
       area: 'Colombo 3',
       description: 'Easy pace, all welcome.',
     });
-    expect(created).toHaveLength(1);
-    const event = created[0] as Record<string, unknown>;
+    expect(mockCreated).toHaveLength(1);
+    const event = mockCreated[0] as Record<string, unknown>;
     expect(event).toMatchObject({
       title: 'Sunset 5K',
       timeZone: 'Asia/Colombo',

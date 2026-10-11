@@ -27,8 +27,8 @@ describe('R2 presigned uploads', () => {
   });
 
   it('is required: the server won’t start without it', () => {
-    const { R2_BUCKET: _bucket, R2_PUBLIC_URL: _url, ...rest } = env;
-    expect(() => loadEnv({ ...stringify(rest), NODE_ENV: 'development' })).toThrow(
+    const partial = stringify({ ...env, R2_BUCKET: undefined, R2_PUBLIC_URL: undefined });
+    expect(() => loadEnv({ ...partial, NODE_ENV: 'development' })).toThrow(
       /R2_BUCKET, R2_PUBLIC_URL/,
     );
   });

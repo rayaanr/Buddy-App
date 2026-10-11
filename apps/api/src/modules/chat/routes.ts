@@ -4,6 +4,7 @@ import {
   markReadInput,
   messageSummary,
   messagesQuery,
+  reactInput,
   sendMessageInput,
   voteInput,
 } from '@buddy/shared';
@@ -24,7 +25,15 @@ import { blockedIds } from '../safety/blocks';
 import { communityMembers } from '../../db/schema';
 import type { PushMessage } from '../../lib/push';
 import { listChats } from './list';
-import { listMessages, markRead, requireMember, type Room, sendMessage, vote } from './service';
+import {
+  listMessages,
+  markRead,
+  react,
+  requireMember,
+  type Room,
+  sendMessage,
+  vote,
+} from './service';
 
 const HEARTBEAT_MS = 30_000;
 const TYPING_THROTTLE_MS = 2_000;
@@ -141,6 +150,22 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
         }
         return c.json(message, created ? 201 : 200);
       })
+
+      // React to a message (or change or take back your reaction).
+      .post(
+        '/messages/:messageId/react',
+        voting,
+        validate('param', z.object({ id: z.uuid(), messageId: z.uuid() })),
+        validate('json', reactInput),
+        async (c) => {
+          const me = currentUser(c);
+          const room = roomOf(c.req.param('id')!);
+          const { messageId } = c.req.valid('param');
+          const reactions = await react(db, room, me.id, messageId, c.req.valid('json').emoji);
+          hub.publish(room.id, { type: 'reactions', messageId, reactions });
+          return c.json({ messageId, reactions });
+        },
+      )
 
       // Answer a poll (or change or take back your answer).
       .post(

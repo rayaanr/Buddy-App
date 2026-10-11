@@ -5,6 +5,7 @@ import {
   type ChatPreview,
   type MessagesPage,
   type PollInput,
+  type Reaction,
 } from '@buddy/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
@@ -34,6 +35,8 @@ export interface ChatDraft {
   mentions?: { id: string; name: string }[];
   photo?: { uri: string; width: number; height: number; mimeType?: string | null };
   poll?: PollInput;
+  /** The message this replies to, as it's quoted. */
+  replyTo?: NonNullable<ChatMessage['replyTo']>;
 }
 
 /** A message on its way: shown at once, retried with the same id if it fails. */
@@ -164,6 +167,13 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
           }
         } else if (event.type === 'typing') {
           setTyping({ name: event.user.name.split(' ')[0]!, until: Date.now() + TYPING_SHOW_MS });
+        } else if (event.type === 'reactions') {
+          update((p) => ({
+            ...p,
+            messages: p.messages.map((m) =>
+              m.id === event.messageId ? { ...m, reactions: event.reactions } : m,
+            ),
+          }));
         } else if (event.type === 'poll') {
           update((p) => ({
             ...p,
@@ -283,6 +293,7 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
                 imageHeight: photo.height,
               }),
               ...(draft.poll && { poll: draft.poll }),
+              ...(draft.replyTo && { replyToId: draft.replyTo.id }),
             },
           }),
         );
@@ -335,6 +346,8 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
               })),
             }
           : null,
+        replyTo: draft.replyTo ?? null,
+        reactions: [],
         createdAt: new Date().toISOString(),
       };
       const item: Pending = { message, failed: false, draft: { ...draft, body } };
@@ -403,6 +416,44 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     }
   }, []);
 
+  /** Reacts to a message (null takes it back); shows straight away. */
+  const react = useCallback(
+    async (messageId: string, emoji: Reaction | null) => {
+      if (!myId) return;
+      const setReactions = (fn: (r: ChatMessage['reactions']) => ChatMessage['reactions']) =>
+        update((p) => ({
+          ...p,
+          messages: p.messages.map((m) =>
+            m.id === messageId ? { ...m, reactions: fn(m.reactions) } : m,
+          ),
+        }));
+      setReactions((list) => {
+        const others = list
+          .map((r) => ({ ...r, userIds: r.userIds.filter((u) => u !== myId) }))
+          .filter((r) => r.userIds.length);
+        if (!emoji) return others;
+        const existing = others.find((r) => r.emoji === emoji);
+        return existing
+          ? others.map((r) => (r === existing ? { ...r, userIds: [...r.userIds, myId] } : r))
+          : [...others, { emoji, userIds: [myId] }];
+      });
+      try {
+        const res = await unwrap(
+          chat.messages[':messageId'].react.$post({
+            param: { id: roomId, messageId },
+            json: { emoji },
+          }),
+        );
+        setReactions(() => res.reactions);
+      } catch (err) {
+        void qc.invalidateQueries({ queryKey: key });
+        throw err;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roomId, myId, update],
+  );
+
   // ── View model ───────────────────────────────────────────────────────
   const items = useMemo<ChatItem[]>(() => {
     const readUpTo = history.data?.othersReadUpTo ?? null;
@@ -435,6 +486,7 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     send,
     retry,
     vote,
+    react,
     notifyTyping,
   };
 }

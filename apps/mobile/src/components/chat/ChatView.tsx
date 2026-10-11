@@ -1,9 +1,17 @@
-import type { ChatMessage } from '@buddy/shared';
+import { type ChatMessage, isDeletedAccount, messageSummary, type Reaction } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  type ReactElement,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { FlatList, Platform, Text, View, type ListRenderItem } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, View, type ListRenderItem } from 'react-native';
 
 import { type ChatDraft, type ChatRoom, useChat } from '@/api/chat';
 import { ApiRequestError, errorMessage } from '@/api/client';
@@ -21,6 +29,7 @@ import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { enterMessage } from '@/theme/motion';
 import { type ChatPerson, Composer } from './Composer';
+import { MessageActions, type MessageActionsTarget } from './MessageActions';
 import { MessageBubble, toChatRows, type ChatRow } from './MessageBubble';
 import { PhotoViewer } from './PhotoViewer';
 import { TypingIndicator } from './TypingIndicator';
@@ -79,12 +88,51 @@ export function ChatView({
     [room.id],
   );
   const [viewing, setViewing] = useState<string | null>(null);
-  const { retry, vote, send } = chat;
+  const [actions, setActions] = useState<MessageActionsTarget | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatDraft['replyTo']>();
+  // A quoted message just jumped to, briefly lit up.
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const list = useRef<FlatList<ChatRow>>(null);
+  const { retry, vote, react, send } = chat;
   const onVote = useCallback(
     (messageId: string, optionIds: string[]) =>
       void vote(messageId, optionIds).catch((err: unknown) => toast(errorMessage(err))),
     [vote],
   );
+  const onReact = useCallback(
+    (messageId: string, emoji: Reaction | null) =>
+      void react(messageId, emoji).catch((err: unknown) => toast(errorMessage(err))),
+    [react],
+  );
+  const onActions = useCallback(
+    (message: ChatMessage, mine: boolean, y: number) => setActions({ message, mine, y }),
+    [],
+  );
+  const onReply = useCallback(
+    (m: ChatMessage) =>
+      setReplyTo({
+        id: m.id,
+        senderName: m.sender?.name ?? null,
+        summary: messageSummary({
+          body: m.body,
+          hasImage: !!m.image || m.photoExpired,
+          pollQuestion: m.poll?.question,
+        }),
+      }),
+    [],
+  );
+  // Read by onJumpTo, which stays the same function so rows don't re-render.
+  const rowsRef = useRef(rows);
+  useLayoutEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+  const onJumpTo = useCallback((messageId: string) => {
+    const index = rowsRef.current.findIndex((r) => r.message.id === messageId);
+    if (index < 0) return toast('That message is no longer in the chat.');
+    list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
+    setHighlighted(messageId);
+    setTimeout(() => setHighlighted((h) => (h === messageId ? null : h)), 1400);
+  }, []);
   const myId = me.data?.id;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item }) => (
@@ -92,6 +140,7 @@ export function ChatView({
         entering={
           animateNew && openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined
         }
+        style={item.message.id === highlighted ? styles.highlight : undefined}
       >
         <MessageBubble
           row={item}
@@ -99,11 +148,14 @@ export function ChatView({
           onRetry={retry}
           onVote={onVote}
           onOpenPhoto={setViewing}
-          onReport={reportMessage}
+          onActions={onActions}
+          onReact={onReact}
+          onReply={onReply}
+          onJumpTo={onJumpTo}
         />
       </AnimatedView>
     ),
-    [openedWith, myId, retry, onVote, reportMessage],
+    [openedWith, highlighted, myId, retry, onVote, onActions, onReact, onReply, onJumpTo],
   );
 
   /** Picks a photo from the library and sends it, with the typed text as its caption. */
@@ -117,6 +169,7 @@ export function ChatView({
     send({
       body: caption,
       mentions,
+      replyTo,
       photo: {
         uri: asset.uri,
         width: asset.width,
@@ -124,6 +177,7 @@ export function ChatView({
         mimeType: asset.mimeType,
       },
     });
+    setReplyTo(undefined);
     return true;
   };
 
@@ -161,6 +215,7 @@ export function ChatView({
         </View>
       ) : (
         <FlatList
+          ref={list}
           inverted
           data={rows}
           keyExtractor={(r) => r.message.id}
@@ -180,6 +235,14 @@ export function ChatView({
           // Inverted: the header shows at the bottom, the footer at the top.
           ListHeaderComponent={chat.typingName ? <TypingIndicator name={chat.typingName} /> : null}
           ListFooterComponent={banner ?? null}
+          // Jumping to a quote far up: get near it, then try again once it's laid out.
+          onScrollToIndexFailed={({ index, averageItemLength }) => {
+            list.current?.scrollToOffset({ offset: index * averageItemLength, animated: false });
+            setTimeout(
+              () => list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true }),
+              120,
+            );
+          }}
         />
       )}
 
@@ -187,7 +250,12 @@ export function ChatView({
         ready={!!me.data}
         myId={me.data?.id}
         people={people}
-        onSend={chat.send}
+        onSend={(draft) => {
+          send({ ...draft, replyTo });
+          setReplyTo(undefined);
+        }}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(undefined)}
         onTyping={chat.notifyTyping}
         onPhoto={sendPhoto}
         onPoll={() =>
@@ -195,6 +263,26 @@ export function ChatView({
         }
       />
       <PhotoViewer url={viewing} onClose={() => setViewing(null)} />
+      <MessageActions
+        target={actions}
+        myId={myId}
+        onClose={() => setActions(null)}
+        onReact={onReact}
+        onReply={onReply}
+        onReport={
+          actions &&
+          !actions.mine &&
+          actions.message.sender &&
+          !isDeletedAccount(actions.message.sender)
+            ? reportMessage
+            : undefined
+        }
+      />
     </KeyboardScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  // A quoted message you jumped to.
+  highlight: { backgroundColor: 'rgba(201,245,63,0.12)', borderRadius: 14 },
+});

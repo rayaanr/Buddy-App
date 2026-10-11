@@ -43,6 +43,10 @@ export type DiscoverFilter = (typeof DISCOVER_FILTERS)[number];
 export const DISCOVER_RADII = [5, 10, 25, 50] as const;
 export const DEFAULT_RADIUS_KM = 25;
 
+/** Reactions people can add to a chat message (one each). */
+export const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
+export type Reaction = (typeof REACTIONS)[number];
+
 /**
  * How long chats are kept (see the API's jobs/retention.ts). Messages someone
  * reported stay until a moderator has dealt with them.

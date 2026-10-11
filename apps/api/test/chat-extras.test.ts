@@ -155,3 +155,59 @@ describe('polls', () => {
     expect(res.body.poll!.options.every((o) => o.voterIds.includes(me.userId))).toBe(true);
   });
 });
+
+describe('replies', () => {
+  it('quotes the message replied to, only within the same chat', async () => {
+    const me = await t.signIn();
+    const shehani = await t.signIn('shehani@buddy.test');
+    const id = await padel(me.headers);
+    const { body: question } = await send(id, shehani.headers, { body: 'Who has spare balls?' });
+    const { body: reply } = await send(id, me.headers, { body: 'Me!', replyToId: question.id });
+    expect(reply.replyTo).toEqual({
+      id: question.id,
+      senderName: 'Shehani',
+      summary: 'Who has spare balls?',
+    });
+
+    // A message from another chat can't be quoted.
+    const { body: elsewhere } = await t.call<ChatMessage>(
+      `/v1/communities/${(await t.call<{ communities: { id: string; name: string }[] }>('/v1/communities', { headers: me.headers })).body.communities[0]!.id}/chat/messages`,
+      { method: 'POST', headers: me.headers, body: { id: randomUUID(), body: 'hi' } },
+    );
+    const odd = await send(id, me.headers, { body: 'Odd', replyToId: elsewhere.id });
+    expect(odd.body.replyTo).toBeNull();
+  });
+});
+
+describe('reactions', () => {
+  it('one reaction each; changing or clearing it updates the counts', async () => {
+    const me = await t.signIn();
+    const shehani = await t.signIn('shehani@buddy.test');
+    const id = await padel(me.headers);
+    const { body: msg } = await send(id, shehani.headers, { body: 'Court booked!' });
+    const react = (headers: Record<string, string>, emoji: string | null) =>
+      t.call<{ reactions: ChatMessage['reactions'] }>(
+        `/v1/activities/${id}/chat/messages/${msg.id}/react`,
+        { method: 'POST', headers, body: { emoji } },
+      );
+    await react(me.headers, '👍');
+    const both = await react(shehani.headers, '👍');
+    expect(both.body.reactions).toEqual([{ emoji: '👍', userIds: [me.userId, shehani.userId] }]);
+    const changed = await react(me.headers, '❤️');
+    expect(changed.body.reactions).toEqual([
+      { emoji: '👍', userIds: [shehani.userId] },
+      { emoji: '❤️', userIds: [me.userId] },
+    ]);
+    expect((await react(me.headers, null)).body.reactions).toEqual([
+      { emoji: '👍', userIds: [shehani.userId] },
+    ]);
+    expect((await react(me.headers, '🍕')).status).toBe(400);
+
+    const page = await t.call<MessagesPage>(`/v1/activities/${id}/chat/messages`, {
+      headers: me.headers,
+    });
+    expect(page.body.messages.find((m) => m.id === msg.id)!.reactions).toEqual([
+      { emoji: '👍', userIds: [shehani.userId] },
+    ]);
+  });
+});

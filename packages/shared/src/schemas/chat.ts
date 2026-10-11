@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { LIMITS } from '../constants';
+import { LIMITS, REACTIONS } from '../constants';
 import { isoDateTime, userSummary } from './common';
 
 /** A poll in a chat, with who picked what (counts are the voter lists' lengths). */
@@ -32,6 +32,12 @@ export const chatMessage = z.object({
   /** People tagged as @FirstName in the text. */
   mentions: z.array(z.object({ id: z.string(), name: z.string() })),
   poll: chatPoll.nullable(),
+  /** The message this replies to, as a one-line quote (null once that one is deleted). */
+  replyTo: z
+    .object({ id: z.uuid(), senderName: z.string().nullable(), summary: z.string() })
+    .nullable(),
+  /** Who reacted with what, most used first. */
+  reactions: z.array(z.object({ emoji: z.enum(REACTIONS), userIds: z.array(z.string()) })),
   createdAt: isoDateTime,
 });
 export type ChatMessage = z.infer<typeof chatMessage>;
@@ -72,6 +78,8 @@ export const sendMessageInput = z
     /** People @mentioned; anyone not in the chat is ignored. */
     mentions: z.array(z.uuid()).max(LIMITS.mentionsMax).default([]),
     poll: pollInput.optional(),
+    /** Replying to this message (in the same chat). */
+    replyToId: z.uuid().optional(),
   })
   .refine((m) => m.body || m.imageKey || m.poll, 'Write a message')
   .refine((m) => !(m.poll && m.imageKey), 'A poll can’t have a photo');
@@ -79,6 +87,9 @@ export type SendMessageInput = z.infer<typeof sendMessageInput>;
 
 /** Your answer to a poll; it replaces any earlier one (none clears it). */
 export const voteInput = z.object({ optionIds: z.array(z.string()).max(LIMITS.pollOptionsMax) });
+
+/** Your reaction to a message; null takes it back. */
+export const reactInput = z.object({ emoji: z.enum(REACTIONS).nullable() });
 
 export const markReadInput = z.object({
   /** The newest message the user has seen. */
@@ -92,6 +103,12 @@ export const serverEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('read'), userId: z.string(), upTo: isoDateTime }),
   /** Someone voted: the poll's new totals. */
   z.object({ type: z.literal('poll'), messageId: z.string(), poll: chatPoll }),
+  /** Someone reacted: the message's reactions now. */
+  z.object({
+    type: z.literal('reactions'),
+    messageId: z.string(),
+    reactions: chatMessage.shape.reactions,
+  }),
   /** A moderator removed this message. */
   z.object({ type: z.literal('removed'), messageId: z.string() }),
 ]);
