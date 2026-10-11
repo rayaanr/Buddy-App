@@ -150,7 +150,7 @@ export const MessageBubble = memo(function MessageBubble({
               className={cn(
                 'self-start active:opacity-80',
                 !m.poll && 'overflow-hidden rounded-[18px] rounded-bl-md bg-surface',
-                !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
+                !m.poll && !m.image && !m.photoExpired && (m.replyTo ? 'p-1' : 'px-4 py-3'),
               )}
             >
               {content}
@@ -176,7 +176,7 @@ export const MessageBubble = memo(function MessageBubble({
           }
           className={cn(
             !m.poll && 'overflow-hidden rounded-[18px] rounded-br-md bg-lime',
-            !m.poll && !m.image && !m.photoExpired && 'px-4 py-3',
+            !m.poll && !m.image && !m.photoExpired && (m.replyTo ? 'p-1' : 'px-4 py-3'),
           )}
           style={{ opacity: saved ? 1 : 0.6 }}
         >
@@ -243,7 +243,16 @@ function Content({
         </View>
       ) : null}
       {m.body ? (
-        <View className={m.image || m.photoExpired ? 'max-w-[240px] px-3.5 py-2.5' : undefined}>
+        <View
+          className={
+            m.image || m.photoExpired
+              ? 'max-w-[240px] px-3.5 py-2.5'
+              : // Under a quote: the bubble has a thin edge, so the text brings its own.
+                m.replyTo
+                ? 'px-3 pb-2 pt-1.5'
+                : undefined
+          }
+        >
           <MessageText body={m.body} mentions={m.mentions} mine={mine} />
         </View>
       ) : null}
@@ -268,11 +277,12 @@ function Quote({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`Replying to ${quote.senderName ?? 'a message'}: ${quote.summary}. Show it`}
-      className={cn(padded ? 'mx-2 mt-2' : '-mx-1 mb-2', 'max-w-[240px]')}
+      // A thin edge between the quote and the bubble, as in WhatsApp.
+      className={padded ? 'mx-1 mt-1 max-w-[232px]' : undefined}
     >
       <View
         className={cn(
-          'rounded-[10px] border-l-[3px] px-2.5 py-1.5',
+          'rounded-[14px] border-l-[4px] px-3 py-2',
           mine ? 'border-bg/50 bg-black/10' : 'border-lime bg-surface-raised',
         )}
       >

@@ -11,7 +11,15 @@ import {
   useState,
 } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { FlatList, Platform, StyleSheet, Text, View, type ListRenderItem } from 'react-native';
+import {
+  BackHandler,
+  FlatList,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  type ListRenderItem,
+} from 'react-native';
 
 import { type ChatDraft, type ChatRoom, useChat } from '@/api/chat';
 import { ApiRequestError, errorMessage } from '@/api/client';
@@ -19,17 +27,21 @@ import { keys, useMe } from '@/api/queries';
 import {
   AnimatedView,
   BackButton,
+  CloseIcon,
+  IconButton,
   KeyboardScreen,
   LoadError,
   Loading,
+  Menu,
   PressableScale,
+  ReplyIcon,
 } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { enterMessage } from '@/theme/motion';
 import { type ChatPerson, Composer } from './Composer';
-import { MessageActions, type MessageActionsTarget } from './MessageActions';
+import { ReactionBar, type SelectedMessage } from './ReactionBar';
 import { MessageBubble, toChatRows, type ChatRow } from './MessageBubble';
 import { PhotoViewer } from './PhotoViewer';
 import { TypingIndicator } from './TypingIndicator';
@@ -88,7 +100,19 @@ export function ChatView({
     [room.id],
   );
   const [viewing, setViewing] = useState<string | null>(null);
-  const [actions, setActions] = useState<MessageActionsTarget | null>(null);
+  // Long-pressed: highlighted, reactions float beside it, and the header
+  // turns into its actions (Reply, Report), like WhatsApp.
+  const [selected, setSelected] = useState<SelectedMessage | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  useEffect(() => {
+    if (!selected || Platform.OS !== 'android') return;
+    // Android back lets go of the message instead of leaving the chat.
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setSelected(null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [selected]);
   const [replyTo, setReplyTo] = useState<ChatDraft['replyTo']>();
   // A quoted message just jumped to, briefly lit up.
   const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -105,7 +129,7 @@ export function ChatView({
     [react],
   );
   const onActions = useCallback(
-    (message: ChatMessage, mine: boolean, y: number) => setActions({ message, mine, y }),
+    (message: ChatMessage, mine: boolean, y: number) => setSelected({ message, mine, y }),
     [],
   );
   const onReply = useCallback(
@@ -134,13 +158,21 @@ export function ChatView({
     setTimeout(() => setHighlighted((h) => (h === messageId ? null : h)), 1400);
   }, []);
   const myId = me.data?.id;
+  const selectedId = selected?.message.id ?? null;
+  const selectedSender = selected?.message.sender;
+  const canReport =
+    !!selected && !selected.mine && !!selectedSender && !isDeletedAccount(selectedSender);
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item }) => (
       <AnimatedView
         entering={
           animateNew && openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined
         }
-        style={item.message.id === highlighted ? styles.highlight : undefined}
+        style={
+          item.message.id === highlighted || item.message.id === selectedId
+            ? styles.highlight
+            : undefined
+        }
       >
         <MessageBubble
           row={item}
@@ -155,7 +187,18 @@ export function ChatView({
         />
       </AnimatedView>
     ),
-    [openedWith, highlighted, myId, retry, onVote, onActions, onReact, onReply, onJumpTo],
+    [
+      openedWith,
+      highlighted,
+      selectedId,
+      myId,
+      retry,
+      onVote,
+      onActions,
+      onReact,
+      onReply,
+      onJumpTo,
+    ],
   );
 
   /** Picks a photo from the library and sends it, with the typed text as its caption. */
@@ -190,21 +233,58 @@ export function ChatView({
       <View
         className="flex-row items-center gap-3.5 border-b border-line px-[18px] pb-3"
         style={{ paddingTop: top(56) }}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
       >
-        <BackButton />
-        <PressableScale
-          onPress={onTitlePress}
-          disabled={!onTitlePress}
-          scale="dim"
-          className="min-w-0 flex-1"
-        >
-          <Text className="font-sans-semibold text-[16.5px] text-ink" numberOfLines={1}>
-            {title}
-          </Text>
-          <Text className="mt-0.5 font-sans text-[13px] text-muted" numberOfLines={1}>
-            {subtitle}
-          </Text>
-        </PressableScale>
+        {selected ? (
+          <>
+            <IconButton
+              icon={<CloseIcon />}
+              label="Done with this message"
+              onPress={() => setSelected(null)}
+            />
+            <View className="flex-1" />
+            <IconButton
+              icon={<ReplyIcon />}
+              label="Reply"
+              onPress={() => {
+                onReply(selected.message);
+                setSelected(null);
+              }}
+            />
+            {canReport ? (
+              <Menu
+                label="More options"
+                items={[
+                  {
+                    label: 'Report message',
+                    destructive: true,
+                    onPress: () => {
+                      reportMessage(selected.message);
+                      setSelected(null);
+                    },
+                  },
+                ]}
+              />
+            ) : null}
+          </>
+        ) : (
+          <>
+            <BackButton />
+            <PressableScale
+              onPress={onTitlePress}
+              disabled={!onTitlePress}
+              scale="dim"
+              className="min-w-0 flex-1"
+            >
+              <Text className="font-sans-semibold text-[16.5px] text-ink" numberOfLines={1}>
+                {title}
+              </Text>
+              <Text className="mt-0.5 font-sans text-[13px] text-muted" numberOfLines={1}>
+                {subtitle}
+              </Text>
+            </PressableScale>
+          </>
+        )}
       </View>
 
       {chat.isLoading ? (
@@ -263,26 +343,25 @@ export function ChatView({
         }
       />
       <PhotoViewer url={viewing} onClose={() => setViewing(null)} />
-      <MessageActions
-        target={actions}
-        myId={myId}
-        onClose={() => setActions(null)}
-        onReact={onReact}
-        onReply={onReply}
-        onReport={
-          actions &&
-          !actions.mine &&
-          actions.message.sender &&
-          !isDeletedAccount(actions.message.sender)
-            ? reportMessage
-            : undefined
-        }
-      />
+      {selected ? (
+        <ReactionBar
+          selected={selected}
+          myId={myId}
+          headerHeight={headerHeight}
+          onDismiss={() => setSelected(null)}
+          onReact={onReact}
+        />
+      ) : null}
     </KeyboardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  // A quoted message you jumped to.
-  highlight: { backgroundColor: 'rgba(201,245,63,0.12)', borderRadius: 14 },
+  // A message you long-pressed, or a quoted one you jumped to.
+  // Full width, past the list's side padding.
+  highlight: {
+    backgroundColor: 'rgba(201,245,63,0.12)',
+    marginHorizontal: -18,
+    paddingHorizontal: 18,
+  },
 });
