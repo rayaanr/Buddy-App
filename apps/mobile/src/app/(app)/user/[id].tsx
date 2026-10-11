@@ -12,7 +12,7 @@ import {
   Avatar,
   Button,
   Heading,
-  MoreButton,
+  Menu,
   QueryFallback,
   ScreenHeader,
   SectionLabel,
@@ -26,7 +26,6 @@ export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useUser(id);
   const me = useMe();
-  const [sheet, setSheet] = useState<'menu' | 'confirm-block' | null>(null);
 
   if (!user.data)
     return <QueryFallback query={user} notFound="This person is no longer on Buddy." />;
@@ -36,9 +35,7 @@ export default function UserProfileScreen() {
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader
-        right={me.data && !isMe ? <MoreButton onPress={() => setSheet('menu')} /> : null}
-      />
+      <ScreenHeader right={me.data && !isMe ? <SafetyMenu person={u} /> : null} />
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 8, paddingBottom: 30 }}
@@ -101,8 +98,6 @@ export default function UserProfileScreen() {
 
         {u.blockedByYou ? <BlockedNotice person={u} /> : null}
       </ScrollView>
-
-      <SafetySheet person={u} mode={sheet} onChange={setSheet} />
     </View>
   );
 }
@@ -122,52 +117,35 @@ function useBlockToggle(person: PublicProfile) {
 }
 
 /** "⋯" menu: report or block, then a confirmation before blocking. */
-function SafetySheet({
-  person,
-  mode,
-  onChange,
-}: {
-  person: PublicProfile;
-  mode: 'menu' | 'confirm-block' | null;
-  onChange: (mode: 'menu' | 'confirm-block' | null) => void;
-}) {
+function SafetyMenu({ person }: { person: PublicProfile }) {
   const { update, name } = useBlockToggle(person);
-  const close = () => onChange(null);
-
-  if (mode === 'confirm-block') {
-    return (
+  const [confirmBlock, setConfirmBlock] = useState(false);
+  return (
+    <>
+      <Menu
+        label="More options"
+        items={[
+          {
+            label: `Report ${name}`,
+            onPress: () =>
+              router.push({ pathname: '/report', params: { type: 'user', id: person.id } }),
+          },
+          person.blockedByYou
+            ? { label: `Unblock ${name}`, onPress: () => update(false) }
+            : { label: `Block ${name}`, destructive: true, onPress: () => setConfirmBlock(true) },
+        ]}
+      />
       <ActionSheet
-        visible
-        onClose={close}
+        visible={confirmBlock}
+        onClose={() => setConfirmBlock(false)}
         title={`Block ${name}?`}
         message="You won’t see each other’s activities or messages, and they can’t view your profile. They won’t be told."
         actions={[{ label: 'Block', destructive: true, onPress: () => update(true) }]}
       />
-    );
-  }
-
-  return (
-    <ActionSheet
-      visible={mode === 'menu'}
-      onClose={close}
-      actions={[
-        {
-          label: `Report ${name}`,
-          onPress: () =>
-            router.push({
-              pathname: '/report',
-              params: { type: 'user', id: person.id },
-            }),
-        },
-        person.blockedByYou
-          ? { label: `Unblock ${name}`, onPress: () => update(false) }
-          : { label: `Block ${name}`, destructive: true, onPress: () => onChange('confirm-block') },
-      ]}
-    />
+    </>
   );
 }
 
-/** Shown on the profile of someone you blocked, with a quick way back. */
 function BlockedNotice({ person }: { person: PublicProfile }) {
   const { update, pending, name } = useBlockToggle(person);
   return (

@@ -9,6 +9,8 @@
     "@expo-google-fonts/geist-mono": "^0.4.3",
     "@expo-google-fonts/schibsted-grotesk": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@rn-primitives/dropdown-menu": "^1.5.2",
+    "@rn-primitives/portal": "^1.5.3",
     "@tanstack/react-query": "^5.104.1",
     "better-auth": "^1.7.7",
     "expo": "~57.0.27",
@@ -89,7 +91,7 @@
       "<rootDir>/src/**/*.test.tsx"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|react-native-svg|nativewind|react-native-css-interop|lucide-react-native|@buddy/.*|standard-navigation)"
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|react-native-svg|nativewind|react-native-css-interop|lucide-react-native|@buddy/.*|@rn-primitives/.*|standard-navigation)"
     ],
     "moduleNameMapper": {
       "^lucide-react-native/icons/(.*)$": "<rootDir>/../../node_modules/lucide-react-native/dist/cjs/icons/$1.js"

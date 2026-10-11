@@ -1,27 +1,23 @@
 import { LIMITS } from '@buddy/shared';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import { CoverField } from '@/components/create/CoverField';
+import { PhotoButton } from '@/components/create/PhotoButton';
 import {
-  ActionSheet,
-  Avatar,
   BackButton,
   Button,
-  CameraIcon,
   CloseIcon,
   Footer,
   Heading,
   KeyboardAwareScrollView,
   KeyboardScreen,
-  PressableScale,
   SectionLabel,
   TextField,
 } from '@/components/ui';
 import { COMMUNITY_HUE } from '@/data/constants';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { colors } from '@/theme';
 
 interface CommunityValues {
   name: string;
@@ -62,7 +58,6 @@ export function CommunityForm({
   const [rules, setRules] = useState(initial.rules);
   const cover = usePickedImage('cover', initial.coverUrl);
   const logo = usePickedImage('logo', initial.logoUrl);
-  const [logoMenu, setLogoMenu] = useState(false);
 
   const trimmed = name.trim();
   const ready =
@@ -101,31 +96,14 @@ export function CommunityForm({
         <Heading size="page">{heading}</Heading>
 
         {/* Square, like an app icon; the name's initials stand in until there's one. */}
-        <PressableScale
-          onPress={() => (logo.uri ? setLogoMenu(true) : void logo.pick())}
-          disabled={logo.uploading}
-          accessibilityRole="button"
-          accessibilityLabel={logo.uri ? 'Change logo' : 'Add a logo'}
-          className="mt-6 self-center"
-        >
-          <Avatar
-            uri={logo.uri ?? undefined}
-            name={trimmed || 'New community'}
-            shape="rounded"
-            size={84}
-          />
-          {logo.uploading ? (
-            <View className="absolute inset-0 items-center justify-center rounded-[24px] bg-black/50">
-              <ActivityIndicator color={colors.ink} />
-            </View>
-          ) : null}
-          <View className="absolute -bottom-1 -right-1 h-8 w-8 items-center justify-center rounded-full border-2 border-bg bg-lime">
-            <CameraIcon />
-          </View>
-        </PressableScale>
-        <Text className="mt-2.5 text-center font-sans text-[13.5px] text-muted">
-          {logo.uploading ? 'Uploading…' : logo.uri ? 'Change logo' : 'Add a logo (optional)'}
-        </Text>
+        <PhotoButton
+          image={logo}
+          name={trimmed || 'New community'}
+          shape="rounded"
+          size={84}
+          noun="logo"
+          emptyHint="Add a logo (optional)"
+        />
 
         <SectionLabel className="mb-2 mt-6">Name</SectionLabel>
         <TextField
@@ -201,15 +179,6 @@ export function CommunityForm({
           hint="Optional, but it helps people find you."
         />
       </KeyboardAwareScrollView>
-
-      <ActionSheet
-        visible={logoMenu}
-        onClose={() => setLogoMenu(false)}
-        actions={[
-          { label: 'Choose a new logo', onPress: () => void logo.pick() },
-          { label: 'Remove logo', destructive: true, onPress: logo.remove },
-        ]}
-      />
 
       <Footer>
         <Button label={pending ? pendingLabel : submitLabel} inactive={!ready} onPress={submit} />

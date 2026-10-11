@@ -1,0 +1,121 @@
+import * as DropdownMenu from '@rn-primitives/dropdown-menu';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+
+import { cn } from '@/lib/cn';
+import { colors } from '@/theme';
+import { MoreIcon } from './icons';
+
+export interface MenuItem {
+  label: string;
+  onPress: () => void;
+  /** Red, for actions like Block or Delete (which then ask to confirm). */
+  destructive?: boolean;
+  icon?: ReactNode;
+}
+
+interface MenuProps {
+  items: MenuItem[];
+  /** What the button is called for screen readers, e.g. "More options". */
+  label: string;
+  /** The button's look; a round ⋯ by default. */
+  trigger?: ReactNode;
+  /** The ⋯ button floats over photos ("glass") or sits on the page ("solid"). */
+  tone?: 'glass' | 'solid';
+  /** Which edge of the button the menu lines up with. */
+  align?: 'start' | 'end';
+}
+
+/**
+ * A small menu that opens next to the button that opened it (a popover),
+ * for a few short actions. Longer choices, and confirmations, use a drawer.
+ * Built on @rn-primitives' dropdown menu: placement, flipping at the screen
+ * edge, closing on an outside tap and screen reader roles come from there.
+ */
+export function Menu({ items, label, trigger, tone = 'solid', align = 'end' }: MenuProps) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger accessibilityLabel={label} hitSlop={6}>
+        {trigger ?? (
+          <View
+            className={cn(
+              'h-11 w-11 items-center justify-center rounded-full',
+              tone === 'glass' ? 'bg-[rgba(11,12,11,0.6)]' : 'bg-surface',
+            )}
+          >
+            <MoreIcon />
+          </View>
+        )}
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Overlay style={StyleSheet.absoluteFill}>
+          <DropdownMenu.Content align={align} sideOffset={6} insets={INSETS}>
+            <Animated.View
+              entering={ZoomIn.duration(140)}
+              exiting={FadeOut.duration(100)}
+              style={styles.card}
+            >
+              {items.map((item, i) => (
+                // asChild: our Pressable is the item, so its pressed style applies everywhere.
+                <DropdownMenu.Item
+                  key={item.label}
+                  asChild
+                  onPress={item.onPress}
+                  textValue={item.label}
+                >
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.item,
+                      i > 0 && styles.divider,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    {item.icon ? <View className="w-5 items-center">{item.icon}</View> : null}
+                    <Text
+                      className={cn(
+                        'font-sans-medium text-[15.5px]',
+                        item.destructive ? 'text-danger' : 'text-ink',
+                      )}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                </DropdownMenu.Item>
+              ))}
+            </Animated.View>
+          </DropdownMenu.Content>
+        </DropdownMenu.Overlay>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+/** Keeps the menu clear of the screen's edges. */
+const INSETS = { top: 12, bottom: 12, left: 12, right: 12 };
+
+const styles = StyleSheet.create({
+  card: {
+    minWidth: 210,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors['surface-raised'],
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 12,
+  },
+  item: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  pressed: { backgroundColor: colors.surface },
+});

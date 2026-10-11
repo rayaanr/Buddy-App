@@ -1,30 +1,26 @@
 import { LIMITS, type Place, type Availability, type Interest } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
 import { AvailabilityChips, InterestGrid } from '@/components/onboarding/InterestPicker';
 import {
-  ActionSheet,
-  Avatar,
   Button,
-  CameraIcon,
   Footer,
   Heading,
   KeyboardAwareScrollView,
   KeyboardScreen,
-  PressableScale,
   QueryFallback,
   ScreenHeader,
   SectionLabel,
   TextField,
 } from '@/components/ui';
+import { PhotoButton } from '@/components/create/PhotoButton';
 import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { toast } from '@/store/ui';
-import { colors } from '@/theme';
 
 /** Profile → Edit profile: photo, name, bio, home town, interests and when you're free, saved together. */
 export default function EditProfileScreen() {
@@ -48,7 +44,6 @@ function EditProfileForm({ me }: { me: Saved }) {
   const [bio, setBio] = useState(me.bio);
   const photo = usePickedImage('avatar', me.avatarUrl);
   const uploading = photo.uploading;
-  const [photoMenu, setPhotoMenu] = useState(false);
   const [town, setTown] = useState(me.place);
   const [interests, setInterests] = useState(me.interests);
   const [availability, setAvailability] = useState(me.availability);
@@ -85,26 +80,7 @@ function EditProfileForm({ me }: { me: Saved }) {
       >
         <Heading size="page">Edit profile</Heading>
 
-        <PressableScale
-          onPress={() => (photo.uri ? setPhotoMenu(true) : void photo.pick())}
-          disabled={uploading}
-          accessibilityRole="button"
-          accessibilityLabel={photo.uri ? 'Change photo' : 'Add a photo'}
-          className="mt-6 self-center"
-        >
-          <Avatar uri={photo.uri ?? undefined} name={name || me.name} size={96} />
-          {uploading ? (
-            <View className="absolute inset-0 items-center justify-center rounded-full bg-black/50">
-              <ActivityIndicator color={colors.ink} />
-            </View>
-          ) : null}
-          <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-2 border-bg bg-lime">
-            <CameraIcon />
-          </View>
-        </PressableScale>
-        <Text className="mt-2 text-center font-sans text-[13.5px] text-muted">
-          {uploading ? 'Uploading…' : photo.uri ? 'Change photo' : 'Add a photo'}
-        </Text>
+        <PhotoButton image={photo} name={name || me.name} shape="circle" size={96} noun="photo" />
 
         <SectionLabel className="mb-2 mt-6">Name</SectionLabel>
         <TextField
@@ -151,19 +127,6 @@ function EditProfileForm({ me }: { me: Saved }) {
           onPress={save}
         />
       </Footer>
-
-      <ActionSheet
-        visible={photoMenu}
-        onClose={() => setPhotoMenu(false)}
-        actions={[
-          { label: 'Choose a new photo', onPress: () => void photo.pick() },
-          {
-            label: 'Remove photo',
-            destructive: true,
-            onPress: photo.remove,
-          },
-        ]}
-      />
     </KeyboardScreen>
   );
 }

@@ -38,13 +38,13 @@ import {
   Footer,
   Heading,
   IconButton,
-  MoreButton,
+  Menu,
+  type MenuItem,
   Photo,
   PressableScale,
   QueryFallback,
   Scrim,
   ShareIcon,
-  type SheetAction,
   successHaptic,
   useEnterOnChange,
 } from '@/components/ui';
@@ -79,7 +79,6 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const cancel = useCancelActivity();
   const { top } = useScreenInsets();
   const started = useHasPassed(a.startsAt);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   // Hosts can change or call off an activity until it starts.
   const canManage = a.viewer.hosting && !a.cancelled && !started;
@@ -151,7 +150,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
     );
 
   // ⋯ menu: what you can do depends on whether you host, are going, or are browsing.
-  const menu: SheetAction[] = [
+  const menu: MenuItem[] = [
     ...(isIn
       ? [{ label: a.viewer.chatMuted ? 'Unmute group chat' : 'Mute group chat', onPress: onMute }]
       : []),
@@ -300,7 +299,7 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
               onPress={() => void shareActivity(a)}
             />
           )}
-          {menu.length ? <MoreButton tone="glass" onPress={() => setMenuOpen(true)} /> : null}
+          {menu.length ? <Menu tone="glass" label="More options" items={menu} /> : null}
         </View>
       </View>
 
@@ -366,7 +365,6 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
         </AnimatedView>
       </Footer>
 
-      <ActionSheet visible={menuOpen} onClose={() => setMenuOpen(false)} actions={menu} />
       <ActionSheet
         visible={confirmCancel}
         onClose={() => setConfirmCancel(false)}

@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
-import { ArrowLeftIcon, MoreIcon } from './icons';
+import { ArrowLeftIcon } from './icons';
 import { PressableScale } from './Motion';
 
 interface IconButtonProps {
@@ -65,11 +65,6 @@ export function BackButton({ onPress, ...rest }: HeaderButtonProps) {
       {...rest}
     />
   );
-}
-
-/** "⋯": opens less common actions (report, block) without crowding the screen. */
-export function MoreButton({ onPress, ...rest }: HeaderButtonProps & { onPress: () => void }) {
-  return <IconButton icon={<MoreIcon />} label="More options" onPress={onPress} {...rest} />;
 }
 
 /** The plain screen header: Back on the left, an optional button on the right. */

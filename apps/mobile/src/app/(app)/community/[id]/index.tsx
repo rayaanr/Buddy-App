@@ -12,7 +12,7 @@ import {
   BackButton,
   Button,
   Heading,
-  MoreButton,
+  Menu,
   Photo,
   QueryFallback,
   Scrim,
@@ -30,7 +30,6 @@ export default function CommunityScreen() {
   const community = useCommunity(id);
   const { toggle, pending } = useCommunityToggle();
   const { top } = useScreenInsets();
-  const [menu, setMenu] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const remove = useDeleteCommunity();
 
@@ -45,7 +44,35 @@ export default function CommunityScreen() {
         <Scrim from={0.3} topOpacity={0.2} opacity={1} />
         <View className="absolute inset-x-[18px] flex-row justify-between" style={{ top: top(56) }}>
           <BackButton tone="glass" />
-          <MoreButton tone="glass" onPress={() => setMenu(true)} />
+          <Menu
+            tone="glass"
+            label="More options"
+            items={
+              c.isCreator
+                ? [
+                    {
+                      label: 'Edit community',
+                      onPress: () => router.push(`/community/${c.id}/edit`),
+                    },
+                    {
+                      label: 'Delete community',
+                      destructive: true,
+                      onPress: () => setConfirmDelete(true),
+                    },
+                  ]
+                : [
+                    {
+                      label: 'Report community',
+                      destructive: true,
+                      onPress: () =>
+                        router.push({
+                          pathname: '/report',
+                          params: { type: 'community', id: c.id },
+                        }),
+                    },
+                  ]
+            }
+          />
         </View>
       </Photo>
 
@@ -160,29 +187,6 @@ export default function CommunityScreen() {
         ) : null}
       </View>
 
-      <ActionSheet
-        visible={menu}
-        onClose={() => setMenu(false)}
-        actions={
-          c.isCreator
-            ? [
-                { label: 'Edit community', onPress: () => router.push(`/community/${c.id}/edit`) },
-                {
-                  label: 'Delete community',
-                  destructive: true,
-                  onPress: () => setConfirmDelete(true),
-                },
-              ]
-            : [
-                {
-                  label: 'Report community',
-                  destructive: true,
-                  onPress: () =>
-                    router.push({ pathname: '/report', params: { type: 'community', id: c.id } }),
-                },
-              ]
-        }
-      />
       <ActionSheet
         visible={confirmDelete}
         onClose={() => setConfirmDelete(false)}

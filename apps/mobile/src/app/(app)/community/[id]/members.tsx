@@ -11,6 +11,7 @@ import {
   Heading,
   LoadError,
   Loading,
+  Menu,
   MoreIcon,
   ScreenHeader,
 } from '@/components/ui';
@@ -66,15 +67,21 @@ export default function CommunityMembersScreen() {
                 ) : null}
               </Pressable>
               {canRemove && !m.isCreator ? (
-                <Pressable
-                  onPress={() => setRemoving(m)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Options for ${m.name}`}
-                  hitSlop={8}
-                  className="ml-2 h-9 w-9 items-center justify-center rounded-full active:bg-surface"
-                >
-                  <MoreIcon size={18} />
-                </Pressable>
+                <Menu
+                  label={`Options for ${m.name}`}
+                  trigger={
+                    <View className="ml-2 h-9 w-9 items-center justify-center rounded-full">
+                      <MoreIcon size={18} />
+                    </View>
+                  }
+                  items={[
+                    {
+                      label: 'Remove from community',
+                      destructive: true,
+                      onPress: () => setRemoving(m),
+                    },
+                  ]}
+                />
               ) : null}
             </View>
           ))}
