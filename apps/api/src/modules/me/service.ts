@@ -146,7 +146,7 @@ export async function deleteAccount(
 ) {
   return db.transaction(async (tx) => {
     const [me] = await tx
-      .select({ name: user.name, avatarKey: profiles.avatarKey })
+      .select({ name: user.name, email: user.email, avatarKey: profiles.avatarKey })
       .from(user)
       .leftJoin(profiles, eq(profiles.userId, user.id))
       .where(eq(user.id, userId));
@@ -183,6 +183,29 @@ export async function deleteAccount(
     }
     // Nobody is left to post next week's.
     await tx.update(activities).set({ repeatsWeekly: false }).where(eq(activities.hostId, userId));
+
+    // Photos they sent in chats go too (the messages stay, as "Deleted
+    // account", showing the photo as no longer available), except in
+    // messages someone has reported, which moderators still need to see.
+    const sentPhotos = await tx.execute<{ image_key: string }>(sql`
+      with old as (
+        select m.id, m.image_key from messages m
+        where m.sender_id = ${userId} and m.image_key is not null
+          and not exists (select 1 from reports r where r.message_id = m.id and r.status = 'open')
+        for update
+      )
+      update messages set image_key = null
+      from old where messages.id = old.id
+      returning old.image_key`);
+    photoKeys.push(...sentPhotos.map((r) => r.image_key));
+    // @mentions of them no longer point anywhere.
+    await tx.execute(
+      sql`update messages set mentions = array_remove(mentions, ${userId}::uuid) where ${userId}::uuid = any(mentions)`,
+    );
+    // Sign-in codes still waiting for their email address.
+    await tx.execute(
+      sql`delete from verification where identifier = ${me.email} or identifier like ${`%-otp-${me.email}`}`,
+    );
 
     await tx.delete(user).where(eq(user.id, userId));
     return { cancelled, photoKeys };

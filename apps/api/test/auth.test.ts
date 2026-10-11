@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   activities,
+  activityFeedback,
   activityMembers,
+  messages,
   profiles,
   reports,
   user,
@@ -227,6 +229,78 @@ describe('DELETE /v1/me', () => {
     await t.call('/v1/me', { method: 'DELETE', headers: nethmi.headers });
     const [row] = await t.deps.db.select().from(reports).where(eq(reports.id, filed.body.id));
     expect(row).toMatchObject({ reason: 'spam', targetUserId: null });
+  });
+
+  it('leaves nothing of theirs behind in chats, roll calls, searches or sign-in codes', async () => {
+    const run = await nethmisRun();
+    const db = t.deps.db;
+    const nethmi = await t.signIn('nethmi@buddy.test');
+    const guest = await t.signIn(run.guestEmail);
+    const [{ id: photoMsg }] = (await db
+      .insert(messages)
+      .values({
+        id: randomUUID(),
+        activityId: run.id,
+        senderId: nethmi.userId,
+        body: 'Route map',
+        imageKey: `chat/${nethmi.userId}/map.jpg`,
+        imageWidth: 800,
+        imageHeight: 600,
+      })
+      .returning({ id: messages.id })) as [{ id: string }];
+    const [{ id: mentionMsg }] = (await db
+      .insert(messages)
+      .values({
+        id: randomUUID(),
+        activityId: run.id,
+        senderId: guest.userId,
+        body: 'See you @Nethmi',
+        mentions: [nethmi.userId],
+      })
+      .returning({ id: messages.id })) as [{ id: string }];
+    await db
+      .update(activityMembers)
+      .set({ attended: true })
+      .where(eq(activityMembers.userId, nethmi.userId));
+    await db
+      .update(profiles)
+      .set({ hiddenInterests: ['Yoga'] })
+      .where(eq(profiles.userId, nethmi.userId));
+    await db.insert(activityFeedback).values({
+      activityId: run.id,
+      userId: nethmi.userId,
+      hostId: guest.userId,
+      wouldGoAgain: true,
+    });
+    await db.insert(verification).values({
+      identifier: 'sign-in-otp-nethmi@buddy.test',
+      value: '123456:0',
+      expiresAt: new Date(Date.now() + 300_000),
+    });
+
+    await t.call('/v1/me', { method: 'DELETE', headers: nethmi.headers });
+
+    const [photo] = await db.select().from(messages).where(eq(messages.id, photoMsg));
+    // The message stays (as "Deleted account"); the photo doesn't.
+    expect(photo).toMatchObject({ senderId: null, imageKey: null, body: 'Route map' });
+    const [mention] = await db.select().from(messages).where(eq(messages.id, mentionMsg));
+    expect(mention!.mentions).toEqual([]);
+    expect(
+      await db.select().from(activityMembers).where(eq(activityMembers.userId, nethmi.userId)),
+    ).toHaveLength(0);
+    expect(
+      await db.select().from(activityFeedback).where(eq(activityFeedback.userId, nethmi.userId)),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .select()
+        .from(verification)
+        .where(eq(verification.identifier, 'sign-in-otp-nethmi@buddy.test')),
+    ).toHaveLength(0);
+    const found = await t.call<{ people: { id: string }[] }>('/v1/users/search?q=Nethmi', {
+      headers: guest.headers,
+    });
+    expect(found.body.people.some((p) => p.id === nethmi.userId)).toBe(false);
   });
 
   it('stops their weekly series', async () => {

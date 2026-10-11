@@ -10,3 +10,4 @@ export * from './schemas/community';
 export * from './schemas/chat';
 export * from './schemas/upload';
 export * from './schemas/safety';
+export * from './schemas/admin';

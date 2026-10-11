@@ -10,8 +10,9 @@ import { idParam, validate } from '../../lib/validate';
 import { createAnnouncer } from '../activities/announce';
 import { roomOf } from '../chat/service';
 import { liftSuspension, listReports, resolveReport } from './service';
+import { adminStats } from './stats';
 
-/** Moderators act on reports from the app (Settings → Moderation). */
+/** Moderators act on reports and see how Buddy is doing, from the app (Settings → Admin). */
 export function moderationRoutes(deps: Deps) {
   const { db, urls, env, hub, logger } = deps;
   const announce = createAnnouncer(deps);
@@ -24,6 +25,7 @@ export function moderationRoutes(deps: Deps) {
 
   return new Hono<AppEnv>()
     .use(requireUser, requireAdmin)
+    .get('/stats', async (c) => c.json(await adminStats(db)))
     .get('/reports', validate('query', adminReportsQuery), async (c) =>
       c.json({ reports: await listReports(db, urls, c.req.valid('query').status) }),
     )

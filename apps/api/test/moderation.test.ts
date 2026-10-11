@@ -1,4 +1,4 @@
-import type { ActivityDetail, AdminReport, Me } from '@buddy/shared';
+import type { ActivityDetail, AdminReport, Me, AdminStats } from '@buddy/shared';
 import { atLocalTime } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
@@ -148,5 +148,25 @@ describe('acting on reports', () => {
     const mod = await moderator();
     const report = (await openReports(mod.headers)).find((r) => r.person?.id === someone.userId)!;
     expect((await resolve(mod.headers, report.id, { removeContent: true })).status).toBe(400);
+  });
+});
+
+describe('admin dashboard', () => {
+  it('gives moderators the numbers, and nobody else', async () => {
+    const mod = await t.signIn('mod@buddy.test');
+    const someone = await t.signIn('someone@buddy.test');
+    expect((await t.call('/v1/admin/stats', { headers: someone.headers })).status).toBe(403);
+
+    const res = await t.call<AdminStats>('/v1/admin/stats', { headers: mod.headers });
+    expect(res.status).toBe(200);
+    const s = res.body;
+    // The seed has people, activities and communities; both of us signed up just now.
+    expect(s.people.total).toBeGreaterThan(5);
+    expect(s.people.new7).toBeGreaterThanOrEqual(2);
+    expect(s.activities.upcoming).toBeGreaterThan(0);
+    expect(s.communities.total).toBeGreaterThan(0);
+    expect(s.daily).toHaveLength(14);
+    expect(s.daily.at(-1)!.signups).toBeGreaterThanOrEqual(2);
+    expect(s.daily[0]!.day < s.daily.at(-1)!.day).toBe(true);
   });
 });

@@ -39,7 +39,7 @@ export const privacyHtml = (contact: string) => `
 <p>Reports go to our moderators, who review them within 24 hours and may remove content or accounts that break the rules.</p>
 
 <h2>Deleting your account</h2>
-<p>Settings → Delete account removes your account, profile, photos and email address straight away. Upcoming activities you host are cancelled. Messages you sent stay in their chats as “Deleted account”, and reports about you are kept for moderation.</p>
+<p>Settings → Delete account removes your account, profile, photos (including ones you sent in chats) and email address straight away. Upcoming activities you host are cancelled. Messages you sent stay in their chats as “Deleted account”, and reports about you are kept for moderation.</p>
 
 <h2>Contact</h2>
 <p>Questions or requests: <a href="mailto:${contact}">${contact}</a>.</p>

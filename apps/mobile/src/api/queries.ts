@@ -526,6 +526,13 @@ export function useDeleteCommunity() {
 
 // ── Moderation (admins only) ─────────────────────────────────────────────
 
+/** Admin → Dashboard: how Buddy is doing. */
+export const useAdminStats = () =>
+  useQuery({
+    queryKey: ['admin', 'stats'] as const,
+    queryFn: async () => unwrap(api.admin.stats.$get()),
+  });
+
 export const useAdminReports = (status: 'open' | 'resolved') =>
   useQuery({
     queryKey: keys.reports(status),

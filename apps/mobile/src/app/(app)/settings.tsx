@@ -70,6 +70,7 @@ export default function SettingsScreen() {
         {me.data?.isAdmin ? (
           <>
             <SectionLabel className="mb-1 mt-7">Buddy team</SectionLabel>
+            <Row label="Dashboard" onPress={() => router.push('/admin')} />
             <Row label="Moderation" onPress={() => router.push('/moderation')} />
           </>
         ) : null}
