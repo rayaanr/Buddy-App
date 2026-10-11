@@ -10,6 +10,7 @@ const CROP = {
   avatar: { aspect: [1, 1] as [number, number], shape: 'oval' as const },
   cover: { aspect: [16, 10] as [number, number], shape: 'rectangle' as const },
   logo: { aspect: [1, 1] as [number, number], shape: 'rectangle' as const },
+  chat: { aspect: [4, 3] as [number, number], shape: 'rectangle' as const },
 };
 
 /**

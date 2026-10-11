@@ -1,4 +1,11 @@
-import { serverEvent, type ChatMessage, type ChatPreview, type MessagesPage } from '@buddy/shared';
+import {
+  serverEvent,
+  type ChatMessage,
+  type ChatPoll,
+  type ChatPreview,
+  type MessagesPage,
+  type PollInput,
+} from '@buddy/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { randomUUID } from 'expo-crypto';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -8,6 +15,7 @@ import { API_URL } from '@/config';
 import { sessionCookie } from './auth-client';
 import { api, unwrap } from './client';
 import { askForPush } from './push';
+import { uploadSized } from './upload';
 import { keys } from './queries';
 
 export type MessageStatus = 'sending' | 'failed' | 'sent' | 'seen';
@@ -17,6 +25,24 @@ export interface ChatItem {
   message: ChatMessage;
   mine: boolean;
   status: MessageStatus | null;
+}
+
+/** What the composer sends: text, a photo (text is its caption) or a poll. */
+export interface ChatDraft {
+  body: string;
+  /** People tagged as @FirstName in the text. */
+  mentions?: { id: string; name: string }[];
+  photo?: { uri: string; width: number; height: number; mimeType?: string | null };
+  poll?: PollInput;
+}
+
+/** A message on its way: shown at once, retried with the same id if it fails. */
+interface Pending {
+  message: ChatMessage;
+  failed: boolean;
+  draft: ChatDraft;
+  /** The photo, once uploaded. */
+  uploaded?: { key: string; width: number; height: number };
 }
 
 const TYPING_SHOW_MS = 3_000;
@@ -70,9 +96,7 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     queryFn: () => unwrap(chat.messages.$get({ param: { id: roomId }, query: {} })),
   });
 
-  const [pending, setPending] = useState<Map<string, { message: ChatMessage; failed: boolean }>>(
-    new Map(),
-  );
+  const [pending, setPending] = useState<Map<string, Pending>>(new Map());
   const [typing, setTyping] = useState<{ name: string; until: number } | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const lastTypingSent = useRef(0);
@@ -140,6 +164,13 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
           }
         } else if (event.type === 'typing') {
           setTyping({ name: event.user.name.split(' ')[0]!, until: Date.now() + TYPING_SHOW_MS });
+        } else if (event.type === 'poll') {
+          update((p) => ({
+            ...p,
+            messages: p.messages.map((m) =>
+              m.id === event.messageId ? { ...m, poll: event.poll } : m,
+            ),
+          }));
         } else if (event.type === 'removed') {
           // A moderator took it down.
           update((p) => ({
@@ -223,11 +254,37 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
   }, [roomId, latestFromOthers?.id]);
 
   // ── Sending ──────────────────────────────────────────────────────────
+  /** Uploads the photo (once) then posts; on failure the message stays, marked to retry. */
   const post = useCallback(
-    async (id: string, body: string) => {
+    async (item: Pending) => {
+      const id = item.message.id;
+      const { draft } = item;
       try {
+        let photo = item.uploaded;
+        if (draft.photo && !photo) {
+          photo = await uploadSized('chat', draft.photo);
+          // Kept, so a retry doesn't upload it again.
+          const uploaded = photo;
+          setPending((prev) => {
+            const now = prev.get(id);
+            return now ? new Map(prev).set(id, { ...now, uploaded }) : prev;
+          });
+        }
         const message = await unwrap(
-          chat.messages.$post({ param: { id: roomId }, json: { id, body } }),
+          chat.messages.$post({
+            param: { id: roomId },
+            json: {
+              id,
+              body: draft.body,
+              mentions: draft.mentions?.map((m) => m.id) ?? [],
+              ...(photo && {
+                imageKey: photo.key,
+                imageWidth: photo.width,
+                imageHeight: photo.height,
+              }),
+              ...(draft.poll && { poll: draft.poll }),
+            },
+          }),
         );
         update((p) => ({ ...p, messages: merge(p.messages, [message]) }));
         setPending((prev) => {
@@ -239,9 +296,9 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
         void askForPush();
       } catch {
         setPending((prev) => {
-          const item = prev.get(id);
-          if (!item) return prev;
-          return new Map(prev).set(id, { ...item, failed: true });
+          const now = prev.get(id);
+          if (!now) return prev;
+          return new Map(prev).set(id, { ...now, failed: true });
         });
       }
     },
@@ -249,10 +306,11 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     [roomId, update],
   );
 
+  /** Sends text, a photo (the text is its caption) or a poll; it shows straight away. */
   const send = useCallback(
-    (text: string) => {
-      const body = text.trim();
-      if (!body || !myId) return;
+    (draft: ChatDraft) => {
+      const body = draft.body.trim();
+      if ((!body && !draft.photo && !draft.poll) || !myId) return;
       const id = randomUUID();
       const message: ChatMessage = {
         id,
@@ -261,10 +319,26 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
         kind: 'user',
         sender: { id: myId, name: '', avatarUrl: null },
         body,
+        image: draft.photo
+          ? { url: draft.photo.uri, width: draft.photo.width, height: draft.photo.height }
+          : null,
+        mentions: draft.mentions ?? [],
+        poll: draft.poll
+          ? {
+              question: draft.poll.question,
+              multiple: draft.poll.multiple,
+              options: draft.poll.options.map((text, k) => ({
+                id: `o${k + 1}`,
+                text,
+                voterIds: [],
+              })),
+            }
+          : null,
         createdAt: new Date().toISOString(),
       };
-      setPending((prev) => new Map(prev).set(id, { message, failed: false }));
-      void post(id, body);
+      const item: Pending = { message, failed: false, draft: { ...draft, body } };
+      setPending((prev) => new Map(prev).set(id, item));
+      void post(item);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [roomId, myId, post],
@@ -276,9 +350,47 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
       const item = pending.get(id);
       if (!item) return;
       setPending((prev) => new Map(prev).set(id, { ...item, failed: false }));
-      void post(id, item.message.body);
+      void post(item);
     },
     [pending, post],
+  );
+
+  /** Answers a poll (or changes or clears your answer); shows straight away. */
+  const vote = useCallback(
+    async (messageId: string, optionIds: string[]) => {
+      if (!myId) return;
+      const setPoll = (fn: (poll: ChatPoll) => ChatPoll) =>
+        update((p) => ({
+          ...p,
+          messages: p.messages.map((m) =>
+            m.id === messageId && m.poll ? { ...m, poll: fn(m.poll) } : m,
+          ),
+        }));
+      setPoll((poll) => ({
+        ...poll,
+        options: poll.options.map((o) => ({
+          ...o,
+          voterIds: [
+            ...o.voterIds.filter((v) => v !== myId),
+            ...(optionIds.includes(o.id) ? [myId] : []),
+          ],
+        })),
+      }));
+      try {
+        const message = await unwrap(
+          chat.messages[':messageId'].vote.$post({
+            param: { id: roomId, messageId },
+            json: { optionIds },
+          }),
+        );
+        setPoll(() => message.poll!);
+      } catch (err) {
+        void qc.invalidateQueries({ queryKey: key });
+        throw err;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [roomId, myId, update],
   );
 
   const notifyTyping = useCallback(() => {
@@ -321,6 +433,7 @@ export function useChat(room: ChatRoom, myId: string | undefined) {
     typingName: typing?.name ?? null,
     send,
     retry,
+    vote,
     notifyTyping,
   };
 }

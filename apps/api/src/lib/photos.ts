@@ -15,7 +15,7 @@ interface PhotoDeps {
 
 /**
  * Deletes uploaded photos nothing points to any more: a replaced cover, logo
- * or profile photo, or those of a deleted community. Takes public URLs or
+ * or profile photo, those of a deleted community, or a removed chat photo. Takes public URLs or
  * storage keys; stock and seed photos (not ours) are skipped. A photo still in
  * use elsewhere stays: weekly activities share one cover between occurrences.
  * Runs after the change is saved, and never throws.
@@ -29,7 +29,7 @@ export async function forgetPhotos(
     ...new Set(
       refs
         .map((r) =>
-          r && /^(avatars|covers|logos)\//.test(r) ? r : keyFromUrl(r ?? null, publicUrl),
+          r && /^(avatars|covers|logos|chat)\//.test(r) ? r : keyFromUrl(r ?? null, publicUrl),
         )
         .filter((k): k is string => !!k),
     ),

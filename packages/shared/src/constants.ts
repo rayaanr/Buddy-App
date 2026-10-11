@@ -57,6 +57,12 @@ export const LIMITS = {
   /** Furthest ahead an activity can be scheduled. */
   maxDaysAhead: 90,
   messageMax: 2000,
+  /** People one message can @mention. */
+  mentionsMax: 20,
+  pollQuestionMax: 200,
+  pollOptionMax: 80,
+  pollOptionsMin: 2,
+  pollOptionsMax: 6,
   /** People one invite can go to, and the note's length. */
   invitesMax: 20,
   inviteNoteMax: 200,

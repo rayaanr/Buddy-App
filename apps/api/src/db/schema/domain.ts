@@ -306,7 +306,23 @@ export const messages = pgTable(
     /** Null for system lines ("Kavindu joined"), and once the sender deleted their account. */
     senderId: uuid().references(() => user.id, { onDelete: 'set null' }),
     kind: text().notNull().default('user'),
+    /** The text; empty for a photo without a caption or a poll. */
     body: text().notNull(),
+    /** A photo (R2 key) and its size, so the app can lay it out before it loads. */
+    imageKey: text(),
+    imageWidth: integer(),
+    imageHeight: integer(),
+    /** People tagged with @Name (members of the chat when it was sent). */
+    mentions: uuid()
+      .array()
+      .notNull()
+      .default(sql`'{}'::uuid[]`),
+    /** A poll: its question and options (votes are in poll_votes). */
+    poll: jsonb().$type<{
+      question: string;
+      options: { id: string; text: string }[];
+      multiple: boolean;
+    }>(),
     ...timestamps,
   },
   (t) => [
@@ -316,6 +332,25 @@ export const messages = pgTable(
     index('messages_sender_idx').on(t.senderId),
     check('messages_kind_check', sql`${t.kind} in ('user', 'system')`),
     check('messages_chat_check', sql`(${t.activityId} is null) <> (${t.communityId} is null)`),
+  ],
+);
+
+/** Answers to chat polls: one row per person per option they picked. */
+export const pollVotes = pgTable(
+  'poll_votes',
+  {
+    messageId: uuid()
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    userId: uuid()
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    optionId: text().notNull(),
+    createdAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.messageId, t.userId, t.optionId] }),
+    index('poll_votes_user_idx').on(t.userId),
   ],
 );
 

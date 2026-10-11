@@ -7,6 +7,7 @@ import {
   firstName,
   isDeletedAccount,
   LIMITS,
+  messageSummary,
   type MyActivity,
   placeLabel,
   type RemovalReason,
@@ -633,6 +634,8 @@ export async function myActivities(
       activityId: messages.activityId,
       kind: messages.kind,
       body: messages.body,
+      imageKey: messages.imageKey,
+      poll: messages.poll,
       senderId: messages.senderId,
       senderName: user.name,
     })
@@ -659,7 +662,11 @@ export async function myActivities(
         ? {
             kind: m.kind as 'user' | 'system',
             senderName: m.senderName ?? DELETED_ACCOUNT.name,
-            body: m.body,
+            body: messageSummary({
+              body: m.body,
+              hasImage: !!m.imageKey,
+              pollQuestion: m.poll?.question,
+            }),
             mine: m.senderId === userId,
           }
         : null,

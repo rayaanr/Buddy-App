@@ -155,6 +155,13 @@
       "when": 1791679346189,
       "tag": "0021_community_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791694834233,
+      "tag": "0022_chat_photos_mentions_polls",
+      "breakpoints": true
     }
   ]
 }

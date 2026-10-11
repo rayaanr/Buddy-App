@@ -4,7 +4,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { api, ApiRequestError, unwrap } from './client';
 
 /** Longest edge kept: covers fill the screen width at 3x; avatars and logos are small. */
-const MAX_EDGE: Record<UploadKind, number> = { avatar: 800, cover: 1600, logo: 600 };
+const MAX_EDGE: Record<UploadKind, number> = { avatar: 800, cover: 1600, logo: 600, chat: 1600 };
 
 /**
  * Phone photos are often 4000px and several MB. Scaled down and re-saved as
@@ -21,21 +21,25 @@ async function shrink(kind: UploadKind, image: { uri: string; width?: number; he
   const rendered = await context.renderAsync();
   try {
     const saved = await rendered.saveAsync({ compress: 0.8, format: SaveFormat.JPEG });
-    return { uri: saved.uri, mimeType: 'image/jpeg' };
+    return { uri: saved.uri, mimeType: 'image/jpeg', width: saved.width, height: saved.height };
   } finally {
     rendered.release();
     context.release();
   }
 }
 
+type Picked = { uri: string; mimeType?: string | null; width?: number; height?: number };
+
 /**
  * Uploads a picked image straight to storage (the API hands out a one-file
  * URL) and returns the key to save as avatarKey / coverKey.
  */
-export async function uploadImage(
-  kind: UploadKind,
-  picked: { uri: string; mimeType?: string | null; width?: number; height?: number },
-) {
+export async function uploadImage(kind: UploadKind, picked: Picked) {
+  return (await uploadSized(kind, picked)).key;
+}
+
+/** Like uploadImage, also returning the uploaded size (chat photos are laid out with it). */
+export async function uploadSized(kind: UploadKind, picked: Picked) {
   // If shrinking fails for some reason, try the original: it may still fit.
   const image = await shrink(kind, picked).catch(() => picked);
   // fetch reads local file:// and blob: URIs on every platform.
@@ -61,5 +65,5 @@ export async function uploadImage(
       'upload_failed',
       'The upload didn’t go through. Try again.',
     );
-  return ticket.key;
+  return { key: ticket.key, width: image.width ?? 1, height: image.height ?? 1 };
 }

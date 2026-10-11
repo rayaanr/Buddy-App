@@ -1,4 +1,4 @@
-import type { ChatPreview } from '@buddy/shared';
+import { type ChatPreview, messageSummary } from '@buddy/shared';
 import { sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
@@ -18,6 +18,8 @@ interface Row extends Record<string, unknown> {
   joined_at: Date;
   lm_kind: 'user' | 'system' | null;
   lm_body: string | null;
+  lm_image: string | null;
+  lm_question: string | null;
   lm_sender: string | null;
   lm_name: string | null;
   lm_at: Date | null;
@@ -44,7 +46,8 @@ export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]
   const rows = await db.execute<Row>(sql`
     select 'activity' as kind, a.id, a.title, a.cover_url as image_url, a.starts_at,
            a.cancelled_at is not null as cancelled, m.chat_muted as muted, m.joined_at,
-           lm.kind as lm_kind, lm.body as lm_body, lm.sender_id as lm_sender,
+           lm.kind as lm_kind, lm.body as lm_body, lm.image_key as lm_image,
+           lm.poll->>'question' as lm_question, lm.sender_id as lm_sender,
            su.name as lm_name, lm.created_at as lm_at,
            (select count(*)::int from messages x
              where x.activity_id = a.id and ${fromOthers}
@@ -64,7 +67,8 @@ export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]
     union all
 
     select 'community', c.id, c.name, c.logo_url, null, false, m.chat_muted, m.joined_at,
-           lm.kind, lm.body, lm.sender_id, su.name, lm.created_at,
+           lm.kind, lm.body, lm.image_key, lm.poll->>'question', lm.sender_id, su.name,
+           lm.created_at,
            (select count(*)::int from messages x
              where x.community_id = c.id and ${fromOthers}
                and ${readAfter('r', 'm')})
@@ -95,7 +99,11 @@ export async function listChats(db: Db, viewerId: string): Promise<ChatPreview[]
             ? {
                 kind: r.lm_kind,
                 senderName: r.lm_name,
-                body: r.lm_body,
+                body: messageSummary({
+                  body: r.lm_body,
+                  hasImage: !!r.lm_image,
+                  pollQuestion: r.lm_question,
+                }),
                 mine: r.lm_sender === viewerId,
                 createdAt: iso(r.lm_at),
               }

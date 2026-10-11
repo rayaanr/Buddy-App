@@ -86,6 +86,10 @@ export default function AppLayout() {
       />
       <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen
+        name="new-poll"
+        options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
+      />
+      <Stack.Screen
         name="activity/[id]/invite"
         options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
       />

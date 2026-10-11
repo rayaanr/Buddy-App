@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, Text } from 'react-native';
 
-import { useActivity } from '@/api/queries';
+import { useActivity, useActivityMembers } from '@/api/queries';
 import { ChatView } from '@/components/chat/ChatView';
 import { whenLong } from '@/lib/activity';
 
@@ -9,12 +9,14 @@ import { whenLong } from '@/lib/activity';
 export default function ActivityChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const a = useActivity(id).data;
+  const people = useActivityMembers(id, true).data?.members ?? [];
   return (
     <ChatView
       room={{ kind: 'activity', id }}
       title={a?.title ?? ''}
       subtitle={a ? `${a.goingCount} of ${a.capacity} going` : ''}
       membersOnly="Join this activity to see its chat."
+      people={people}
       banner={
         a ? (
           <Pressable

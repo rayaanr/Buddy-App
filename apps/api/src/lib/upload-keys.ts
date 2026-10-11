@@ -6,7 +6,12 @@ import type { Storage } from './storage';
 
 /** Where uploads go in R2: `avatars/<user id>/<uuid>.<ext>` or `covers/<user id>/<uuid>.<ext>`. */
 
-const FOLDER: Record<UploadKind, string> = { avatar: 'avatars', cover: 'covers', logo: 'logos' };
+const FOLDER: Record<UploadKind, string> = {
+  avatar: 'avatars',
+  cover: 'covers',
+  logo: 'logos',
+  chat: 'chat',
+};
 /** UUID_RE without its anchors, to embed in the key pattern. */
 const UUID = UUID_RE.source.slice(1, -1);
 

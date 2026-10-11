@@ -37,7 +37,10 @@ export function moderationRoutes(deps: Deps) {
         me.id,
         input,
       );
-      await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, removedPhotos);
+      await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, [
+        ...removedPhotos,
+        removedMessage?.imageKey,
+      ]);
       for (const a of cancelled) await announce(a.id, me.id, a.result);
       if (removedMessage) {
         hub.publish(roomOf(removedMessage).id, { type: 'removed', messageId: removedMessage.id });

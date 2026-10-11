@@ -91,7 +91,12 @@ interface Resolved {
   /** Activities cancelled along the way, for the caller to announce. */
   cancelled: { id: string; result: ChangeResult }[];
   /** A removed chat message, for the caller to take out of open chats. */
-  removedMessage: { id: string; activityId: string | null; communityId: string | null } | null;
+  removedMessage: {
+    id: string;
+    activityId: string | null;
+    communityId: string | null;
+    imageKey: string | null;
+  } | null;
   /** A removed community's photos, for the caller to clean up. */
   removedPhotos: string[];
 }
@@ -123,6 +128,7 @@ export async function resolveReport(
             id: messages.id,
             activityId: messages.activityId,
             communityId: messages.communityId,
+            imageKey: messages.imageKey,
           });
         out.removedMessage = message ?? null;
       } else if (report.activityId) {

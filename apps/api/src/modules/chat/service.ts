@@ -4,7 +4,7 @@ import {
   type MessagesPage,
   type SendMessageInput,
 } from '@buddy/shared';
-import { and, asc, desc, eq, gt, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 
 import type { Db } from '../../db/client';
 import {
@@ -15,10 +15,13 @@ import {
   communityChatReads,
   communityMembers,
   messages,
+  pollVotes,
   profiles,
   user,
 } from '../../db/schema';
-import { conflict, forbidden, notFound } from '../../lib/errors';
+import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
+import type { Storage } from '../../lib/storage';
+import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
 import { notBlockedBetween } from '../safety/blocks';
 
@@ -69,10 +72,12 @@ export async function requireMember(db: Db, room: Room, userId: string) {
   return { title: row.title };
 }
 
-/** Attaches sender details to stored messages. */
+/** Attaches senders, @mentioned names, photo URLs and poll votes to stored messages. */
 async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<ChatMessage[]> {
-  const senderIds = [...new Set(rows.map((r) => r.senderId).filter((id): id is string => !!id))];
-  const senders = senderIds.length
+  const peopleIds = [
+    ...new Set(rows.flatMap((r) => [r.senderId, ...r.mentions]).filter((id): id is string => !!id)),
+  ];
+  const people = peopleIds.length
     ? await db
         .select({
           id: user.id,
@@ -82,28 +87,64 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
         })
         .from(user)
         .leftJoin(profiles, eq(profiles.userId, user.id))
-        .where(sql`${user.id} in ${senderIds}`)
+        .where(inArray(user.id, peopleIds))
     : [];
   const byId = new Map(
-    senders.map((s) => [
+    people.map((s) => [
       s.id,
       { id: s.id, name: s.name, avatarUrl: urls.avatar(s.avatarKey, s.avatarUrl) },
     ]),
   );
-  return rows.map((r) => ({
-    id: r.id,
-    activityId: r.activityId,
-    communityId: r.communityId,
-    kind: r.kind as ChatMessage['kind'],
-    // A person's own message whose sender is gone: they deleted their account.
-    sender: r.senderId
-      ? (byId.get(r.senderId) ?? DELETED_ACCOUNT)
-      : r.kind === 'user'
-        ? DELETED_ACCOUNT
+
+  const pollIds = rows.filter((r) => r.poll).map((r) => r.id);
+  const votes = pollIds.length
+    ? await db
+        .select({
+          messageId: pollVotes.messageId,
+          userId: pollVotes.userId,
+          optionId: pollVotes.optionId,
+        })
+        .from(pollVotes)
+        .where(inArray(pollVotes.messageId, pollIds))
+        .orderBy(asc(pollVotes.createdAt))
+    : [];
+
+  return rows.map((r) => {
+    const imageUrl = r.imageKey ? urls.fromKey(r.imageKey) : null;
+    return {
+      id: r.id,
+      activityId: r.activityId,
+      communityId: r.communityId,
+      kind: r.kind as ChatMessage['kind'],
+      // A person's own message whose sender is gone: they deleted their account.
+      sender: r.senderId
+        ? (byId.get(r.senderId) ?? DELETED_ACCOUNT)
+        : r.kind === 'user'
+          ? DELETED_ACCOUNT
+          : null,
+      body: r.body,
+      image: imageUrl
+        ? { url: imageUrl, width: r.imageWidth ?? 1, height: r.imageHeight ?? 1 }
         : null,
-    body: r.body,
-    createdAt: r.createdAt.toISOString(),
-  }));
+      mentions: r.mentions.flatMap((id) => {
+        const person = byId.get(id);
+        return person ? [{ id, name: person.name }] : [];
+      }),
+      poll: r.poll
+        ? {
+            question: r.poll.question,
+            multiple: r.poll.multiple,
+            options: r.poll.options.map((o) => ({
+              ...o,
+              voterIds: votes
+                .filter((v) => v.messageId === r.id && v.optionId === o.id)
+                .map((v) => v.userId),
+            })),
+          }
+        : null,
+      createdAt: r.createdAt.toISOString(),
+    };
+  });
 }
 
 export async function toChatMessage(db: Db, urls: Urls, row: MessageRow) {
@@ -196,25 +237,115 @@ export async function listMessages(
  */
 export async function sendMessage(
   db: Db,
-  urls: Urls,
+  { urls, storage }: { urls: Urls; storage: Storage | null },
   senderId: string,
   room: Room,
   input: SendMessageInput,
 ) {
+  const [existing] = await db.select().from(messages).where(eq(messages.id, input.id));
+  if (existing) {
+    // A retry of a message that already went through.
+    const sameRoom = (existing[`${room.kind}Id`] as string | null) === room.id;
+    if (existing.senderId !== senderId || !sameRoom) throw conflict('Message ID already used');
+    return { message: await toChatMessage(db, urls, existing), created: false };
+  }
+
+  if (input.imageKey) await requireUpload(storage, input.imageKey, 'chat', senderId);
+  const mentions = await membersAmong(db, room, senderId, input.mentions);
   const where = room.kind === 'activity' ? { activityId: room.id } : { communityId: room.id };
   const [inserted] = await db
     .insert(messages)
-    .values({ id: input.id, ...where, senderId, kind: 'user', body: input.body })
+    .values({
+      id: input.id,
+      ...where,
+      senderId,
+      kind: 'user',
+      body: input.body,
+      imageKey: input.imageKey ?? null,
+      imageWidth: input.imageKey ? (input.imageWidth ?? null) : null,
+      imageHeight: input.imageKey ? (input.imageHeight ?? null) : null,
+      mentions,
+      poll: input.poll
+        ? {
+            question: input.poll.question,
+            multiple: input.poll.multiple,
+            options: input.poll.options.map((text, k) => ({ id: `o${k + 1}`, text })),
+          }
+        : null,
+    })
     .onConflictDoNothing({ target: messages.id })
     .returning();
-  if (inserted) return { message: await toChatMessage(db, urls, inserted), created: true };
+  // Two copies of the same send racing: the other one stored it.
+  if (!inserted) return sendMessage(db, { urls, storage }, senderId, room, input);
+  return { message: await toChatMessage(db, urls, inserted), created: true };
+}
 
-  const [existing] = await db.select().from(messages).where(eq(messages.id, input.id));
-  const sameRoom = existing && (existing[`${room.kind}Id`] as string | null) === room.id;
-  if (!existing || existing.senderId !== senderId || !sameRoom) {
-    throw conflict('Message ID already used');
-  }
-  return { message: await toChatMessage(db, urls, existing), created: false };
+/**
+ * The people in `ids` who are in this chat, minus the sender and anyone on
+ * either side of a block with them: who an @mention can reach.
+ */
+async function membersAmong(db: Db, room: Room, senderId: string, ids: string[]) {
+  const wanted = [...new Set(ids)].filter((id) => id !== senderId);
+  if (!wanted.length) return [];
+  const rows =
+    room.kind === 'activity'
+      ? await db
+          .select({ id: activityMembers.userId })
+          .from(activityMembers)
+          .where(
+            and(
+              eq(activityMembers.activityId, room.id),
+              inArray(activityMembers.userId, wanted),
+              notBlockedBetween(senderId, activityMembers.userId),
+            ),
+          )
+      : await db
+          .select({ id: communityMembers.userId })
+          .from(communityMembers)
+          .where(
+            and(
+              eq(communityMembers.communityId, room.id),
+              inArray(communityMembers.userId, wanted),
+              notBlockedBetween(senderId, communityMembers.userId),
+            ),
+          );
+  const found = new Set(rows.map((r) => r.id));
+  return wanted.filter((id) => found.has(id));
+}
+
+/**
+ * Records your answer to a poll, replacing any earlier one; no options takes
+ * your vote back. Returns the message with the new totals.
+ */
+export async function vote(
+  db: Db,
+  urls: Urls,
+  room: Room,
+  userId: string,
+  messageId: string,
+  optionIds: string[],
+) {
+  const [msg] = await db
+    .select()
+    .from(messages)
+    .where(and(eq(messages.id, messageId), eq(roomColumn(room), room.id)));
+  if (!msg?.poll) throw notFound('Poll');
+  const picked = [...new Set(optionIds)];
+  const known = new Set(msg.poll.options.map((o) => o.id));
+  if (picked.some((id) => !known.has(id))) throw badRequest('That isn’t one of the options');
+  if (!msg.poll.multiple && picked.length > 1) throw badRequest('Pick one option');
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(pollVotes)
+      .where(and(eq(pollVotes.messageId, messageId), eq(pollVotes.userId, userId)));
+    if (picked.length) {
+      await tx
+        .insert(pollVotes)
+        .values(picked.map((optionId) => ({ messageId, userId, optionId })));
+    }
+  });
+  return toChatMessage(db, urls, msg);
 }
 
 /** Moves the reader's position forward (never back) to the given message. */

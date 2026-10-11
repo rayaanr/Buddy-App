@@ -12,6 +12,7 @@ import {
   weekdayName,
   whenLabel,
 } from './time';
+import { messageSummary } from './text';
 
 // Friday 9 October 2026, 11:30 in Sri Lanka (06:00 UTC).
 const now = new Date('2026-10-09T06:00:00Z');
@@ -78,5 +79,14 @@ describe('calendar days in Sri Lanka time', () => {
   it('builds the instant for a local day and time', () => {
     expect(atLocalDay('2026-10-10', '18:30').toISOString()).toBe('2026-10-10T13:00:00.000Z');
     expect(clockLabel(atLocalDay('2026-10-10', '07:05'))).toBe('07:05');
+  });
+});
+
+describe('messageSummary', () => {
+  it('describes photos and polls', () => {
+    expect(messageSummary({ body: 'hi' })).toBe('hi');
+    expect(messageSummary({ body: '', hasImage: true })).toBe('📷 Photo');
+    expect(messageSummary({ body: 'Look', hasImage: true })).toBe('📷 Look');
+    expect(messageSummary({ body: '', pollQuestion: 'Saturday?' })).toBe('📊 Saturday?');
   });
 });

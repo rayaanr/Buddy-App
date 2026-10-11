@@ -1,7 +1,16 @@
-import { clientEvent, markReadInput, messagesQuery, sendMessageInput } from '@buddy/shared';
+import {
+  clientEvent,
+  firstName,
+  markReadInput,
+  messageSummary,
+  messagesQuery,
+  sendMessageInput,
+  voteInput,
+} from '@buddy/shared';
 import { upgradeWebSocket } from '@hono/node-server';
 import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
+import { z } from 'zod';
 import { and, eq } from 'drizzle-orm';
 import type { WebSocket } from 'ws';
 
@@ -15,7 +24,7 @@ import { blockedIds } from '../safety/blocks';
 import { communityMembers } from '../../db/schema';
 import type { PushMessage } from '../../lib/push';
 import { listChats } from './list';
-import { listMessages, markRead, requireMember, type Room, sendMessage } from './service';
+import { listMessages, markRead, requireMember, type Room, sendMessage, vote } from './service';
 
 const HEARTBEAT_MS = 30_000;
 const TYPING_THROTTLE_MS = 2_000;
@@ -28,7 +37,7 @@ type ChatEnv = AppEnv & { Variables: { chatTitle: string } };
  * /v1/communities/:id/chat (its members).
  */
 export function chatRoutes(deps: Deps, kind: Room['kind']) {
-  const { db, urls, hub, push, logger } = deps;
+  const { db, urls, hub, push, logger, storage } = deps;
   const roomOf = (id: string): Room => ({ kind, id });
 
   /** Pushes a message to the chat's members, except these (and anyone who muted it). */
@@ -45,6 +54,7 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
   };
   // Each message can push to everyone in the chat.
   const sending = limits(deps)({ name: 'chat', limit: 30, windowMs: MINUTE, by: 'user' });
+  const voting = limits(deps)({ name: 'votes', limit: 60, windowMs: MINUTE, by: 'user' });
   const memberOnly = createMiddleware<ChatEnv>(async (c, next) => {
     const { title } = await requireMember(db, roomOf(c.req.param('id')!), currentUser(c).id);
     c.set('chatTitle', title);
@@ -85,29 +95,74 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
       .post('/messages', sending, validate('json', sendMessageInput), async (c) => {
         const me = currentUser(c);
         const room = roomOf(c.req.param('id')!);
-        const { message, created } = await sendMessage(db, urls, me.id, room, c.req.valid('json'));
+        const { message, created } = await sendMessage(
+          db,
+          { urls, storage },
+          me.id,
+          room,
+          c.req.valid('json'),
+        );
         if (created) {
           // Everyone connected, including the sender's other devices (apps dedupe
           // by id), except people on either side of a block with the sender.
           const blocked = await blockedIds(db, me.id);
           hub.publish(room.id, { type: 'message', message }, { except: blocked });
+          const summary = messageSummary({
+            body: message.body,
+            hasImage: !!message.image,
+            pollQuestion: message.poll?.question,
+          });
           const preview =
-            message.body.length > PUSH_PREVIEW_CHARS
-              ? `${message.body.slice(0, PUSH_PREVIEW_CHARS)}…`
-              : message.body;
+            summary.length > PUSH_PREVIEW_CHARS
+              ? `${summary.slice(0, PUSH_PREVIEW_CHARS)}…`
+              : summary;
+          const data = { [`${kind}Id`]: room.id, screen: 'chat' };
+          const skip = new Set([me.id, ...blocked, ...hub.connectedUsers(room.id)]);
+          // Tagged people hear about it even if they muted the chat.
+          const mentioned = message.mentions.map((m) => m.id).filter((id) => !skip.has(id));
+          if (mentioned.length) {
+            void push.notifyUsers(mentioned, {
+              title: `${firstName(me.name)} mentioned you in ${c.get('chatTitle')}`,
+              body: preview,
+              data,
+              channelId: 'chat',
+            });
+          }
           void notify(
             room,
             {
               title: c.get('chatTitle'),
               body: `${me.name}: ${preview}`,
-              data: { [`${kind}Id`]: room.id, screen: 'chat' },
+              data,
               channelId: 'chat',
             },
-            new Set([me.id, ...blocked, ...hub.connectedUsers(room.id)]),
+            new Set([...skip, ...mentioned]),
           ).catch((err: unknown) => logger.error({ err, room }, 'Chat push failed'));
         }
         return c.json(message, created ? 201 : 200);
       })
+
+      // Answer a poll (or change or take back your answer).
+      .post(
+        '/messages/:messageId/vote',
+        voting,
+        validate('param', z.object({ id: z.uuid(), messageId: z.uuid() })),
+        validate('json', voteInput),
+        async (c) => {
+          const me = currentUser(c);
+          const room = roomOf(c.req.param('id')!);
+          const message = await vote(
+            db,
+            urls,
+            room,
+            me.id,
+            c.req.valid('param').messageId,
+            c.req.valid('json').optionIds,
+          );
+          hub.publish(room.id, { type: 'poll', messageId: message.id, poll: message.poll! });
+          return c.json(message);
+        },
+      )
 
       .post('/read', validate('json', markReadInput), async (c) => {
         const me = currentUser(c);

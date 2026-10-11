@@ -5,7 +5,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { ChatItem, MessageStatus } from '@/api/chat';
 import { AnimatedView, Avatar, DoubleTickIcon, TickIcon, useEnterOnChange } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
+import { ChatPhoto } from './ChatPhoto';
+import { MessageText } from './MessageText';
+import { PollCard } from './PollCard';
 
 export interface ChatRow extends ChatItem {
   /** First message in a run from the same sender. */
@@ -38,7 +42,10 @@ const openUser = (id: string) => router.push(`/user/${id}`);
 
 interface MessageBubbleProps {
   row: ChatRow;
+  myId: string | undefined;
   onRetry: (id: string) => void;
+  onVote: (messageId: string, optionIds: string[]) => void;
+  onOpenPhoto: (url: string) => void;
   /** Long-pressing someone else's message offers to report it. */
   onReport: (message: ChatRow['message']) => void;
 }
@@ -46,7 +53,10 @@ interface MessageBubbleProps {
 /** Memoised: the thread re-renders as messages arrive, but unchanged rows don't. */
 export const MessageBubble = memo(function MessageBubble({
   row,
+  myId,
   onRetry,
+  onVote,
+  onOpenPhoto,
   onReport,
 }: MessageBubbleProps) {
   const { message: m, mine, status, startsRun, gap, showMeta } = row;
@@ -89,34 +99,97 @@ export const MessageBubble = memo(function MessageBubble({
             accessibilityHint={person ? 'Long press to report this message' : undefined}
             accessibilityActions={person ? [{ name: 'longpress', label: 'Report message' }] : []}
             onAccessibilityAction={() => onReport(m)}
-            className="rounded-[18px] rounded-bl-md bg-surface px-4 py-3 active:opacity-80"
+            className={cn(
+              'active:opacity-80',
+              !m.poll && 'overflow-hidden rounded-[18px] rounded-bl-md bg-surface',
+              !m.poll && !m.image && 'px-4 py-3',
+            )}
           >
-            <Text className="font-sans text-[15.5px] leading-[21.5px] text-ink">{m.body}</Text>
+            <Content
+              message={m}
+              mine={false}
+              myId={myId}
+              onVote={onVote}
+              onOpenPhoto={onOpenPhoto}
+            />
           </Pressable>
         </View>
       </View>
     );
   }
 
+  // Only a failed message is a button (tap to retry): wrapping the others in a
+  // disabled one would block their photo and poll taps on web.
+  const bubble = (
+    <View
+      className={cn(
+        !m.poll && 'overflow-hidden rounded-[18px] rounded-br-md bg-lime',
+        !m.poll && !m.image && 'px-4 py-3',
+      )}
+      style={{ opacity: status === 'sending' || status === 'failed' ? 0.6 : 1 }}
+    >
+      <Content
+        message={m}
+        mine
+        myId={myId}
+        // Votes wait until the poll has been saved.
+        onVote={status === 'sending' || status === 'failed' ? undefined : onVote}
+        onOpenPhoto={onOpenPhoto}
+      />
+    </View>
+  );
+
   return (
     <View className="max-w-[78%] items-end self-end" style={{ marginTop: gap }}>
-      <Pressable
-        disabled={status !== 'failed'}
-        onPress={() => onRetry(m.id)}
-        accessibilityRole={status === 'failed' ? 'button' : undefined}
-        accessibilityHint={status === 'failed' ? 'Sends the message again' : undefined}
-      >
-        <View
-          className="rounded-[18px] rounded-br-md bg-lime px-4 py-3"
-          style={{ opacity: status === 'sending' || status === 'failed' ? 0.6 : 1 }}
+      {status === 'failed' ? (
+        <Pressable
+          onPress={() => onRetry(m.id)}
+          accessibilityRole="button"
+          accessibilityHint="Sends the message again"
         >
-          <Text className="font-sans text-[15.5px] leading-[21.5px] text-bg">{m.body}</Text>
-        </View>
-      </Pressable>
+          {bubble}
+        </Pressable>
+      ) : (
+        bubble
+      )}
       {showMeta && status ? <MessageMeta status={status} createdAt={m.createdAt} /> : null}
     </View>
   );
 });
+
+/** What's in a bubble: a photo and/or text (with @mentions), or a poll. */
+function Content({
+  message: m,
+  mine,
+  myId,
+  onVote,
+  onOpenPhoto,
+}: {
+  message: ChatRow['message'];
+  mine: boolean;
+  myId: string | undefined;
+  onVote?: (messageId: string, optionIds: string[]) => void;
+  onOpenPhoto: (url: string) => void;
+}) {
+  if (m.poll)
+    return (
+      <PollCard
+        poll={m.poll}
+        myId={myId}
+        onVote={onVote ? (ids) => onVote(m.id, ids) : undefined}
+      />
+    );
+  return (
+    <>
+      {m.image ? <ChatPhoto image={m.image} onOpen={onOpenPhoto} /> : null}
+      {m.body ? (
+        <View className={m.image ? 'max-w-[240px] px-3.5 py-2.5' : undefined}>
+          <MessageText body={m.body} mentions={m.mentions} mine={mine} />
+        </View>
+      ) : null}
+    </>
+  );
+}
 
 /**
  * "Sending… → Sent → Seen" under your latest message, easing in as it

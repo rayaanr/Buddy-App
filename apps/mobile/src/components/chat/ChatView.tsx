@@ -2,10 +2,11 @@ import type { ChatMessage } from '@buddy/shared';
 import { router } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { type ReactElement, useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Platform, Text, TextInput, View, type ListRenderItem } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { FlatList, Platform, Text, View, type ListRenderItem } from 'react-native';
 
-import { type ChatRoom, useChat } from '@/api/chat';
-import { ApiRequestError } from '@/api/client';
+import { type ChatDraft, type ChatRoom, useChat } from '@/api/chat';
+import { ApiRequestError, errorMessage } from '@/api/client';
 import { keys, useMe } from '@/api/queries';
 import {
   AnimatedView,
@@ -17,10 +18,11 @@ import {
 } from '@/components/ui';
 import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
-import { cn } from '@/lib/cn';
-import { colors } from '@/theme';
+import { toast } from '@/store/ui';
 import { enterMessage } from '@/theme/motion';
+import { type ChatPerson, Composer } from './Composer';
 import { MessageBubble, toChatRows, type ChatRow } from './MessageBubble';
+import { PhotoViewer } from './PhotoViewer';
 import { TypingIndicator } from './TypingIndicator';
 
 /**
@@ -40,6 +42,8 @@ interface ChatViewProps {
   membersOnly: string;
   /** Tapping the title, e.g. back to the activity. */
   onTitlePress?: () => void;
+  /** Who can be @mentioned. */
+  people: ChatPerson[];
 }
 
 /** A group chat screen: an activity's or a community's. */
@@ -50,6 +54,7 @@ export function ChatView({
   banner,
   membersOnly,
   onTitlePress,
+  people,
 }: ChatViewProps) {
   const me = useMe();
   const chat = useChat(room, me.data?.id);
@@ -73,7 +78,14 @@ export function ChatView({
       router.push({ pathname: '/report', params: { type: 'message', id: m.id, chatId: room.id } }),
     [room.id],
   );
-  const { retry } = chat;
+  const [viewing, setViewing] = useState<string | null>(null);
+  const { retry, vote, send } = chat;
+  const onVote = useCallback(
+    (messageId: string, optionIds: string[]) =>
+      void vote(messageId, optionIds).catch((err: unknown) => toast(errorMessage(err))),
+    [vote],
+  );
+  const myId = me.data?.id;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item }) => (
       <AnimatedView
@@ -81,11 +93,39 @@ export function ChatView({
           animateNew && openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined
         }
       >
-        <MessageBubble row={item} onRetry={retry} onReport={reportMessage} />
+        <MessageBubble
+          row={item}
+          myId={myId}
+          onRetry={retry}
+          onVote={onVote}
+          onOpenPhoto={setViewing}
+          onReport={reportMessage}
+        />
       </AnimatedView>
     ),
-    [openedWith, retry, reportMessage],
+    [openedWith, myId, retry, onVote, reportMessage],
   );
+
+  /** Picks a photo from the library and sends it, with the typed text as its caption. */
+  const sendPhoto = async (caption: string, mentions: ChatDraft['mentions']) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.8,
+    });
+    const asset = result.canceled ? null : result.assets[0];
+    if (!asset) return false;
+    send({
+      body: caption,
+      mentions,
+      photo: {
+        uri: asset.uri,
+        width: asset.width,
+        height: asset.height,
+        mimeType: asset.mimeType,
+      },
+    });
+    return true;
+  };
 
   const status = chat.error instanceof ApiRequestError ? chat.error.status : null;
   if (status === 403) return <NotFound message={membersOnly} />;
@@ -144,72 +184,17 @@ export function ChatView({
       )}
 
       <Composer
-        // Until `me` loads, a send couldn't be attributed: keep the text.
         ready={!!me.data}
+        myId={me.data?.id}
+        people={people}
         onSend={chat.send}
         onTyping={chat.notifyTyping}
+        onPhoto={sendPhoto}
+        onPoll={() =>
+          router.push({ pathname: '/new-poll', params: { kind: room.kind, id: room.id } })
+        }
       />
+      <PhotoViewer url={viewing} onClose={() => setViewing(null)} />
     </KeyboardScreen>
-  );
-}
-
-/**
- * The message box. Its text lives here, so typing re-renders only this, not
- * every message in the thread.
- */
-function Composer({
-  ready,
-  onSend,
-  onTyping,
-}: {
-  ready: boolean;
-  onSend: (text: string) => void;
-  onTyping: () => void;
-}) {
-  const { bottom } = useScreenInsets();
-  const [text, setText] = useState('');
-  const canSend = ready && !!text.trim();
-  const send = () => {
-    if (!canSend) return;
-    onSend(text);
-    setText('');
-  };
-
-  return (
-    <View
-      className="flex-row gap-2.5 border-t border-line px-3.5 pt-3"
-      style={{ paddingBottom: bottom(28) }}
-    >
-      <TextInput
-        value={text}
-        onChangeText={(t) => {
-          setText(t);
-          if (t) onTyping();
-        }}
-        onSubmitEditing={send}
-        submitBehavior="submit"
-        returnKeyType="send"
-        placeholder="Message the group"
-        placeholderTextColor={colors.subtle}
-        selectionColor={colors.lime}
-        className="h-[50px] min-w-0 flex-1 rounded-[25px] border border-field bg-surface px-5 font-sans text-[15.5px] text-ink"
-      />
-      <PressableScale
-        onPress={send}
-        disabled={!canSend}
-        haptic="light"
-        scale="strong"
-        accessibilityRole="button"
-        accessibilityLabel="Send"
-        className={cn(
-          'h-[50px] items-center justify-center rounded-[25px] px-5',
-          canSend ? 'bg-lime' : 'bg-disabled',
-        )}
-      >
-        <Text className={cn('font-sans-semibold text-[15px]', canSend ? 'text-bg' : 'text-muted')}>
-          Send
-        </Text>
-      </PressableScale>
-    </View>
   );
 }

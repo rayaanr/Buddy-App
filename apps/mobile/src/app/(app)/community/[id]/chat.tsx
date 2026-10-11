@@ -1,13 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Text, View } from 'react-native';
 
-import { useCommunity } from '@/api/queries';
+import { useCommunity, useCommunityMembers } from '@/api/queries';
 import { ChatView } from '@/components/chat/ChatView';
 
 /** A community's group chat: all its members, between activities. */
 export default function CommunityChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useCommunity(id).data;
+  const people = useCommunityMembers(id).data ?? [];
   const members = c ? `${c.memberCount} ${c.memberCount === 1 ? 'member' : 'members'}` : '';
   return (
     <ChatView
@@ -16,6 +17,7 @@ export default function CommunityChatScreen() {
       subtitle={members}
       onTitlePress={() => router.back()}
       membersOnly="Join this community to see its chat."
+      people={people}
       banner={
         c ? (
           <View className="mb-2 rounded-[14px] border border-lime-panel-border bg-lime-panel px-4 py-3.5">
