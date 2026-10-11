@@ -6,6 +6,7 @@ import { Avatar, Photo, PressableScale, Skeleton } from '@/components/ui';
 import { COMMUNITY_HUE } from '@/data/constants';
 import { useCommunityToggle } from '@/hooks/useCommunityToggle';
 import { cn } from '@/lib/cn';
+import { colors } from '@/theme';
 
 const PHOTO_HEIGHT = 124;
 
@@ -27,17 +28,25 @@ export function CommunityCard({ community: c }: { community: CommunitySummary })
         accessibilityLabel={`${c.name}, ${communityMeta(c)}`}
         className="overflow-hidden rounded-[22px] bg-surface"
       >
-        <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }} />
-        <View className="flex-row items-center gap-3 py-4 pl-4 pr-[120px]">
-          <Avatar uri={c.logoUrl ?? undefined} name={c.name} shape="rounded" size={46} />
-          <View className="flex-1">
-            <Text className="font-sans-semibold text-[17.5px] text-ink" numberOfLines={2}>
-              {c.name}
-            </Text>
-            <Text className="mt-1 font-sans text-[14px] leading-[19px] text-muted">
-              {communityMeta(c)}
-            </Text>
+        {/* The logo sits on the cover's corner, leaving the text its full width. */}
+        <Photo uri={c.coverUrl ?? undefined} hue={COMMUNITY_HUE} style={{ height: PHOTO_HEIGHT }}>
+          <View className="absolute bottom-3 left-3">
+            <Avatar
+              uri={c.logoUrl ?? undefined}
+              name={c.name}
+              shape="rounded"
+              size={44}
+              ring={colors.surface}
+            />
           </View>
+        </Photo>
+        <View className="py-4 pl-[18px] pr-[120px]">
+          <Text className="font-sans-semibold text-[17.5px] text-ink" numberOfLines={2}>
+            {c.name}
+          </Text>
+          <Text className="mt-1 font-sans text-[14px] leading-[19px] text-muted">
+            {communityMeta(c)}
+          </Text>
         </View>
       </PressableScale>
       <View
@@ -72,8 +81,7 @@ export function CommunityCardSkeleton() {
   return (
     <View className="overflow-hidden rounded-[22px] bg-surface">
       <Skeleton className="h-[124px] rounded-none" />
-      <View className="flex-row items-center gap-3 py-4 pl-4 pr-4">
-        <Skeleton className="h-[46px] w-[46px] rounded-[13px]" />
+      <View className="flex-row items-center gap-3 py-4 pl-[18px] pr-4">
         <View className="flex-1 gap-2">
           <Skeleton className="h-4 w-3/5" />
           <Skeleton className="h-3 w-4/5" />

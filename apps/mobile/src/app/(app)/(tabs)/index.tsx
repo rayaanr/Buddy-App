@@ -24,7 +24,7 @@ import {
   MapPinIcon,
   Refresh,
   SearchField,
-  SparklesIcon,
+  PicksIcon,
 } from '@/components/ui';
 import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -107,7 +107,7 @@ export default function DiscoverScreen() {
         <View className="flex-row gap-2">
           {/* Straight to the swipe deck, any time. */}
           <IconButton
-            icon={<SparklesIcon />}
+            icon={<PicksIcon />}
             label="Picked for you"
             onPress={() => router.push({ pathname: '/picks', params: { from: 'button' } })}
           />
