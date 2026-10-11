@@ -1,22 +1,29 @@
 import type { ActivitySummary, Location } from '@buddy/shared';
 import { Image } from 'expo-image';
-import { useLayoutEffect, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { IconButton, MaximizeIcon } from '@/components/ui';
 import { MAP_ATTRIBUTION, MAP_BACKGROUND } from '@/config';
 import { availabilityColor } from '@/lib/activity';
+import { project } from '@/lib/gestures';
 import { fitPoints, fromWorldPixel, tilesAround, worldPixel } from '@/lib/maps';
 import { colors } from '@/theme';
+import { ease } from '@/theme/motion';
 
 const MIN_ZOOM = 7;
 const MAX_ZOOM = 17;
 /** Tiles drawn beyond each edge, so dragging doesn't show blank strips. */
 const MARGIN = 256;
 const PIN = 30;
+/** After a fling the map glides on and slows down, about this long. */
+const GLIDE_MS = 450;
+/** Maps stop sooner than lists: a fling moves it a screen or so, not a country. */
+const MAP_DECELERATION = 0.995;
 
 interface ActivityMapProps {
   activities: ActivitySummary[];
@@ -72,48 +79,77 @@ export function ActivityMap({
   const moved = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.get() }, { translateY: ty.get() }, { scale: scale.get() }],
   }));
-  const settle = (dx: number, dy: number) =>
-    setView((v) => {
-      if (!v) return v;
-      const c = worldPixel(v.center, v.zoom);
-      return { ...v, center: fromWorldPixel({ x: c.x - dx, y: c.y - dy }, v.zoom) };
-    });
+  const settle = useCallback(
+    (dx: number, dy: number) =>
+      setView((v) => {
+        if (!v) return v;
+        const c = worldPixel(v.center, v.zoom);
+        return { ...v, center: fromWorldPixel({ x: c.x - dx, y: c.y - dy }, v.zoom) };
+      }),
+    [],
+  );
   // The new centre is drawn now: drop the drag offset in the same frame.
   useLayoutEffect(() => {
     tx.set(0);
     ty.set(0);
     scale.set(1);
   }, [view, tx, ty, scale]);
-  const pan = Gesture.Pan()
-    .minDistance(4)
-    .onUpdate((e) => {
-      tx.set(e.translationX);
-      ty.set(e.translationY);
-    })
-    .onEnd((e) => {
-      runOnJS(settle)(e.translationX, e.translationY);
-    });
 
-  const zoomBy = (step: number) => {
-    if (!view) return scale.set(1);
-    const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, view.zoom + step));
-    // Already as far as it goes: just undo the pinch.
-    if (zoom === view.zoom) return scale.set(1);
-    setView({ ...view, zoom });
-  };
-  const pinch = Gesture.Pinch()
-    .onUpdate((e) => {
-      scale.set(e.scale);
-    })
-    .onEnd((e) => {
-      runOnJS(zoomBy)(Math.round(Math.log2(Math.max(0.01, e.scale))));
-    });
-  const doubleTap = Gesture.Tap()
-    .numberOfTaps(2)
-    .onEnd(() => {
-      runOnJS(zoomBy)(1);
-    });
-  const gestures = Gesture.Simultaneous(pan, pinch, doubleTap);
+  // From the latest view (a drag may have moved it in the same instant).
+  const zoomBy = useCallback(
+    (step: number) =>
+      setView((v) => {
+        const zoom = v && Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, v.zoom + step));
+        // Already as far as it goes: just undo the pinch.
+        if (!v || zoom === v.zoom) {
+          scale.set(withTiming(1, { duration: 150, easing: ease.out }));
+          return v;
+        }
+        return { ...v, zoom: zoom! };
+      }),
+    [scale],
+  );
+
+  // Where the drag started, so catching the map mid-glide picks it up there.
+  const fromX = useSharedValue(0);
+  const fromY = useSharedValue(0);
+  const gestures = useMemo(() => {
+    const pan = Gesture.Pan()
+      .minDistance(4)
+      .onStart(() => {
+        fromX.set(tx.get());
+        fromY.set(ty.get());
+      })
+      .onUpdate((e) => {
+        tx.set(fromX.get() + e.translationX);
+        ty.set(fromY.get() + e.translationY);
+      })
+      .onEnd((e) => {
+        // Keep going the way it was flung, slowing down, then re-centre there.
+        const x = tx.get() + project(e.velocityX, MAP_DECELERATION);
+        const y = ty.get() + project(e.velocityY, MAP_DECELERATION);
+        const glide = { duration: GLIDE_MS, easing: ease.out };
+        ty.set(withTiming(y, glide));
+        tx.set(
+          withTiming(x, glide, (done) => {
+            if (done) scheduleOnRN(settle, x, y);
+          }),
+        );
+      });
+    const pinch = Gesture.Pinch()
+      .onUpdate((e) => {
+        scale.set(e.scale);
+      })
+      .onEnd((e) => {
+        scheduleOnRN(zoomBy, Math.round(Math.log2(Math.max(0.01, e.scale))));
+      });
+    const doubleTap = Gesture.Tap()
+      .numberOfTaps(2)
+      .onEnd(() => {
+        scheduleOnRN(zoomBy, 1);
+      });
+    return Gesture.Simultaneous(pan, pinch, doubleTap);
+  }, [tx, ty, fromX, fromY, scale, settle, zoomBy]);
 
   const selected = activities.find((a) => a.id === picked) ?? null;
 

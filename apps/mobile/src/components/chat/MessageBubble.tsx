@@ -12,6 +12,13 @@ import {
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, {
+  type SharedValue,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import type { ChatItem, MessageStatus } from '@/api/chat';
 import {
@@ -378,29 +385,67 @@ function SwipeToReply({
   enabled: boolean;
 }) {
   const swipeable = useRef<SwipeableMethods>(null);
+  // Set the moment the drag reaches the reply point (with its tick).
+  const ticked = useSharedValue(false);
   if (Platform.OS === 'web' || !enabled) return children;
   return (
     <ReanimatedSwipeable
       ref={swipeable}
       friction={2}
-      leftThreshold={56}
+      leftThreshold={REPLY_AT}
       overshootLeft={false}
-      renderLeftActions={() => (
-        <View className="w-14 items-center justify-center">
-          <ReplyIcon color={colors.lime} />
-        </View>
+      renderLeftActions={(_progress, translation) => (
+        <ReplyCue translation={translation} ticked={ticked} />
       )}
       onSwipeableWillOpen={(direction) => {
         if (direction === 'left') {
-          selectionHaptic();
+          // A quick flick can commit before reaching the point: tick now instead.
+          if (!ticked.get()) selectionHaptic();
           onReply();
         }
         // Spring back: it's a gesture, not a drawer that stays open.
         swipeable.current?.close();
       }}
+      onSwipeableClose={() => ticked.set(false)}
     >
       {children}
     </ReanimatedSwipeable>
+  );
+}
+
+/** How far a message slides before letting go replies. */
+const REPLY_AT = 56;
+
+/**
+ * The reply arrow behind a message being swiped: grows in as it slides, and
+ * ticks the moment it's far enough (like WhatsApp), not on letting go.
+ */
+function ReplyCue({
+  translation,
+  ticked,
+}: {
+  translation: SharedValue<number>;
+  ticked: SharedValue<boolean>;
+}) {
+  useAnimatedReaction(
+    () => translation.get() >= REPLY_AT - 1,
+    (reached, before) => {
+      if (reached && !before && !ticked.get()) {
+        ticked.set(true);
+        scheduleOnRN(selectionHaptic);
+      }
+    },
+  );
+  const style = useAnimatedStyle(() => {
+    const p = Math.min(1, Math.max(0, translation.get() / REPLY_AT));
+    return { opacity: p, transform: [{ scale: 0.6 + 0.4 * p }] };
+  });
+  return (
+    <View style={styles.cue}>
+      <Animated.View style={style}>
+        <ReplyIcon color={colors.lime} />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -435,6 +480,7 @@ function MessageMeta({ status, createdAt }: { status: MessageStatus; createdAt: 
 
 // Style objects, not classes: NativeWind doesn't style Reanimated views.
 const styles = StyleSheet.create({
+  cue: { width: REPLY_AT, alignItems: 'center', justifyContent: 'center' },
   reaction: { fontSize: 14 },
   meta: { marginRight: 4, marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 5 },
 });

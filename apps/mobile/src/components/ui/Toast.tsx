@@ -1,5 +1,7 @@
 import { Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { riseIn, sinkOut } from '@/theme/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useUiStore } from '@/store/ui';
@@ -18,11 +20,7 @@ export function ToastHost() {
       style={{ bottom: insets.bottom + TAB_BAR_HEIGHT + 12 }}
     >
       {/* Reanimated views carry the motion only; NativeWind classes go on plain Views. */}
-      <Animated.View
-        key={toast.id}
-        entering={FadeInDown.duration(250)}
-        exiting={FadeOut.duration(200)}
-      >
+      <Animated.View key={toast.id} entering={riseIn} exiting={sinkOut}>
         <View
           accessibilityLiveRegion="polite"
           className="mx-6 rounded-[14px] bg-toast px-[18px] py-3"

@@ -1,7 +1,9 @@
 import * as DropdownMenu from '@rn-primitives/dropdown-menu';
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { popIn, popOut } from '@/theme/motion';
 
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
@@ -51,11 +53,7 @@ export function Menu({ items, label, trigger, tone = 'solid', align = 'end' }: M
       <DropdownMenu.Portal>
         <DropdownMenu.Overlay style={StyleSheet.absoluteFill}>
           <DropdownMenu.Content align={align} sideOffset={6} insets={INSETS}>
-            <Animated.View
-              entering={ZoomIn.duration(140)}
-              exiting={FadeOut.duration(100)}
-              style={styles.card}
-            >
+            <Animated.View entering={popIn} exiting={popOut} style={styles.card}>
               {items.map((item, i) => (
                 // The primitive's own Pressable with fixed styles: a style
                 // function passed through `asChild` is dropped on phones.

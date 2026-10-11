@@ -138,7 +138,7 @@ export function useEnterOnChange(trigger: unknown, kind: 'rise' | 'pop' = 'rise'
     progress.set(
       withSequence(
         withTiming(0, { duration: 0 }),
-        withSpring(1, kind === 'pop' ? spring.bouncy : spring.gentle),
+        withSpring(1, kind === 'pop' ? spring.pop : spring.settle),
       ),
     );
   }, [trigger, kind, progress]);

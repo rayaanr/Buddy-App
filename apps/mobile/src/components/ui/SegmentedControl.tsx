@@ -44,7 +44,7 @@ export function SegmentedControl<T extends string>({
     if (!segmentWidth) return;
     const target = index * (segmentWidth + GAP);
     // Start in place; only later changes slide.
-    x.set(placed.current ? withSpring(target, spring.gentle) : target);
+    x.set(placed.current ? withSpring(target, spring.settle) : target);
     placed.current = true;
   }, [index, segmentWidth, x]);
   const indicator = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));

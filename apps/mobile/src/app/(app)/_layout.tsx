@@ -6,6 +6,7 @@ import { useMe, usePicks } from '@/api/queries';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
+import { useScreenAnimation } from '@/theme/motion';
 
 const PREVIEW_CARDS = 3;
 
@@ -62,37 +63,43 @@ export default function AppLayout() {
     void syncPushToken();
   }, []);
   useOpenFromNotifications();
+  const slide = useScreenAnimation();
 
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.bg },
-        animation: 'slide_from_right',
+        animation: slide('slide_from_right'),
+        // The back swipe drags the screen along with the finger.
+        animationMatchesGesture: true,
       }}
     >
       <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
       <Stack.Screen
         name="create"
-        options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
+        options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
       />
       <Stack.Screen
         name="activity/[id]/edit"
-        options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
+        options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
       />
       <Stack.Screen
         name="picks"
-        options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
+        options={{ animation: slide('slide_from_bottom'), gestureEnabled: false }}
       />
       <Stack.Screen name="map" options={{ animation: 'fade' }} />
-      <Stack.Screen name="report" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen
+        name="report"
+        options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
+      />
       <Stack.Screen
         name="new-poll"
-        options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
+        options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
       />
       <Stack.Screen
         name="activity/[id]/invite"
-        options={{ animation: 'slide_from_bottom', gestureDirection: 'vertical' }}
+        options={{ animation: slide('slide_from_bottom'), gestureDirection: 'vertical' }}
       />
     </Stack>
   );

@@ -15,7 +15,7 @@ import {
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { whenLabel } from '@/lib/activity';
 import { cn } from '@/lib/cn';
-import { enterItem, layoutItem } from '@/theme/motion';
+import { layoutItem } from '@/theme/motion';
 
 type Segment = 'joined' | 'hosting';
 
@@ -106,8 +106,8 @@ export default function ActivitiesScreen() {
             stale={!!current.data}
           />
         ) : null}
-        {list.map((a, i) => (
-          <AnimatedView key={a.id} entering={enterItem(i)} layout={layoutItem}>
+        {list.map((a) => (
+          <AnimatedView key={a.id} layout={layoutItem}>
             <MyActivityCard activity={a} />
           </AnimatedView>
         ))}

@@ -17,7 +17,7 @@ import {
 import { useDebounced } from '@/hooks/useDebounced';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { colors } from '@/theme';
-import { enterItem, layoutItem } from '@/theme/motion';
+import { layoutItem } from '@/theme/motion';
 
 export default function CommunitiesScreen() {
   const { top } = useScreenInsets();
@@ -72,8 +72,8 @@ export default function CommunitiesScreen() {
             stale={!!communities.data}
           />
         ) : null}
-        {communities.data?.map((c, i) => (
-          <AnimatedView key={c.id} entering={enterItem(i)} layout={layoutItem}>
+        {communities.data?.map((c) => (
+          <AnimatedView key={c.id} layout={layoutItem}>
             <CommunityCard community={c} />
           </AnimatedView>
         ))}

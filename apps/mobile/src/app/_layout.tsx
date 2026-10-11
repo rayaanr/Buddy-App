@@ -28,6 +28,7 @@ import { activityPathFrom } from '@/lib/pendingLink';
 import { useAccountStore } from '@/store/account';
 import { useUiStore } from '@/store/ui';
 import { colors } from '@/theme';
+import { useScreenAnimation } from '@/theme/motion';
 
 SplashScreen.preventAutoHideAsync();
 connectQueriesToApp();
@@ -88,6 +89,7 @@ function RootNavigator() {
   const signedIn = !!session.data;
   const me = useMe(signedIn);
   const remembered = useAccountStore((s) => !!s.remembered);
+  const slide = useScreenAnimation();
 
   // Returning users who open the app already signed in get the "Picked for you"
   // deck, unless a link opened it somewhere specific (e.g. a chat).
@@ -144,7 +146,7 @@ function RootNavigator() {
       <Stack.Screen
         key={name}
         name={name}
-        options={name === first ? undefined : { animation: 'slide_from_right' }}
+        options={name === first ? undefined : { animation: slide('slide_from_right') }}
       />
     ),
   );
@@ -159,7 +161,7 @@ function RootNavigator() {
     >
       <Stack.Protected guard={!signedIn}>
         {authScreens}
-        <Stack.Screen name="verify" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="verify" options={{ animation: slide('slide_from_right') }} />
       </Stack.Protected>
       <Stack.Protected guard={signedIn && !onboarded}>
         <Stack.Screen name="onboarding" />

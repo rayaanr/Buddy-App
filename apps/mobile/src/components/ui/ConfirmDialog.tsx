@@ -1,6 +1,8 @@
 import * as AlertDialog from '@rn-primitives/alert-dialog';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { fadeIn, popIn, popOut } from '@/theme/motion';
 
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
@@ -49,13 +51,9 @@ export function ConfirmDialog({
     <AlertDialog.Root open={visible} onOpenChange={(open) => !open && onClose()}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay style={StyleSheet.absoluteFill}>
-          <Animated.View
-            entering={FadeIn.duration(160)}
-            exiting={FadeOut.duration(120)}
-            style={styles.backdrop}
-          >
+          <Animated.View entering={fadeIn} exiting={popOut} style={styles.backdrop}>
             <AlertDialog.Content style={styles.content}>
-              <Animated.View entering={ZoomIn.duration(180)} style={styles.card}>
+              <Animated.View entering={popIn} style={styles.card}>
                 <AlertDialog.Title asChild>
                   <Text className="font-display text-[20px] leading-[25px] text-ink">{title}</Text>
                 </AlertDialog.Title>

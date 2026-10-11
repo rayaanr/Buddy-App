@@ -10,7 +10,8 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.bg },
-        animation: 'fade',
+        // Tabs are peers, switched dozens of times a day: no transition.
+        animation: 'none',
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Discover' }} />

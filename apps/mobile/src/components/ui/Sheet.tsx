@@ -1,27 +1,28 @@
-import { useEffect, useEffectEvent, useState, type ReactNode } from 'react';
-import { Dimensions, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useEffectEvent, useMemo, useState, type ReactNode } from 'react';
+import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import {
-  Easing,
+import Animated, {
   Extrapolation,
   interpolate,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { project } from '@/lib/gestures';
+import { ease, spring } from '@/theme/motion';
 import { ModalKeyboardScreen } from './Keyboard';
 import { AnimatedView } from './Motion';
 
-/** vaul's curve and timing (the drawer behind shadcn/ui), so sheets move the same way. */
-const EASE = Easing.bezier(0.32, 0.72, 0, 1);
-const OPEN_MS = 500;
-const CLOSE_MS = 400;
-/** Let go past a quarter of the sheet, or flick down, and it closes. */
-const DISMISS_FRACTION = 0.25;
-const DISMISS_VELOCITY = 700;
+/** Opening and closing by a tap: iOS's sheet curve. */
+const OPEN_MS = 320;
+const CLOSE_MS = 260;
+/** Let go heading past 40% of the sheet (a flick counts) and it closes. */
+const DISMISS_FRACTION = 0.4;
 
 interface SheetProps {
   open: boolean;
@@ -34,7 +35,7 @@ interface SheetProps {
 
 /**
  * Bottom drawer that slides up, follows your finger when dragged down,
- * dismisses on a flick, and always animates out, like shadcn's Drawer.
+ * dismisses on a flick (carrying its speed), and always animates out.
  * Stays mounted until the exit animation finishes.
  */
 export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
@@ -42,14 +43,18 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
 
-  const offscreen = Dimensions.get('window').height;
+  const offscreen = useWindowDimensions().height;
   const height = useSharedValue(offscreen);
   const y = useSharedValue(offscreen); // 0 = fully open
   const dragStart = useSharedValue(0);
+  // A flick down hands its speed to the closing animation (0: closed by a tap).
+  const releaseVelocity = useSharedValue(0);
   // Content scrolls when the drawer is taller than the room it has (e.g. with
   // the keyboard up); dragging only moves the drawer once that's at the top.
   const scrollY = useSharedValue(0);
-  const scrollGesture = Gesture.Native();
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
 
   const closed = useEffectEvent(() => {
     setMounted(false);
@@ -59,40 +64,61 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
   useEffect(() => {
     if (!mounted) return;
     if (open) {
-      y.set(withTiming(0, { duration: OPEN_MS, easing: EASE }));
-    } else {
-      y.set(
-        withTiming(height.get(), { duration: CLOSE_MS, easing: EASE }, (done) => {
-          if (done) scheduleOnRN(closed);
-        }),
-      );
+      y.set(withTiming(0, { duration: OPEN_MS, easing: ease.sheet }));
+      return;
     }
-  }, [open, mounted, y, height]);
+    const done = (finished?: boolean) => {
+      'worklet';
+      if (finished) scheduleOnRN(closed);
+    };
+    const velocity = releaseVelocity.get();
+    releaseVelocity.set(0);
+    y.set(
+      velocity
+        ? // Dragged away: carry on at the finger's speed, never bouncing back up.
+          withSpring(
+            height.get(),
+            { ...spring.sheet, dampingRatio: 1, overshootClamping: true, velocity },
+            done,
+          )
+        : withTiming(height.get(), { duration: CLOSE_MS, easing: ease.sheet }, done),
+    );
+  }, [open, mounted, y, height, releaseVelocity]);
 
-  // Drag down only (taps and horizontal swipes inside still work).
-  const pan = Gesture.Pan()
-    .activeOffsetY(8)
-    .failOffsetX([-12, 12])
-    .simultaneousWithExternalGesture(scrollGesture)
-    .onStart(() => {
-      dragStart.set(y.get());
-    })
-    .onUpdate((e) => {
-      if (scrollY.get() > 0) {
-        // Still scrolling the content: keep the drawer put, and pick up from
-        // here once the content reaches its top.
-        dragStart.set(y.get() - e.translationY);
-        return;
-      }
-      y.set(Math.max(0, dragStart.get() + e.translationY));
-    })
-    .onEnd((e) => {
-      if (y.get() > height.get() * DISMISS_FRACTION || e.velocityY > DISMISS_VELOCITY) {
-        scheduleOnRN(onClose);
-      } else {
-        y.set(withTiming(0, { duration: CLOSE_MS, easing: EASE }));
-      }
-    });
+  // Drag down only (taps and horizontal swipes inside still work). Built
+  // once: rebuilding a gesture mid-drag can drop it.
+  const scrollGesture = useMemo(() => Gesture.Native(), []);
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetY(8)
+        .failOffsetX([-12, 12])
+        .simultaneousWithExternalGesture(scrollGesture)
+        .onStart(() => {
+          dragStart.set(y.get());
+        })
+        .onUpdate((e) => {
+          if (scrollY.get() > 0) {
+            // Still scrolling the content: keep the drawer put, and pick up from
+            // here once the content reaches its top.
+            dragStart.set(y.get() - e.translationY);
+            return;
+          }
+          y.set(Math.max(0, dragStart.get() + e.translationY));
+        })
+        .onEnd((e) => {
+          if (y.get() + project(e.velocityY) > height.get() * DISMISS_FRACTION) {
+            releaseVelocity.set(Math.max(0, e.velocityY));
+            scheduleOnRN(onClose);
+          } else {
+            // Back up, with the finger's speed; clamped so no gap shows below.
+            y.set(
+              withSpring(0, { ...spring.sheet, overshootClamping: true, velocity: e.velocityY }),
+            );
+          }
+        }),
+    [scrollGesture, dragStart, y, scrollY, height, releaseVelocity, onClose],
+  );
 
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
   const backdropStyle = useAnimatedStyle(() => ({
@@ -128,10 +154,10 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
               <View className="shrink rounded-t-[28px] bg-surface-sunken pt-2.5">
                 <View className="mx-auto mb-[18px] h-[5px] w-10 rounded-[3px] bg-outline" />
                 <GestureDetector gesture={scrollGesture}>
-                  <ScrollView
+                  <Animated.ScrollView
                     style={styles.scroll}
                     contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
-                    onScroll={(e) => scrollY.set(e.nativeEvent.contentOffset.y)}
+                    onScroll={onScroll}
                     scrollEventThrottle={16}
                     keyboardShouldPersistTaps="handled"
                     bounces={false}
@@ -139,7 +165,7 @@ export function Sheet({ open, onClose, onClosed, children }: SheetProps) {
                     showsVerticalScrollIndicator={false}
                   >
                     {children}
-                  </ScrollView>
+                  </Animated.ScrollView>
                 </GestureDetector>
               </View>
             </AnimatedView>

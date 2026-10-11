@@ -512,7 +512,7 @@ function Attendance({ activity: a, canRemove }: { activity: ActivityDetail; canR
   // The bar fills in on arrival and slides when someone joins or leaves.
   const fill = useSharedValue(0);
   useEffect(() => {
-    fill.set(withSpring(pct, spring.gentle));
+    fill.set(withSpring(pct, spring.settle));
   }, [pct, fill]);
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.get()}%` }));
   const countStyle = useEnterOnChange(a.goingCount);
@@ -582,5 +582,13 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
   footerRow: { flex: 1, flexDirection: 'row', gap: 10 },
-  fill: { height: '100%', borderRadius: 3, backgroundColor: colors.lime },
+  // Absolute and childless: its width can animate without re-laying out anything else.
+  fill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 3,
+    backgroundColor: colors.lime,
+  },
 });

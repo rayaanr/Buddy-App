@@ -5,7 +5,6 @@
     "@jest/globals",
     "postcss",
     "react-native-css-interop",
-    "expo-updates",
     "@tailwindcss/container-queries",
     "pino-pretty"
   ],

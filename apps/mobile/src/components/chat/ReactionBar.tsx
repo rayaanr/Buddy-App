@@ -1,6 +1,8 @@
 import { type ChatMessage, REACTIONS, type Reaction } from '@buddy/shared';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
+
+import { popIn } from '@/theme/motion';
 
 import { selectionHaptic } from '@/components/ui';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
@@ -61,7 +63,7 @@ export function ReactionBar({
         accessibilityLabel="Close reactions"
       />
       <Animated.View
-        entering={ZoomIn.duration(150)}
+        entering={popIn}
         style={[styles.bar, { top: top - headerHeight }, mine ? styles.right : styles.left]}
         accessibilityRole="toolbar"
       >

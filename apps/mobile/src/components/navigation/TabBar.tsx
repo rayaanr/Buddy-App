@@ -1,18 +1,10 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { router } from 'expo-router';
-import type { ComponentType, ReactNode } from 'react';
-import { useEffect } from 'react';
+import type { ComponentType } from 'react';
 import { Text, View } from 'react-native';
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
-  AnimatedView,
   CalendarIcon,
   CompassIcon,
   PeopleIcon,
@@ -22,7 +14,6 @@ import {
   selectionHaptic,
 } from '@/components/ui';
 import { colors, TAB_BAR_HEIGHT } from '@/theme';
-import { spring } from '@/theme/motion';
 
 const TABS: Record<string, { label: string; Icon: ComponentType<{ color?: string }> }> = {
   index: { label: 'Discover', Icon: CompassIcon },
@@ -61,9 +52,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         scale="strong"
         className="min-w-0 flex-1 items-center gap-[5px]"
       >
-        <TabIcon focused={focused}>
-          <tab.Icon color={color} />
-        </TabIcon>
+        {/* No hop: tabs are tapped dozens of times a day; the colour says which is on. */}
+        <tab.Icon color={color} />
         {/* One line always: shrinks a little rather than wrap ("Communitie/s"),
             e.g. with a larger system text size. */}
         <Text
@@ -109,15 +99,4 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
       {items.slice(2)}
     </View>
   );
-}
-
-/** Gives the icon a small hop when its tab becomes the selected one. */
-function TabIcon({ focused, children }: { focused: boolean; children: ReactNode }) {
-  const lift = useSharedValue(0);
-  useEffect(() => {
-    if (focused)
-      lift.set(withSequence(withSpring(-4, spring.snappy), withSpring(0, spring.bouncy)));
-  }, [focused, lift]);
-  const style = useAnimatedStyle(() => ({ transform: [{ translateY: lift.get() }] }));
-  return <AnimatedView style={style}>{children}</AnimatedView>;
 }

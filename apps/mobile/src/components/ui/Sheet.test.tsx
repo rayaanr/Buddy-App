@@ -1,5 +1,5 @@
 import { describe, expect, it, jest } from '@jest/globals';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { act, fireEvent, render, screen } from '@/test/native';
 import { Sheet } from './Sheet';
@@ -47,7 +47,7 @@ describe('Sheet (drawer)', () => {
       </Sheet>,
     );
     const scroll = screen.UNSAFE_getByType(ScrollView);
-    expect(scroll.props.style).toMatchObject({ flexGrow: 0 });
+    expect(StyleSheet.flatten(scroll.props.style)).toMatchObject({ flexGrow: 0 });
     expect(screen.getByText('Tall content', { includeHiddenElements: true })).toBeTruthy();
   });
 });

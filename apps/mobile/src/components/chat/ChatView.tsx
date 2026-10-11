@@ -27,12 +27,17 @@ import {
   View,
   type ListRenderItem,
 } from 'react-native';
+import Animated, {
+  useAnimatedReaction,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { type ChatDraft, type ChatRoom, useChat } from '@/api/chat';
 import { ApiRequestError, errorMessage } from '@/api/client';
 import { keys, useMe } from '@/api/queries';
 import {
-  AnimatedView,
   BackButton,
   ArrowDownIcon,
   Avatar,
@@ -55,7 +60,7 @@ import { NotFound } from '@/components/ui/NotFound';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
-import { enterMessage } from '@/theme/motion';
+import { popIn, popOut } from '@/theme/motion';
 import { type ChatPerson, Composer } from './Composer';
 import { ReactionBar, type SelectedMessage } from './ReactionBar';
 import { MessageBubble, toChatRows, type ChatRow } from './MessageBubble';
@@ -63,12 +68,8 @@ import { PhotoViewer } from './PhotoViewer';
 import { TypingIndicator } from './TypingIndicator';
 import { useToggleMute } from './useToggleMute';
 
-/**
- * New messages slide in on phones. Not on web: there, the animation takes the
- * row out of the (inverted) list's layout once it ends, and the next message
- * overlaps it.
- */
-const animateNew = Platform.OS !== 'web';
+/** Scrolled up this far, a ↓ button offers a jump back to the latest. */
+const JUMP_AFTER = 600;
 
 interface ChatViewProps {
   room: ChatRoom;
@@ -112,12 +113,6 @@ export function ChatView({
   // bottom and stays there as messages arrive, without scrolling by hand.
   const rows = useMemo(() => toChatRows(chat.items).reverse(), [chat.items]);
 
-  // Messages already here when the chat opened appear as-is; new ones animate in.
-  const [openedWith, setOpenedWith] = useState<Set<string> | null>(null);
-  if (openedWith === null && !chat.isLoading && !chat.error) {
-    setOpenedWith(new Set(chat.items.map((i) => i.message.id)));
-  }
-
   const reportMessage = useCallback(
     (m: ChatMessage) =>
       router.push({ pathname: '/report', params: { type: 'message', id: m.id, chatId: room.id } }),
@@ -146,6 +141,17 @@ export function ChatView({
   const list = useRef<FlatList<ChatRow>>(null);
   // Scrolled up a way: a ↓ button jumps back to the newest message.
   const [showJump, setShowJump] = useState(false);
+  // Tracked on the UI thread; React only hears when it crosses the line.
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+  useAnimatedReaction(
+    () => scrollY.get() > JUMP_AFTER,
+    (far, before) => {
+      if (far !== before) scheduleOnRN(setShowJump, far);
+    },
+  );
   // Where "new messages" starts, fixed when the chat opens (reading it doesn't move it).
   const [unread, setUnread] = useState<{ from: string; count: number } | null | undefined>();
   if (unread === undefined && !chat.isLoading && !chat.error) {
@@ -212,10 +218,9 @@ export function ChatView({
       LIMITS.messageEditMinutes * 60_000;
   const renderItem = useCallback<ListRenderItem<ChatRow>>(
     ({ item }) => (
-      <AnimatedView
-        entering={
-          animateNew && openedWith && !openedWith.has(item.message.id) ? enterMessage : undefined
-        }
+      // No entrance: messages arrive dozens of times a chat, so they just
+      // appear (as in WhatsApp), and the list keeps its place.
+      <View
         style={
           item.message.id === highlighted || item.message.id === selectedId
             ? styles.highlight
@@ -234,21 +239,9 @@ export function ChatView({
           onReply={onReply}
           onJumpTo={onJumpTo}
         />
-      </AnimatedView>
+      </View>
     ),
-    [
-      openedWith,
-      unread,
-      highlighted,
-      selectedId,
-      myId,
-      retry,
-      onVote,
-      onActions,
-      onReact,
-      onReply,
-      onJumpTo,
-    ],
+    [unread, highlighted, selectedId, myId, retry, onVote, onActions, onReact, onReply, onJumpTo],
   );
 
   /** Picks a photo (library or camera) and sends it, with the typed text as its caption. */
@@ -415,7 +408,7 @@ export function ChatView({
               <LoadError error={chat.error} onRetry={() => void chat.refetch()} stale />
             </View>
           ) : null}
-          <FlatList
+          <Animated.FlatList
             ref={list}
             inverted
             data={rows}
@@ -440,8 +433,8 @@ export function ChatView({
             // Inverted: the "end" is the top, where older messages are.
             onEndReached={() => void chat.loadEarlier()}
             onEndReachedThreshold={0.4}
-            onScroll={(e) => setShowJump(e.nativeEvent.contentOffset.y > 600)}
-            scrollEventThrottle={100}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             ListFooterComponent={
               <>
                 {chat.loadingEarlier ? <Loading className="py-3" /> : null}
@@ -458,14 +451,14 @@ export function ChatView({
             }}
           />
           {showJump ? (
-            <View style={styles.jump}>
+            <Animated.View entering={popIn} exiting={popOut} style={styles.jump}>
               <IconButton
                 icon={<ArrowDownIcon />}
                 label="Jump to the latest messages"
                 onPress={() => list.current?.scrollToOffset({ offset: 0, animated: true })}
                 className="border border-line"
               />
-            </View>
+            </Animated.View>
           ) : null}
         </View>
       )}

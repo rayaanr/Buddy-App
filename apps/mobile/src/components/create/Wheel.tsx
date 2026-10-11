@@ -64,7 +64,7 @@ export function Wheel({ values, index, onChange, label, width = 92 }: WheelProps
       // Where a flick would carry it, then the nearest row.
       const projected = offset.get() + e.velocityY * 0.12;
       const i = Math.min(last, Math.max(0, Math.round(-projected / ITEM)));
-      offset.set(withSpring(-i * ITEM, { ...spring.snappy, velocity: e.velocityY }));
+      offset.set(withSpring(-i * ITEM, { ...spring.settle, velocity: e.velocityY }));
       scheduleOnRN(onChange, i);
     });
 

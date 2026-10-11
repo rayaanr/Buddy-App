@@ -1,34 +1,38 @@
 import type { ActivitySummary as Activity } from '@buddy/shared';
 import * as Haptics from 'expo-haptics';
-import { useLayoutEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
   type SharedValue,
 } from 'react-native-reanimated';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
 import { CheckIcon, CloseIcon, Eyebrow, Heading, Photo, Scrim } from '@/components/ui';
 import { availabilityColor, distanceLabel, hueFor, spotsLabel, whenLong } from '@/lib/activity';
-import { colors, EASE_OUT } from '@/theme';
+import { project } from '@/lib/gestures';
+import { colors } from '@/theme';
+import { spring } from '@/theme/motion';
 
-/** Drag distance past which a release counts as a decision. */
+/**
+ * Where a release has to be heading to count as a decision: a long drag or
+ * a quick flick both get there, a lazy let-go near the middle doesn't.
+ */
 const THRESHOLD = 100;
+/** Cards slow down fast: only a real flick projects far. */
+const CARD_DECELERATION = 0.99;
 /** Distance over which the back card grows to full size. */
 const REVEAL = 120;
 const FLY_OUT = 600;
-const ease = Easing.bezier(...EASE_OUT);
 
-const haptic = (like: boolean) => {
+/** The card committing: one light tap, as it leaves. */
+const haptic = () => {
   if (Platform.OS === 'web') return;
-  Haptics.impactAsync(
-    like ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light,
-  );
+  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 };
 
 interface SwipeDeckProps {
@@ -54,34 +58,51 @@ export function SwipeDeck({ top, next, reason, index, onDecide }: SwipeDeckProps
     busy.set(false);
   }, [index, tx, ty, busy]);
 
-  const decide = (like: boolean) => {
-    'worklet';
-    if (busy.get()) return;
-    busy.set(true);
-    scheduleOnRN(haptic, like);
-    tx.set(
-      withTiming(like ? FLY_OUT : -FLY_OUT, { duration: 320, easing: ease }, (done) => {
-        if (done) scheduleOnRN(onDecide, like);
-      }),
-    );
-    ty.set(withTiming(ty.get() || -30, { duration: 320, easing: ease }));
-  };
+  /** Throws the card off, carrying the finger's speed (none from the buttons). */
+  const decide = useCallback(
+    (like: boolean, vx = 0, vy = 0) => {
+      'worklet';
+      if (busy.get()) return;
+      busy.set(true);
+      scheduleOnRN(haptic);
+      const out = { duration: 300, dampingRatio: 1, overshootClamping: true };
+      tx.set(
+        withSpring(like ? FLY_OUT : -FLY_OUT, { ...out, velocity: vx }, (done) => {
+          if (done) scheduleOnRN(onDecide, like);
+        }),
+      );
+      ty.set(withSpring(ty.get() || -30, { ...out, velocity: vy }));
+    },
+    [busy, tx, ty, onDecide],
+  );
 
-  const pan = Gesture.Pan()
-    .onUpdate((e) => {
-      if (busy.get()) return;
-      tx.set(e.translationX);
-      ty.set(e.translationY);
-    })
-    .onEnd((e) => {
-      if (busy.get()) return;
-      if (e.translationX > THRESHOLD) decide(true);
-      else if (e.translationX < -THRESHOLD) decide(false);
-      else {
-        tx.set(withTiming(0, { duration: 320, easing: ease }));
-        ty.set(withTiming(0, { duration: 320, easing: ease }));
-      }
-    });
+  // Where the card was when grabbed, so catching it mid-return doesn't jump.
+  const fromX = useSharedValue(0);
+  const fromY = useSharedValue(0);
+  const pan = useMemo(
+    () =>
+      Gesture.Pan()
+        .onStart(() => {
+          fromX.set(tx.get());
+          fromY.set(ty.get());
+        })
+        .onUpdate((e) => {
+          if (busy.get()) return;
+          tx.set(fromX.get() + e.translationX);
+          ty.set(fromY.get() + e.translationY);
+        })
+        .onEnd((e) => {
+          if (busy.get()) return;
+          const heading = tx.get() + project(e.velocityX, CARD_DECELERATION);
+          if (heading > THRESHOLD) decide(true, e.velocityX, e.velocityY);
+          else if (heading < -THRESHOLD) decide(false, e.velocityX, e.velocityY);
+          else {
+            tx.set(withSpring(0, { ...spring.snapBack, velocity: e.velocityX }));
+            ty.set(withSpring(0, { ...spring.snapBack, velocity: e.velocityY }));
+          }
+        }),
+    [busy, tx, ty, fromX, fromY, decide],
+  );
 
   return (
     <>
