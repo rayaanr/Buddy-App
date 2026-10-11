@@ -3,7 +3,7 @@ import { atLocalTime } from '@buddy/shared';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 
-import { activities } from '../src/db/schema';
+import { activities, activityMembers } from '../src/db/schema';
 import { useTestApp } from './harness';
 
 const t = useTestApp();
@@ -22,6 +22,16 @@ const create = (headers: Record<string, string>, extra: object = {}) =>
       ...extra,
     },
   });
+
+/** Moves an activity into the past; people already going had signed up the day before. */
+async function startedHoursAgo(id: string, hours: number) {
+  const startsAt = new Date(Date.now() - hours * 3_600_000);
+  await t.deps.db.update(activities).set({ startsAt }).where(eq(activities.id, id));
+  await t.deps.db
+    .update(activityMembers)
+    .set({ joinedAt: new Date(startsAt.getTime() - 86_400_000) })
+    .where(eq(activityMembers.activityId, id));
+}
 
 describe('cost and what to bring', () => {
   it('saves them, shows them, and lets the host change them', async () => {
@@ -57,10 +67,7 @@ describe('would go again', () => {
     // Not yet: it hasn't happened.
     expect((await answer(guest.headers, true)).status).toBe(403);
 
-    await t.deps.db
-      .update(activities)
-      .set({ startsAt: new Date(Date.now() - 3 * 3_600_000) })
-      .where(eq(activities.id, a.id));
+    await startedHoursAgo(a.id, 3);
     const before = await t.call<ActivityDetail>(`/v1/activities/${a.id}`, {
       headers: guest.headers,
     });
@@ -79,5 +86,42 @@ describe('would go again', () => {
 
     // Changing your mind takes it off the total.
     expect((await answer(guest.headers, false)).body.host.wouldGoAgain).toBe(0);
+  });
+
+  it('only counts guests who signed up beforehand and stayed', async () => {
+    const host = await t.signIn('host@buddy.test', 'Kavindu');
+    const guest = await t.signIn('guest@buddy.test', 'Nethmi');
+    const lateComer = await t.signIn('late@buddy.test', 'Late');
+    const { body: a } = await create(host.headers);
+    await t.call(`/v1/activities/${a.id}/membership`, { method: 'POST', headers: guest.headers });
+    await startedHoursAgo(a.id, 0.5);
+    const answer = (headers: Record<string, string>) =>
+      t.call<ActivityDetail>(`/v1/activities/${a.id}/feedback`, {
+        method: 'POST',
+        headers,
+        body: { wouldGoAgain: true },
+      });
+
+    // Joining once it's started, voting, then leaving adds nothing.
+    await t.call(`/v1/activities/${a.id}/membership`, {
+      method: 'POST',
+      headers: lateComer.headers,
+    });
+    expect((await answer(lateComer.headers)).body.host.wouldGoAgain).toBe(0);
+    await t.call(`/v1/activities/${a.id}/membership`, {
+      method: 'DELETE',
+      headers: lateComer.headers,
+    });
+
+    // A guest who signed up beforehand counts, until they leave.
+    expect((await answer(guest.headers)).body.host.wouldGoAgain).toBe(1);
+    await t.call(`/v1/activities/${a.id}/membership`, {
+      method: 'DELETE',
+      headers: guest.headers,
+    });
+    const profile = await t.call<PublicProfile>(`/v1/users/${host.userId}`, {
+      headers: lateComer.headers,
+    });
+    expect(profile.body.wouldGoAgain).toBe(0);
   });
 });

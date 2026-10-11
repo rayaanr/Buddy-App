@@ -278,8 +278,17 @@ export async function countWouldGoAgain(db: Db | Tx, hostId: string) {
       and(
         eq(activityFeedback.hostId, hostId),
         eq(activityFeedback.wouldGoAgain, true),
-        // Someone the host's roll call says didn't come doesn't count.
-        sql`not exists (select 1 from activity_members m where m.activity_id = ${activityFeedback.activityId} and m.user_id = ${activityFeedback.userId} and m.attended = false)`,
+        // Only from guests still in it, not marked absent by the host's roll
+        // call, who joined before it started (or the host marked as there):
+        // otherwise anyone could join a started activity, vote and leave.
+        sql`exists (
+          select 1 from activity_members m join activities a on a.id = m.activity_id
+          where m.activity_id = ${activityFeedback.activityId}
+            and m.user_id = ${activityFeedback.userId}
+            and m.role = 'guest'
+            and m.attended is not false
+            and (m.joined_at < a.starts_at or m.attended)
+        )`,
       ),
     );
   return row?.n ?? 0;

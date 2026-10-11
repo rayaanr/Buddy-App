@@ -17,7 +17,7 @@ import {
 } from '@buddy/shared';
 import { randomUUID } from 'node:crypto';
 
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { Db, Tx } from '../../db/client';
 import {
@@ -490,29 +490,65 @@ export async function removeGuest(
     const row = await lockForHost(tx, host.id, activityId, { evenIfStarted: true });
     if (userId === host.id) throw forbidden('Hosts can’t remove themselves');
     const [person] = await tx.select({ name: user.name }).from(user).where(eq(user.id, userId));
-    const left = await tx
-      .delete(activityMembers)
-      .where(and(eq(activityMembers.activityId, activityId), eq(activityMembers.userId, userId)))
-      .returning({ userId: activityMembers.userId });
-    const unqueued = await tx
-      .delete(activityWaitlist)
-      .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)))
-      .returning({ userId: activityWaitlist.userId });
-    if (!person || (!left.length && !unqueued.length)) throw notFound('Guest');
+    if (!person) throw notFound('Guest');
+    const here = await removeFrom(tx, activityId, userId, reason, person.name);
+    if (!here.wasGoing && !here.wasWaiting) throw notFound('Guest');
 
-    await tx.insert(activityRemovals).values({ activityId, userId, reason }).onConflictDoNothing();
-    // Worded gently: everyone else in the chat sees this.
-    const messages = left.length
-      ? [await insertSystemMessage(tx, activityId, `${firstName(person.name)} is no longer going`)]
+    // A weekly activity: next week's is usually posted already (as this one
+    // starts), and the removal holds for it and every later week too.
+    const later = row.seriesId
+      ? await tx
+          .select({ id: activities.id })
+          .from(activities)
+          .where(
+            and(
+              eq(activities.seriesId, row.seriesId),
+              gt(activities.startsAt, row.startsAt),
+              isNull(activities.cancelledAt),
+            ),
+          )
+          .orderBy(asc(activities.startsAt))
+          .for('update')
       : [];
-    const moved = await promoteFromWaitlist(tx, activityId);
-    return {
-      wasGoing: left.length > 0,
-      title: row.title,
-      messages: [...messages, ...moved.messages],
-      promoted: moved.promoted,
-    };
+    const laterWeeks = [];
+    for (const { id } of later) {
+      laterWeeks.push({ id, ...(await removeFrom(tx, id, userId, reason, person.name)) });
+    }
+
+    return { ...here, title: row.title, laterWeeks };
   });
+}
+
+/** Takes someone out of one activity (going or waiting) and keeps them out. */
+async function removeFrom(
+  tx: Tx,
+  activityId: string,
+  userId: string,
+  reason: RemovalReason,
+  name: string,
+) {
+  const left = await tx
+    .delete(activityMembers)
+    .where(and(eq(activityMembers.activityId, activityId), eq(activityMembers.userId, userId)))
+    .returning({ userId: activityMembers.userId });
+  const unqueued = await tx
+    .delete(activityWaitlist)
+    .where(and(eq(activityWaitlist.activityId, activityId), eq(activityWaitlist.userId, userId)))
+    .returning({ userId: activityWaitlist.userId });
+  await tx.insert(activityRemovals).values({ activityId, userId, reason }).onConflictDoNothing();
+  // Worded gently: everyone else in the chat sees this.
+  const messages = left.length
+    ? [await insertSystemMessage(tx, activityId, `${firstName(name)} is no longer going`)]
+    : [];
+  const moved = left.length
+    ? await promoteFromWaitlist(tx, activityId)
+    : { messages: [], promoted: [] };
+  return {
+    wasGoing: left.length > 0,
+    wasWaiting: unqueued.length > 0,
+    messages: [...messages, ...moved.messages],
+    promoted: moved.promoted,
+  };
 }
 
 /** Leaves the waitlist. A no-op if you weren't on it. */
@@ -616,8 +652,13 @@ export async function updateActivity(
       place: input.place,
       ...(where && { location: where.location, placeId: where.placeId, area: where.area }),
       startsAt,
-      // A new time gets its own reminders.
-      ...(timeChanged && { dayBeforeSentAt: null, reminderSentAt: null, followUpSentAt: null }),
+      // A new time gets its own reminders, but only once it's back outside
+      // a reminder's window: nudging the time can't send the same one again.
+      ...(timeChanged && {
+        followUpSentAt: null,
+        ...(startsAt.getTime() > Date.now() + 86_400_000 && { dayBeforeSentAt: null }),
+        ...(startsAt.getTime() > Date.now() + 3_600_000 && { reminderSentAt: null }),
+      }),
       ...(groupChanged
         ? {
             group,

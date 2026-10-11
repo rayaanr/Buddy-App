@@ -37,6 +37,8 @@ export function moderationRoutes(deps: Deps) {
       ...done.removedPhotos,
       done.removedMessage?.imageKey,
     ]);
+    // Open chat connections were made with the sessions just deleted.
+    if (done.suspendedId) hub.disconnectEverywhere(done.suspendedId);
     for (const a of done.cancelled) await announce(a.id, moderatorId, a.result);
     if (done.removedCommunity) {
       const { name, memberIds } = done.removedCommunity;

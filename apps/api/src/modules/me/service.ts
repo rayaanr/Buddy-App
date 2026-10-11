@@ -139,6 +139,9 @@ export async function updateMe(
  * reports about them are kept for moderation. Their uploaded photos are
  * returned for the caller to delete from storage once this commits.
  */
+/** Kinds of email code better-auth stores, as "<type>-otp-<email>". */
+const OTP_TYPES = ['sign-in', 'email-verification', 'forget-password', 'change-email'];
+
 export async function deleteAccount(
   db: Db,
   userId: string,
@@ -204,7 +207,10 @@ export async function deleteAccount(
     );
     // Sign-in codes still waiting for their email address.
     await tx.execute(
-      sql`delete from verification where identifier = ${me.email} or identifier like ${`%-otp-${me.email}`}`,
+      sql`delete from verification where identifier in (${sql.join(
+        [me.email, ...OTP_TYPES.map((type) => `${type}-otp-${me.email}`)],
+        sql`, `,
+      )})`,
     );
 
     await tx.delete(user).where(eq(user.id, userId));

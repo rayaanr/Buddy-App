@@ -122,7 +122,7 @@ describe('reminders', () => {
     expect(forActivity(stale)).toHaveLength(0);
   });
 
-  it('reminds again when the host moves the time', async () => {
+  it('reminds again for a new time, but nudging the time doesn’t repeat it', async () => {
     sent.length = 0;
     const id = await activity('Padel', '45 minutes');
     await run();
@@ -132,15 +132,27 @@ describe('reminders', () => {
       .where(eq(activities.id, id))) as [{ hostId: string }];
     const [host] = await t.deps.db.select().from(user).where(eq(user.id, hostId));
     const { headers } = await t.signIn(host!.email);
-    const res = await t.call(`/v1/activities/${id}`, {
-      method: 'PATCH',
-      headers,
-      body: { startsAt: new Date(Date.now() + 50 * 60_000).toISOString() },
-    });
-    expect(res.status).toBe(200);
+    const moveTo = (minutes: number) =>
+      t.call(`/v1/activities/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: { startsAt: new Date(Date.now() + minutes * 60_000).toISOString() },
+      });
+    const reminders = () =>
+      forActivity(id).filter((s) => s.message.title.startsWith('Starting in an hour'));
+
+    // Five minutes later: still within the hour, so no second reminder.
+    expect((await moveTo(50)).status).toBe(200);
     await run();
-    expect(
-      forActivity(id).filter((s) => s.message.title.startsWith('Starting in an hour')),
-    ).toHaveLength(2);
+    expect(reminders()).toHaveLength(1);
+
+    // Moved to this evening: reminded again once it's an hour away.
+    expect((await moveTo(240)).status).toBe(200);
+    await t.deps.db
+      .update(activities)
+      .set({ startsAt: new Date(Date.now() + 40 * 60_000) })
+      .where(eq(activities.id, id));
+    await run();
+    expect(reminders()).toHaveLength(2);
   });
 });

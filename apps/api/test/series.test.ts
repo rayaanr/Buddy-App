@@ -164,4 +164,41 @@ describe('weekly activities', () => {
     await run();
     expect(await series(stopped.id)).toHaveLength(1);
   });
+
+  it('a guest removed on the day stays out of next week’s too', async () => {
+    const host = await t.signIn();
+    const guest = await t.signIn('trouble@buddy.test', 'Trouble');
+    const first = await weekly(host.headers);
+    await t.call(`/v1/activities/${first.id}/membership`, {
+      method: 'POST',
+      headers: guest.headers,
+    });
+    await startedAgo(first.id, '10 minutes');
+    await run();
+    const [, next] = await series(first.id);
+    // They'd already signed up for next week as well.
+    await t.call(`/v1/activities/${next!.id}/membership`, {
+      method: 'POST',
+      headers: guest.headers,
+    });
+
+    const res = await t.call(`/v1/activities/${first.id}/members/${guest.userId}/remove`, {
+      method: 'POST',
+      headers: host.headers,
+      body: { reason: 'behaviour' },
+    });
+    expect(res.status).toBe(200);
+    const going = await t.deps.db
+      .select()
+      .from(activityMembers)
+      .where(
+        and(eq(activityMembers.activityId, next!.id), eq(activityMembers.userId, guest.userId)),
+      );
+    expect(going).toEqual([]);
+    const join = await t.call(`/v1/activities/${next!.id}/membership`, {
+      method: 'POST',
+      headers: guest.headers,
+    });
+    expect(join.status).not.toBe(200);
+  });
 });

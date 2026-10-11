@@ -211,3 +211,47 @@ describe('reactions', () => {
     ]);
   });
 });
+
+describe('blocked people around a message', () => {
+  it('leaves their quotes and reactions out', async () => {
+    const kavindu = await t.signIn();
+    const shehani = await t.signIn('shehani@buddy.test');
+    const id = await padel(kavindu.headers);
+    const { body: hers } = await send(id, shehani.headers, { body: 'Bringing balls' });
+    const { body: mine } = await send(id, kavindu.headers, { body: 'Great', replyToId: hers.id });
+    await t.call(`/v1/activities/${id}/chat/messages/${mine.id}/react`, {
+      method: 'POST',
+      headers: shehani.headers,
+      body: { emoji: '👍' },
+    });
+
+    await t.call(`/v1/users/${shehani.userId}/block`, { method: 'POST', headers: kavindu.headers });
+    const page = await t.call<MessagesPage>(`/v1/activities/${id}/chat/messages`, {
+      headers: kavindu.headers,
+    });
+    const shown = page.body.messages.find((m) => m.id === mine.id)!;
+    expect(shown.replyTo).toBeNull();
+    expect(shown.reactions).toEqual([]);
+    expect(page.body.messages.some((m) => m.id === hers.id)).toBe(false);
+  });
+});
+
+describe('deleted polls', () => {
+  it('take no more votes', async () => {
+    const me = await t.signIn();
+    const id = await padel(me.headers);
+    const { body: poll } = await send(id, me.headers, {
+      poll: { question: 'Which court?', options: ['Court 2', 'Court 3'] },
+    });
+    await t.call(`/v1/activities/${id}/chat/messages/${poll.id}`, {
+      method: 'DELETE',
+      headers: me.headers,
+    });
+    const res = await t.call(`/v1/activities/${id}/chat/messages/${poll.id}/vote`, {
+      method: 'POST',
+      headers: me.headers,
+      body: { optionIds: [poll.poll!.options[0]!.id] },
+    });
+    expect(res.status).toBe(404);
+  });
+});

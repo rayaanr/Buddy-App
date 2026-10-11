@@ -29,7 +29,7 @@ import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
-import { notBlockedBetween } from '../safety/blocks';
+import { blockedIds, notBlockedBetween } from '../safety/blocks';
 
 export type MessageRow = typeof messages.$inferSelect;
 
@@ -79,7 +79,19 @@ export async function requireMember(db: Db, room: Room, userId: string) {
 }
 
 /** Attaches senders, @mentioned names, photo URLs and poll votes to stored messages. */
-async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<ChatMessage[]> {
+/**
+ * Messages as the app shows them. With a viewer, people blocked either way
+ * are left out of what's around each message too: quotes of their messages,
+ * their reactions and votes, and mentions of them.
+ */
+async function toChatMessages(
+  db: Db,
+  urls: Urls,
+  rows: MessageRow[],
+  viewerId?: string,
+): Promise<ChatMessage[]> {
+  const blocked = new Set(viewerId ? await blockedIds(db, viewerId) : []);
+  const shown = (userId: string | null) => !userId || !blocked.has(userId);
   const peopleIds = [
     ...new Set(rows.flatMap((r) => [r.senderId, ...r.mentions]).filter((id): id is string => !!id)),
   ];
@@ -113,13 +125,14 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
           imageWidth: messages.imageWidth,
           poll: messages.poll,
           deletedAt: messages.deletedAt,
+          senderId: messages.senderId,
           senderName: user.name,
         })
         .from(messages)
         .leftJoin(user, eq(user.id, messages.senderId))
         .where(inArray(messages.id, replyIds))
     : [];
-  const quoteById = new Map(quoted.map((q) => [q.id, q]));
+  const quoteById = new Map(quoted.filter((q) => shown(q.senderId)).map((q) => [q.id, q]));
 
   const messageIds = rows.map((r) => r.id);
   const reactionRows = messageIds.length
@@ -170,7 +183,7 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
       photoExpired: !gone && !r.imageKey && r.imageWidth !== null,
       mentions: (gone ? [] : r.mentions).flatMap((id) => {
         const person = byId.get(id);
-        return person ? [{ id, name: person.name }] : [];
+        return person && shown(id) ? [{ id, name: person.name }] : [];
       }),
       poll:
         r.poll && !gone
@@ -180,7 +193,7 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
               options: r.poll.options.map((o) => ({
                 ...o,
                 voterIds: votes
-                  .filter((v) => v.messageId === r.id && v.optionId === o.id)
+                  .filter((v) => v.messageId === r.id && v.optionId === o.id && shown(v.userId))
                   .map((v) => v.userId),
               })),
             }
@@ -188,7 +201,7 @@ async function toChatMessages(db: Db, urls: Urls, rows: MessageRow[]): Promise<C
       replyTo: r.deletedAt ? null : quoteOf(r.replyToId ? quoteById.get(r.replyToId) : undefined),
       reactions: r.deletedAt
         ? []
-        : groupReactions(reactionRows.filter((x) => x.messageId === r.id)),
+        : groupReactions(reactionRows.filter((x) => x.messageId === r.id && shown(x.userId))),
       editedAt: r.editedAt?.toISOString() ?? null,
       deleted: !!r.deletedAt,
       createdAt: r.createdAt.toISOString(),
@@ -330,7 +343,7 @@ export async function listMessages(
     rows = newest.slice(0, limit).reverse();
   }
   return {
-    messages: await toChatMessages(db, urls, rows),
+    messages: await toChatMessages(db, urls, rows, viewerId),
     othersReadUpTo: await othersReadUpTo(db, room, viewerId),
     myReadUpTo: await readUpTo(db, room, viewerId),
     hasMore,
@@ -459,17 +472,20 @@ export async function vote(
   messageId: string,
   optionIds: string[],
 ) {
-  const [msg] = await db
-    .select()
-    .from(messages)
-    .where(and(eq(messages.id, messageId), eq(roomColumn(room), room.id)));
-  if (!msg?.poll) throw notFound('Poll');
-  const picked = [...new Set(optionIds)];
-  const known = new Set(msg.poll.options.map((o) => o.id));
-  if (picked.some((id) => !known.has(id))) throw badRequest('That isn’t one of the options');
-  if (!msg.poll.multiple && picked.length > 1) throw badRequest('Pick one option');
+  // One vote at a time per poll: two at once could otherwise both clear the
+  // old answer and both insert, giving two answers in a pick-one poll.
+  const msg = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(messages)
+      .where(and(eq(messages.id, messageId), eq(roomColumn(room), room.id)))
+      .for('update');
+    if (!row?.poll || row.deletedAt) throw notFound('Poll');
+    const picked = [...new Set(optionIds)];
+    const known = new Set(row.poll.options.map((o) => o.id));
+    if (picked.some((id) => !known.has(id))) throw badRequest('That isn’t one of the options');
+    if (!row.poll.multiple && picked.length > 1) throw badRequest('Pick one option');
 
-  await db.transaction(async (tx) => {
     await tx
       .delete(pollVotes)
       .where(and(eq(pollVotes.messageId, messageId), eq(pollVotes.userId, userId)));
@@ -478,6 +494,7 @@ export async function vote(
         .insert(pollVotes)
         .values(picked.map((optionId) => ({ messageId, userId, optionId })));
     }
+    return row;
   });
   return toChatMessage(db, urls, msg);
 }

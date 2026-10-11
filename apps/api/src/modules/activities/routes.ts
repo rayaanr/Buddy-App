@@ -289,6 +289,10 @@ export function activityRoutes(deps: Deps) {
           const result = await removeGuest(db, me, id, userId, c.req.valid('json').reason);
           if (result.wasGoing) hub.disconnect(id, userId);
           await announce(id, me.id, result);
+          for (const week of result.laterWeeks) {
+            if (week.wasGoing) hub.disconnect(week.id, userId);
+            await announce(week.id, me.id, week);
+          }
           void push.notifyUsers([userId], {
             title: `You’re no longer going to ${result.title}`,
             body: 'The host removed you from this activity.',

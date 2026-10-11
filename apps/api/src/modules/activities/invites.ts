@@ -68,6 +68,11 @@ export async function findInvitees(
       where mine.user_id = ${viewerId}
         and a.starts_at < now()
         and a.cancelled_at is null
+        -- Really met: both signed up before it started, or the host marked
+        -- them there. Joining a started activity doesn't make everyone in
+        -- it invitable.
+        and (mine.joined_at < a.starts_at or mine.attended)
+        and (other.joined_at < a.starts_at or other.attended)
       group by other.user_id
     )
     select u.id, u.name, p.avatar_key, p.avatar_url, met.title as met,

@@ -33,11 +33,16 @@ async function pastRun(title: string, userIds: string[]) {
       capacity: 10,
     })
     .returning({ id: activities.id });
-  await t.deps.db
-    .insert(activityMembers)
-    .values(
-      userIds.map((userId, i) => ({ activityId: row!.id, userId, role: i ? 'guest' : 'host' })),
-    );
+  await t.deps.db.insert(activityMembers).values(
+    userIds.map((userId, i) => ({
+      activityId: row!.id,
+      userId,
+      role: i ? 'guest' : 'host',
+      // Signed up a week before it happened.
+      joinedAt: new Date(Date.now() - 10 * 86_400_000),
+    })),
+  );
+  return row!.id;
 }
 
 async function upcoming(headers: Record<string, string>) {
@@ -109,6 +114,17 @@ describe('inviting people', () => {
 
     // Once they join, they're not on the list any more.
     await t.call(`/v1/activities/${id}/membership`, { method: 'POST', headers: friend.headers });
+    expect((await invitees(id, host.headers)).body.people).toEqual([]);
+  });
+
+  it('leaves out people who only joined once it had started', async () => {
+    const host = await t.signIn('host@buddy.test', 'Kavindu Perera');
+    const crasher = await t.signIn('crasher@buddy.test', 'Gate Crasher');
+    const runId = await pastRun('Sunday long run', [host.userId]);
+    await t.deps.db
+      .insert(activityMembers)
+      .values({ activityId: runId, userId: crasher.userId, role: 'guest' });
+    const id = await upcoming(host.headers);
     expect((await invitees(id, host.headers)).body.people).toEqual([]);
   });
 

@@ -67,6 +67,10 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
   // Each message can push to everyone in the chat.
   const sending = limits(deps)({ name: 'chat', limit: 30, windowMs: MINUTE, by: 'user' });
   const voting = limits(deps)({ name: 'votes', limit: 60, windowMs: MINUTE, by: 'user' });
+  // Each read receipt goes out to everyone in the chat.
+  const reading = limits(deps)({ name: 'reads', limit: 120, windowMs: MINUTE, by: 'user' });
+  // Phones reconnect when they come back online or change screens; this is plenty.
+  const connecting = limits(deps)({ name: 'sockets', limit: 60, windowMs: MINUTE, by: 'user' });
   const memberOnly = createMiddleware<ChatEnv>(async (c, next) => {
     const { title } = await requireMember(db, roomOf(c.req.param('id')!), currentUser(c).id);
     c.set('chatTitle', title);
@@ -196,7 +200,13 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
               .remove([removedPhoto])
               .catch((err: unknown) => logger.error({ err }, 'Could not delete chat photo'));
           }
-          hub.publish(room.id, { type: 'updated', message });
+          hub.publish(
+            room.id,
+            { type: 'updated', message },
+            {
+              except: await blockedIds(db, me.id),
+            },
+          );
           return c.json(message);
         },
       )
@@ -212,7 +222,13 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
           const room = roomOf(c.req.param('id')!);
           const { messageId } = c.req.valid('param');
           const reactions = await react(db, room, me.id, messageId, c.req.valid('json').emoji);
-          hub.publish(room.id, { type: 'reactions', messageId, reactions });
+          hub.publish(
+            room.id,
+            { type: 'reactions', messageId, reactions },
+            {
+              except: await blockedIds(db, me.id),
+            },
+          );
           return c.json({ messageId, reactions });
         },
       )
@@ -234,12 +250,18 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
             c.req.valid('param').messageId,
             c.req.valid('json').optionIds,
           );
-          hub.publish(room.id, { type: 'poll', messageId: message.id, poll: message.poll! });
+          hub.publish(
+            room.id,
+            { type: 'poll', messageId: message.id, poll: message.poll! },
+            {
+              except: await blockedIds(db, me.id),
+            },
+          );
           return c.json(message);
         },
       )
 
-      .post('/read', validate('json', markReadInput), async (c) => {
+      .post('/read', reading, validate('json', markReadInput), async (c) => {
         const me = currentUser(c);
         const roomId = c.req.param('id')!;
         const upTo = await markRead(db, roomOf(roomId), me.id, c.req.valid('json').messageId);
@@ -252,12 +274,12 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
       .get(
         '/ws',
         sameSiteOnly,
+        connecting,
         upgradeWebSocket((c) => {
           const me = currentUser(c);
           const roomId = c.req.param('id')!;
           let leave: (() => void) | undefined;
           let heartbeat: ReturnType<typeof setInterval> | undefined;
-          let lastTyping = 0;
 
           return {
             onOpen(_event, ws) {
@@ -296,9 +318,7 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
               }
               if (!parsed.success) return;
               if (parsed.data.type === 'typing') {
-                const now = Date.now();
-                if (now - lastTyping < TYPING_THROTTLE_MS) return;
-                lastTyping = now;
+                if (!hub.mayType(roomId, me.id, TYPING_THROTTLE_MS)) return;
                 blockedIds(db, me.id)
                   .then((blocked) =>
                     hub.publish(

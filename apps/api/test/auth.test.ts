@@ -61,6 +61,39 @@ describe('email code sign-in', () => {
     expect(res.headers.getSetCookie()).toHaveLength(0);
   });
 
+  it('past the hourly limit, asking again keeps the code already sent working', async () => {
+    const email = 'nethmi@buddy.test';
+    for (let i = 0; i < 5; i++) await t.requestCode(email);
+    await new Promise((r) => setTimeout(r, 10));
+    const sent = t.mail.codeFor(email);
+    const count = t.mail.sent.length;
+
+    // Someone else keeps asking for codes for this address: no email, no new code…
+    for (let i = 0; i < 3; i++) expect((await t.requestCode(email)).status).toBe(200);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(t.mail.sent).toHaveLength(count);
+
+    // …so the person's own code still signs them in.
+    const res = await t.app.request('/api/auth/sign-in/email-otp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:7400' },
+      body: JSON.stringify({ email, otp: sent }),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it('caps code guesses per address, whatever the IP', async () => {
+    const email = 'amaya@buddy.test';
+    const guess = (otp: string) =>
+      t.app.request('/api/auth/sign-in/email-otp', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', origin: 'http://localhost:7400' },
+        body: JSON.stringify({ email, otp }),
+      });
+    for (let i = 0; i < 20; i++) expect((await guess('000000')).status).not.toBe(429);
+    expect((await guess('000000')).status).toBe(429);
+  });
+
   it('stores codes hashed, never in plain text', async () => {
     await t.requestCode('kavindu@buddy.test');
     await new Promise((r) => setTimeout(r, 10));

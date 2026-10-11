@@ -64,6 +64,10 @@ export function createApp(deps: Deps) {
     );
   }
 
+  // Brand images, ahead of the security headers: email apps load the logo
+  // from their own sites, which Cross-Origin-Resource-Policy would block.
+  app.route('/', brandRoutes());
+
   // nosniff, no framing, no referrer leaks; the share page adds its own CSP.
   app.use(secureHeaders());
 
@@ -91,7 +95,6 @@ export function createApp(deps: Deps) {
   });
 
   // Public pages: shared links, privacy policy and terms.
-  app.route('/', brandRoutes());
   app.route('/', shareRoutes(deps));
   app.route('/', legalRoutes(deps));
 

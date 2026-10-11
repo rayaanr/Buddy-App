@@ -10,6 +10,7 @@ import {
   communityMembers,
   messages,
   profiles,
+  pushTokens,
   reports,
   session,
   user,
@@ -103,6 +104,8 @@ interface Resolved {
   removedPhotos: string[];
   /** A removed community, for the caller to tell its members. */
   removedCommunity: { name: string; memberIds: string[] } | null;
+  /** Someone suspended, for the caller to close their live connections. */
+  suspendedId: string | null;
 }
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -156,8 +159,17 @@ async function suspendLocked(tx: Tx, personId: string, out: Resolved) {
     .update(profiles)
     .set({ suspendedAt: new Date() })
     .where(and(eq(profiles.userId, personId), isNull(profiles.suspendedAt)));
-  // Signed out everywhere; signing back in is refused (see auth.ts).
+  // Signed out everywhere; signing back in is refused (see auth.ts). No more
+  // notifications on their phone either (signing in again registers it anew).
   await tx.delete(session).where(eq(session.userId, personId));
+  await tx.delete(pushTokens).where(eq(pushTokens.userId, personId));
+  // Weekly activities they host stop repeating, including a series whose
+  // latest week has already started (so isn't cancelled below).
+  await tx
+    .update(activities)
+    .set({ repeatsWeekly: false })
+    .where(and(eq(activities.hostId, personId), eq(activities.repeatsWeekly, true)));
+  out.suspendedId = personId;
   // What they host can't go ahead.
   const hosted = await tx
     .select()
@@ -201,6 +213,7 @@ const nothingYet = (): Resolved => ({
   removedMessage: null,
   removedPhotos: [],
   removedCommunity: null,
+  suspendedId: null,
 });
 
 /**

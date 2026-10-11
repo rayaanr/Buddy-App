@@ -10,6 +10,7 @@ import type { Mail, Mailer } from '../src/lib/mailer';
 import type { PushSender } from '../src/lib/push';
 import type { VenueSearch } from '../src/lib/venues';
 import type { Storage, StoredObject } from '../src/lib/storage';
+import { WS_MAX_BYTES } from '../src/realtime/hub';
 import { seed } from '../scripts/seed/index';
 import { TEST_DATABASE_URL } from './global-setup';
 
@@ -146,7 +147,7 @@ export function useTestApp(
 
   /** Starts a real HTTP + WebSocket server on a random port (for socket tests). */
   async function listen() {
-    const wss = new WebSocketServer({ noServer: true });
+    const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_BYTES });
     const server = await new Promise<ReturnType<typeof serve>>((resolve) => {
       const s = serve({ fetch: app.fetch, port: 0, websocket: { server: wss } }, () => resolve(s));
     });

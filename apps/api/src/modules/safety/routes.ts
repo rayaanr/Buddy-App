@@ -21,8 +21,10 @@ export function reportRoutes(deps: Deps) {
         async (c) => {
           const { report, repeat } = await createReport(db, currentUser(c).id, c.req.valid('json'));
           if (!repeat) void notifyModerators(deps, report);
-          // The app blocks whoever this turned out to be about (not what its link claimed).
-          return c.json({ id: report.id, targetUserId: report.targetUserId }, 201);
+          // The app blocks whoever this turned out to be about (not what its link
+          // claimed). Not for a community: who started it isn't shown anywhere.
+          const targetUserId = report.communityId ? null : report.targetUserId;
+          return c.json({ id: report.id, targetUserId }, 201);
         },
       )
   );

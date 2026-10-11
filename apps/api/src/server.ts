@@ -8,6 +8,7 @@ import { startReminders } from './jobs/reminders';
 import { startRetention } from './jobs/retention';
 import { startSeries } from './jobs/series';
 import { flushSentry, startSentry } from './lib/sentry';
+import { WS_MAX_BYTES } from './realtime/hub';
 
 const env = loadEnv();
 startSentry(env);
@@ -18,7 +19,7 @@ const stopSeries = startSeries(deps);
 const stopRetention = startRetention(deps);
 
 // Chat sockets share the HTTP port; Hono routes upgrade requests to this server.
-const wss = new WebSocketServer({ noServer: true });
+const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_BYTES });
 
 const server = serve({ fetch: app.fetch, port: env.PORT, websocket: { server: wss } }, (info) => {
   deps.logger.info({ port: info.port }, 'Buddy API listening');

@@ -1,7 +1,7 @@
 import { expo } from '@better-auth/expo';
 import { ERROR_CODES, LIMITS } from '@buddy/shared';
 import { betterAuth } from 'better-auth';
-import { APIError } from 'better-auth/api';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { emailOTP } from 'better-auth/plugins';
 import { createHash } from 'node:crypto';
@@ -26,6 +26,8 @@ export interface AuthDeps {
 
 /** Sign-in codes per email address per hour, whatever IP asks (stops inbox bombing). */
 const CODES_PER_EMAIL_PER_HOUR = 5;
+/** Code guesses per email address per day, whatever IP tries (each code also allows 5). */
+const TRIES_PER_EMAIL_PER_DAY = 20;
 
 /** A stable, non-reversible tag for an address, so logs can be correlated without holding emails. */
 const emailTag = (email: string) =>
@@ -66,10 +68,11 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
           }
         : undefined,
     account: {
-      // Google only hands over addresses it has verified, so signing in with
-      // Google as someone who signed up by email code is the same person:
-      // attach it to their account instead of failing.
-      accountLinking: { enabled: true, trustedProviders: ['google'] },
+      // Signing in with Google as someone who signed up by email code is the
+      // same person: attach it to their account instead of failing. Only for
+      // addresses Google says it has verified (no trustedProviders, which
+      // would skip that check).
+      accountLinking: { enabled: true },
     },
     session: {
       // Phones stay signed in; activity extends the session.
@@ -98,6 +101,34 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
         },
         '/sign-in/email-otp': { window: 60, max: env.NODE_ENV === 'production' ? 10 : 50 },
       },
+    },
+    hooks: {
+      // Per-address limits, checked before better-auth acts: past the limit a
+      // code request must not create a new code either, or it would replace
+      // (and so lock out) the real person's code.
+      before: createAuthMiddleware(async (ctx) => {
+        const email = String((ctx.body as { email?: unknown } | undefined)?.email ?? '')
+          .trim()
+          .toLowerCase();
+        if (!email) return;
+        if (ctx.path === '/email-otp/send-verification-otp') {
+          if (!limiter.hit(`otp:${email}`, CODES_PER_EMAIL_PER_HOUR, 3_600_000).ok) {
+            // Look the same as success, so this can't be used to probe addresses.
+            logger.warn(
+              { email: emailTag(email) },
+              'Too many sign-in codes for this email; not sending',
+            );
+            return ctx.json({ success: true });
+          }
+        }
+        if (ctx.path === '/sign-in/email-otp') {
+          if (!limiter.hit(`otp-try:${email}`, TRIES_PER_EMAIL_PER_DAY, 86_400_000).ok) {
+            throw new APIError('TOO_MANY_REQUESTS', {
+              message: 'Too many tries for this email. Try again tomorrow.',
+            });
+          }
+        }
+      }),
     },
     databaseHooks: {
       session: {
@@ -138,15 +169,8 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
         allowedAttempts: 5,
         // Hashed at rest: a leaked database must not hand out working codes.
         storeOTP: 'hashed',
+        // The per-address limit runs first (see hooks.before).
         async sendVerificationOTP({ email, otp }) {
-          if (!limiter.hit(`otp:${email.toLowerCase()}`, CODES_PER_EMAIL_PER_HOUR, 3_600_000).ok) {
-            // Look the same as success, so this can't be used to probe addresses.
-            logger.warn(
-              { email: emailTag(email) },
-              'Too many sign-in codes for this email; not sending',
-            );
-            return;
-          }
           // Not awaited by the caller's response path to avoid timing leaks; errors are logged.
           mailer.send(signInCodeEmail(email, otp, env.BETTER_AUTH_URL)).catch((err: unknown) => {
             logger.error({ err, email: emailTag(email) }, 'Failed to send sign-in code');
