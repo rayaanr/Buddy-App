@@ -1,5 +1,6 @@
 import type {
   ActivityDetail,
+  ChatPreview,
   CommunitySummary,
   CreateCommunityInput,
   UpdateCommunityInput,
@@ -22,6 +23,7 @@ import {
 } from '@tanstack/react-query';
 
 import { authClient } from './auth-client';
+import type { ChatRoom } from './chat';
 import { askForPush } from './push';
 import { useAccountStore } from '@/store/account';
 import { useDiscoverStore } from '@/store/discover';
@@ -270,21 +272,34 @@ export function useFeedback(activityId: string) {
   });
 }
 
-export function useMuteCommunityChat() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, muted }: { id: string; muted: boolean }) =>
-      unwrap(api.communities[':id'].mute.$post({ param: { id }, json: { muted } })),
-    onSuccess: (detail) => qc.setQueryData(keys.community(detail.id), detail),
-  });
-}
-
+/**
+ * Mutes or unmutes a group chat (an activity's or a community's). No pushes
+ * for new messages, though @mentions still get through. Updates the Chats
+ * list straight away.
+ */
 export function useMuteChat() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, muted }: { id: string; muted: boolean }) =>
-      unwrap(api.activities[':id'].mute.$post({ param: { id }, json: { muted } })),
-    onSuccess: (detail) => qc.setQueryData(keys.activity(detail.id), detail),
+    mutationFn: async ({ room, muted }: { room: ChatRoom; muted: boolean }) => {
+      if (room.kind === 'community') {
+        const detail = await unwrap(
+          api.communities[':id'].mute.$post({ param: { id: room.id }, json: { muted } }),
+        );
+        qc.setQueryData(keys.community(detail.id), detail);
+        return detail.chatMuted;
+      }
+      const detail = await unwrap(
+        api.activities[':id'].mute.$post({ param: { id: room.id }, json: { muted } }),
+      );
+      qc.setQueryData(keys.activity(detail.id), detail);
+      return detail.viewer.chatMuted;
+    },
+    onSuccess: (muted, { room }) => {
+      qc.setQueryData<ChatPreview[]>(keys.chats, (list) =>
+        list?.map((c) => (c.kind === room.kind && c.id === room.id ? { ...c, muted } : c)),
+      );
+      void qc.invalidateQueries({ queryKey: keys.chats });
+    },
   });
 }
 

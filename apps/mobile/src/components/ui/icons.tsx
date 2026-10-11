@@ -30,7 +30,7 @@ import Plus from 'lucide-react-native/icons/plus';
 import Reply from 'lucide-react-native/icons/reply';
 import Search from 'lucide-react-native/icons/search';
 import Settings from 'lucide-react-native/icons/settings';
-import Share from 'lucide-react-native/icons/share';
+import Share2 from 'lucide-react-native/icons/share-2';
 import Trash from 'lucide-react-native/icons/trash';
 import User from 'lucide-react-native/icons/user';
 import Users from 'lucide-react-native/icons/users';
@@ -119,7 +119,7 @@ export const ClockIcon = icon(
 
 export const MoreIcon = icon(Ellipsis, { size: 20, color: colors.ink, strokeWidth: 2 }, 'MoreIcon');
 export const ShareIcon = icon(
-  Share,
+  Share2,
   { size: 19, color: colors.ink, strokeWidth: 1.9 },
   'ShareIcon',
 );

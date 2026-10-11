@@ -7,7 +7,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue } from 'react-nativ
 
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { IconButton, MaximizeIcon } from '@/components/ui';
-import { MAP_ATTRIBUTION } from '@/config';
+import { MAP_ATTRIBUTION, MAP_BACKGROUND } from '@/config';
 import { availabilityColor } from '@/lib/activity';
 import { fitPoints, fromWorldPixel, tilesAround, worldPixel } from '@/lib/maps';
 import { colors } from '@/theme';
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   map: {
     borderRadius: 22,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
+    backgroundColor: MAP_BACKGROUND,
   },
   pin: {
     position: 'absolute',
@@ -271,7 +271,11 @@ const styles = StyleSheet.create({
     left: 10,
     bottom: 6,
     fontSize: 9.5,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 4,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   empty: {
     position: 'absolute',

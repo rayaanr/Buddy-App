@@ -21,6 +21,7 @@ export default function ActivityChatScreen() {
       // Back to the activity if that's where you came from, else open it.
       onTitlePress={() => router.dismissTo(`/activity/${id}`)}
       people={people}
+      muted={a && (a.viewer.joined || a.viewer.hosting) ? a.viewer.chatMuted : undefined}
       banner={
         a ? (
           <View className="mb-2">

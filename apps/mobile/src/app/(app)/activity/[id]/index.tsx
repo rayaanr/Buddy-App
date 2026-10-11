@@ -25,7 +25,6 @@ import {
   useFeedback,
   useJoinActivity,
   useLeaveActivity,
-  useMuteChat,
   useUnreadMessages,
   useWaitlist,
 } from '@/api/queries';
@@ -90,7 +89,6 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
   const join = useJoinActivity();
   const leave = useLeaveActivity();
   const waitlist = useWaitlist();
-  const mute = useMuteChat();
   const cancel = useCancelActivity();
   const unreadMessages = useUnreadMessages(a.id);
   const { top } = useScreenInsets();
@@ -152,25 +150,8 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             : errorMessage(err),
         ),
     });
-  const onMute = () =>
-    mute.mutate(
-      { id: a.id, muted: !a.viewer.chatMuted },
-      {
-        onSuccess: (detail) =>
-          toast(
-            detail.viewer.chatMuted
-              ? 'Group chat muted. You’ll still get reminders and changes.'
-              : 'Group chat unmuted.',
-          ),
-        onError: (err) => toast(errorMessage(err)),
-      },
-    );
-
   // ⋯ menu: what you can do depends on whether you host, are going, or are browsing.
   const menu: MenuItem[] = [
-    ...(isIn
-      ? [{ label: a.viewer.chatMuted ? 'Unmute group chat' : 'Mute group chat', onPress: onMute }]
-      : []),
     ...(canManage
       ? [
           { label: 'Edit activity', onPress: () => router.push(`/activity/${a.id}/edit`) },

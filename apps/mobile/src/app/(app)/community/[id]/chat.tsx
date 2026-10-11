@@ -21,6 +21,7 @@ export default function CommunityChatScreen() {
       onTitlePress={() => router.dismissTo(`/community/${id}`)}
       membersOnly="Join this community to see its chat."
       people={people}
+      muted={c?.joined ? c.chatMuted : undefined}
       banner={
         c ? (
           <View className="mb-2 rounded-[14px] border border-lime-panel-border bg-lime-panel px-4 py-3.5">

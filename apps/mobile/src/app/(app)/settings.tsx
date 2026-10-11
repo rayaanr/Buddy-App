@@ -49,7 +49,7 @@ export default function SettingsScreen() {
         <NotificationSwitch
           kind="chat"
           label="Group chat messages"
-          sub="Mute a single chat from its activity’s ⋯ menu."
+          sub="Mute a single chat from its ⋯ menu, or by holding it in Chats."
         />
         <NotificationSwitch
           kind="reminders"

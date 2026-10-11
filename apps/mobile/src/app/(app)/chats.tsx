@@ -1,15 +1,20 @@
 import { type ChatPreview, clockLabel, dayMonth, firstName, localDay } from '@buddy/shared';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { useChats } from '@/api/queries';
+import { useToggleMute } from '@/components/chat/useToggleMute';
 import {
   Avatar,
+  BellIcon,
   BellOffIcon,
   Chip,
+  CloseIcon,
   CountBadge,
   EmptyState,
+  holdHaptic,
+  IconButton,
   LoadError,
   Loading,
   MapPinIcon,
@@ -17,6 +22,7 @@ import {
   Refresh,
   ScreenHeader,
 } from '@/components/ui';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { colors } from '@/theme';
 
@@ -36,10 +42,45 @@ export default function ChatsScreen() {
   const chats = useChats();
   const [filter, setFilter] = useState<Filter>('all');
   const shown = chats.data?.filter((c) => matches(c, filter)) ?? [];
+  // Held down: the header turns into its actions (Mute), like WhatsApp.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = chats.data?.find((c) => c.id === selectedId) ?? null;
+  const toggleMute = useToggleMute();
+  const { top } = useScreenInsets();
+  useEffect(() => {
+    if (!selected || Platform.OS !== 'android') return;
+    // Android back lets go of the chat instead of leaving the screen.
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      setSelectedId(null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [selected]);
 
   return (
     <View className="flex-1 bg-bg">
-      <ScreenHeader title="Chats" />
+      {selected ? (
+        <View className="flex-row items-center gap-3 px-[18px]" style={{ paddingTop: top(56) }}>
+          <IconButton
+            icon={<CloseIcon />}
+            label="Done with this chat"
+            onPress={() => setSelectedId(null)}
+          />
+          <Text numberOfLines={1} className="flex-1 font-sans-semibold text-[17px] text-ink">
+            {selected.title}
+          </Text>
+          <IconButton
+            icon={selected.muted ? <BellIcon /> : <BellOffIcon size={20} color={colors.ink} />}
+            label={selected.muted ? 'Unmute' : 'Mute'}
+            onPress={() => {
+              toggleMute({ kind: selected.kind, id: selected.id }, !selected.muted);
+              setSelectedId(null);
+            }}
+          />
+        </View>
+      ) : (
+        <ScreenHeader title="Chats" />
+      )}
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingHorizontal: 22, paddingTop: 12, paddingBottom: 30 }}
@@ -83,7 +124,16 @@ export default function ChatsScreen() {
             </Text>
           ) : null}
           {shown.map((c) => (
-            <Row key={c.id} chat={c} />
+            <Row
+              key={c.id}
+              chat={c}
+              selected={c.id === selectedId}
+              selecting={!!selected}
+              onSelect={(on) => {
+                if (on) holdHaptic();
+                setSelectedId(on ? c.id : null);
+              }}
+            />
           ))}
         </View>
       </ScrollView>
@@ -106,7 +156,18 @@ function preview(c: ChatPreview) {
   return `${who}: ${m.body}`;
 }
 
-function Row({ chat: c }: { chat: ChatPreview }) {
+function Row({
+  chat: c,
+  selected,
+  selecting,
+  onSelect,
+}: {
+  chat: ChatPreview;
+  selected: boolean;
+  /** Some chat is held: a tap picks this one (or lets go) instead of opening it. */
+  selecting: boolean;
+  onSelect: (on: boolean) => void;
+}) {
   const unread = c.unread > 0;
   const open = () =>
     c.kind === 'activity'
@@ -114,10 +175,17 @@ function Row({ chat: c }: { chat: ChatPreview }) {
       : router.push(`/community/${c.id}/chat`);
   return (
     <Pressable
-      onPress={open}
+      onPress={selecting ? () => onSelect(!selected) : open}
+      onLongPress={() => onSelect(true)}
+      delayLongPress={350}
       accessibilityRole="button"
-      accessibilityLabel={`${c.title}. ${unread ? `${c.unread} new. ` : ''}${preview(c)}`}
-      className="flex-row items-center gap-3.5 border-b border-divider py-3.5 active:opacity-80"
+      accessibilityState={{ selected }}
+      accessibilityLabel={`${c.title}. ${c.muted ? 'Muted. ' : ''}${unread ? `${c.unread} new. ` : ''}${preview(c)}`}
+      accessibilityHint="Hold for options"
+      className={cn(
+        '-mx-[22px] flex-row items-center gap-3.5 border-b border-divider px-[22px] py-3.5 active:opacity-80',
+        selected && 'bg-surface',
+      )}
     >
       <View>
         <Avatar uri={c.imageUrl ?? undefined} name={c.title} size={50} shape="rounded" />

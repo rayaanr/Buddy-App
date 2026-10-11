@@ -40,13 +40,17 @@ export const TERMS_URL = `${API_URL}/terms`;
 
 /**
  * Map tiles for meeting-point previews: any {z}/{x}/{y} raster tile URL.
- * CARTO's dark basemap (OpenStreetMap data) matches the app, but CARTO now
+ * CARTO's Voyager basemap (OpenStreetMap data): light, with streets, names,
+ * parks and water, so a place is easy to find. CARTO now
  * needs an API key (`?key=…`; free up to 1M tiles a month for commercial
  * use) or every tile reads "API key required". Set EXPO_PUBLIC_MAP_TILES to
  * the keyed URL: on EAS for builds, in apps/mobile/.env.local for local runs.
  * Another source works too, with EXPO_PUBLIC_MAP_ATTRIBUTION as its credit.
  */
 export const MAP_TILES =
-  process.env.EXPO_PUBLIC_MAP_TILES ?? 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png';
+  process.env.EXPO_PUBLIC_MAP_TILES ??
+  'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+/** Shown under tiles still loading: close to Voyager's land colour. */
+export const MAP_BACKGROUND = '#EDEBE6';
 export const MAP_ATTRIBUTION =
   process.env.EXPO_PUBLIC_MAP_ATTRIBUTION ?? '© OpenStreetMap contributors © CARTO';

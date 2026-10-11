@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MapPinIcon, Menu } from '@/components/ui';
-import { MAP_ATTRIBUTION } from '@/config';
+import { MAP_ATTRIBUTION, MAP_BACKGROUND } from '@/config';
 import { mapsApps, tilesAround } from '@/lib/maps';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     height: HEIGHT,
     borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
+    backgroundColor: MAP_BACKGROUND,
   },
   center: {
     position: 'absolute',
@@ -144,6 +144,10 @@ const styles = StyleSheet.create({
     right: 8,
     bottom: 6,
     fontSize: 9.5,
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 4,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
 });

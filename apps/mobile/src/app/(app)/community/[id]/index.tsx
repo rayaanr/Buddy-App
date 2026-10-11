@@ -3,12 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { errorMessage } from '@/api/client';
-import {
-  useCommunity,
-  useDeleteCommunity,
-  useMuteCommunityChat,
-  useUnreadMessages,
-} from '@/api/queries';
+import { useCommunity, useDeleteCommunity, useUnreadMessages } from '@/api/queries';
 import { ActivityRow } from '@/components/activity/ActivityCards';
 import { communityMeta } from '@/components/community/CommunityCard';
 import {
@@ -37,25 +32,12 @@ export default function CommunityScreen() {
   const { top } = useScreenInsets();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const remove = useDeleteCommunity();
-  const mute = useMuteCommunityChat();
   const unreadMessages = useUnreadMessages(id);
 
   if (!community.data)
     return <QueryFallback query={community} notFound="This community no longer exists." />;
   const c = community.data;
   const others = c.memberCount - c.members.length;
-  const onMute = () =>
-    mute.mutate(
-      { id: c.id, muted: !c.chatMuted },
-      {
-        onSuccess: (detail) =>
-          toast(detail.chatMuted ? 'Group chat muted.' : 'Group chat unmuted.'),
-        onError: (err) => toast(errorMessage(err)),
-      },
-    );
-  const muteItem = c.joined
-    ? [{ label: c.chatMuted ? 'Unmute group chat' : 'Mute group chat', onPress: onMute }]
-    : [];
 
   return (
     <ScrollView className="flex-1 bg-bg" contentContainerStyle={{ paddingBottom: 30 }}>
@@ -69,7 +51,6 @@ export default function CommunityScreen() {
             items={
               c.isCreator
                 ? [
-                    ...muteItem,
                     {
                       label: 'Edit community',
                       onPress: () => router.push(`/community/${c.id}/edit`),
@@ -81,7 +62,6 @@ export default function CommunityScreen() {
                     },
                   ]
                 : [
-                    ...muteItem,
                     {
                       label: 'Report community',
                       destructive: true,

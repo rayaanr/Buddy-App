@@ -35,6 +35,7 @@ import {
   AnimatedView,
   BackButton,
   ArrowDownIcon,
+  BellOffIcon,
   Avatar,
   CloseIcon,
   ConfirmDialog,
@@ -60,6 +61,7 @@ import { ReactionBar, type SelectedMessage } from './ReactionBar';
 import { MessageBubble, toChatRows, type ChatRow } from './MessageBubble';
 import { PhotoViewer } from './PhotoViewer';
 import { TypingIndicator } from './TypingIndicator';
+import { useToggleMute } from './useToggleMute';
 
 /**
  * New messages slide in on phones. Not on web: there, the animation takes the
@@ -82,6 +84,8 @@ interface ChatViewProps {
   image?: string | null;
   /** Who can be @mentioned. */
   people: ChatPerson[];
+  /** Whether you've muted it; unset when you aren't in it (nothing to mute). */
+  muted?: boolean;
 }
 
 /** A group chat screen: an activity's or a community's. */
@@ -94,7 +98,9 @@ export function ChatView({
   onTitlePress,
   image,
   people,
+  muted,
 }: ChatViewProps) {
+  const toggleMute = useToggleMute();
   const me = useMe();
   const chat = useChat(room, me.data?.id);
   const { top } = useScreenInsets();
@@ -372,11 +378,25 @@ export function ChatView({
                 <Text className="font-sans-semibold text-[16.5px] text-ink" numberOfLines={1}>
                   {title}
                 </Text>
-                <Text className="mt-0.5 font-sans text-[13px] text-muted" numberOfLines={1}>
-                  {subtitle}
-                </Text>
+                <View className="mt-0.5 flex-row items-center gap-1.5">
+                  {muted ? <BellOffIcon size={13} accessibilityLabel="Muted" /> : null}
+                  <Text className="flex-1 font-sans text-[13px] text-muted" numberOfLines={1}>
+                    {subtitle}
+                  </Text>
+                </View>
               </View>
             </PressableScale>
+            {muted === undefined ? null : (
+              <Menu
+                label="Chat options"
+                items={[
+                  {
+                    label: muted ? 'Unmute group chat' : 'Mute group chat',
+                    onPress: () => toggleMute(room, !muted),
+                  },
+                ]}
+              />
+            )}
           </>
         )}
       </View>
