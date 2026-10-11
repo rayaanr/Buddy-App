@@ -334,11 +334,11 @@ function AttachTile({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityHint={hint}
-      className="flex-1 rounded-[18px] bg-surface px-3.5 pb-3.5 pt-3"
+      className="flex-1 items-center rounded-[18px] bg-surface px-2 pb-3.5 pt-3.5"
     >
       <View className="h-10 w-10 items-center justify-center rounded-xl bg-lime-deep">{icon}</View>
-      <Text className="mt-3 font-sans-semibold text-[15px] text-ink">{label}</Text>
-      <Text className="mt-0.5 font-sans text-[12.5px] text-muted" numberOfLines={1}>
+      <Text className="mt-3 text-center font-sans-semibold text-[15px] text-ink">{label}</Text>
+      <Text className="mt-0.5 text-center font-sans text-[12.5px] text-muted" numberOfLines={1}>
         {hint}
       </Text>
     </PressableScale>

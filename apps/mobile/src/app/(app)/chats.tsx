@@ -7,12 +7,12 @@ import { useChats } from '@/api/queries';
 import {
   Avatar,
   BellOffIcon,
-  CalendarIcon,
   Chip,
   CountBadge,
   EmptyState,
   LoadError,
   Loading,
+  MapPinIcon,
   PeopleIcon,
   Refresh,
   ScreenHeader,
@@ -129,7 +129,7 @@ function Row({ chat: c }: { chat: ChatPreview }) {
           {c.kind === 'community' ? (
             <PeopleIcon size={13} color={colors.lime} />
           ) : (
-            <CalendarIcon size={13} color={colors.lime} />
+            <MapPinIcon size={13} color={colors.lime} />
           )}
         </View>
       </View>
