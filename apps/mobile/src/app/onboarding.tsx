@@ -1,7 +1,12 @@
 import {
+  EARLIEST_BIRTH_YEAR,
+  GENDER_LABELS,
+  GENDERS,
+  latestBirthYear,
   LIMITS,
   placeLabel,
   type Availability,
+  type Gender,
   type Interest,
   type Me,
   type Place,
@@ -13,11 +18,13 @@ import { Text, View } from 'react-native';
 import { errorMessage } from '@/api/client';
 import { useMe, useUpdateMe } from '@/api/queries';
 import { AvailabilityChips, InterestGrid } from '@/components/onboarding/InterestPicker';
+import { Wheel } from '@/components/create/Wheel';
 import { TownField } from '@/components/places/TownField';
 import {
   AnimatedView,
   BackButton,
   Button,
+  Chip,
   Footer,
   Heading,
   KeyboardAwareScrollView,
@@ -31,11 +38,19 @@ import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { cn } from '@/lib/cn';
 import { toast } from '@/store/ui';
 
-const STEPS = 3;
+const STEPS = 4;
+
+// Birth years on the wheel, newest first (18 and over only).
+const YEARS = Array.from({ length: latestBirthYear() - EARLIEST_BIRTH_YEAR + 1 }, (_, k) =>
+  String(latestBirthYear() - k),
+);
+/** Where the wheel starts: someone in their mid-twenties. */
+const DEFAULT_YEAR_INDEX = 7;
 
 /**
- * First run, right after the emailed code: name, home town, then interests.
- * Every step can be skipped; finishing or skipping the last one opens the app.
+ * First run, right after the emailed code: name, about you (gender, birth
+ * year), home town, then interests. "About you" is required (Buddy is 18+);
+ * the others can be skipped. Finishing the last one opens the app.
  */
 export default function OnboardingScreen() {
   const me = useMe();
@@ -52,6 +67,10 @@ function Steps({ me }: { me: Me }) {
   const [town, setTown] = useState<Place>(me.place);
   const [interests, setInterests] = useState<Interest[]>(me.interests);
   const [availability, setAvailability] = useState<Availability[]>(me.availability);
+  const [gender, setGender] = useState<Gender | null>(me.gender);
+  const [yearIndex, setYearIndex] = useState(
+    me.birthYear ? Math.max(0, YEARS.indexOf(String(me.birthYear))) : DEFAULT_YEAR_INDEX,
+  );
   const enter = useEnterOnChange(step);
 
   const last = step === STEPS - 1;
@@ -90,6 +109,41 @@ function Steps({ me }: { me: Me }) {
             returnKeyType="next"
             onSubmitEditing={() => trimmed && next(saveName())}
           />
+        </>
+      ),
+    },
+    {
+      title: 'A bit about you',
+      hint: 'Only you see these. Buddy is for people 18 and over.',
+      canContinue: !!gender,
+      required: true,
+      save: (): UpdateMeInput => ({
+        ...(gender && { gender }),
+        birthYear: Number(YEARS[yearIndex]),
+      }),
+      body: (
+        <>
+          <SectionLabel className="mb-2.5 mt-7">I am</SectionLabel>
+          <View className="flex-row flex-wrap gap-2" role="radiogroup">
+            {GENDERS.map((g) => (
+              <Chip
+                key={g}
+                label={GENDER_LABELS[g]}
+                selected={gender === g}
+                onPress={() => setGender(g)}
+              />
+            ))}
+          </View>
+          <SectionLabel className="mb-2 mt-7">Born in</SectionLabel>
+          <View className="items-center rounded-[20px] bg-surface py-2">
+            <Wheel
+              values={YEARS}
+              index={yearIndex}
+              onChange={setYearIndex}
+              label="Birth year"
+              width={140}
+            />
+          </View>
         </>
       ),
     },
@@ -173,15 +227,17 @@ function Steps({ me }: { me: Me }) {
           onPress={() => current.canContinue && next(current.save())}
         />
         {/* Not a primary action: skipping is fine, but continuing is the nudge. */}
-        <Button
-          label="Skip for now"
-          variant="ghost"
-          size="md"
-          weight="medium"
-          disabled={update.isPending}
-          onPress={() => next({})}
-          className="mt-2.5"
-        />
+        {current.required ? null : (
+          <Button
+            label="Skip for now"
+            variant="ghost"
+            size="md"
+            weight="medium"
+            disabled={update.isPending}
+            onPress={() => next({})}
+            className="mt-2.5"
+          />
+        )}
       </Footer>
     </KeyboardScreen>
   );

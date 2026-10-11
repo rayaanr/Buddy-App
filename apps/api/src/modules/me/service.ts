@@ -2,6 +2,7 @@ import {
   type ActivityGroup,
   type Availability,
   firstName,
+  type Gender,
   type Interest,
   type Me,
   placeLabel,
@@ -65,6 +66,8 @@ export async function getMe(
     availability: profile.availability as Availability[],
     avatarUrl: urls.avatar(profile.avatarKey, profile.avatarUrl),
     onboarded: profile.onboardedAt !== null,
+    gender: (profile.gender as Gender | null) ?? null,
+    birthYear: profile.birthYear,
     isAdmin: admins.includes(row.user.email.toLowerCase()),
     notifications: {
       chat: profile.notifyChat,
@@ -105,6 +108,8 @@ export async function updateMe(
       ...(input.interests !== undefined && { interests: input.interests }),
       ...(input.availability !== undefined && { availability: input.availability }),
       ...(input.avatarKey !== undefined && { avatarKey: input.avatarKey }),
+      ...(input.gender !== undefined && { gender: input.gender }),
+      ...(input.birthYear !== undefined && { birthYear: input.birthYear }),
       // Only ever set once, so finishing setup again keeps the first date.
       ...(input.onboarded && { onboardedAt: sql`coalesce(${profiles.onboardedAt}, now())` }),
       ...(input.notifications?.chat !== undefined && { notifyChat: input.notifications.chat }),

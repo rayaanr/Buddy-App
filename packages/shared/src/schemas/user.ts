@@ -1,6 +1,14 @@
 import { z } from 'zod';
 
-import { AVAILABILITY, INTERESTS, LIMITS } from '../constants';
+import {
+  AVAILABILITY,
+  EARLIEST_BIRTH_YEAR,
+  GENDERS,
+  INTERESTS,
+  latestBirthYear,
+  LIMITS,
+  MIN_AGE,
+} from '../constants';
 import { activitySummary } from './activity';
 import { place } from './place';
 import { isoDateTime } from './common';
@@ -22,6 +30,9 @@ export const me = z.object({
   avatarUrl: z.url().nullable(),
   /** False until first-run setup is finished or skipped; the app shows it until then. */
   onboarded: z.boolean(),
+  /** Private: only you see these. Null until given. */
+  gender: z.enum(GENDERS).nullable(),
+  birthYear: z.number().int().nullable(),
   /** Can review reports (Settings → Moderation). */
   isAdmin: z.boolean(),
   /** Push notification switches. */
@@ -53,6 +64,13 @@ export const updateMeInput = z
     availability: uniqueList(availability),
     /** Key returned by the upload endpoint; null removes the photo. */
     avatarKey: z.string().nullable(),
+    gender: z.enum(GENDERS),
+    /** You must be 18 or over this year. */
+    birthYear: z
+      .number()
+      .int()
+      .min(EARLIEST_BIRTH_YEAR, 'Check your birth year')
+      .refine((y) => y <= latestBirthYear(), `You need to be ${MIN_AGE} or over to use Buddy`),
     notifications: z
       .object({ chat: z.boolean(), reminders: z.boolean(), communities: z.boolean() })
       .partial(),

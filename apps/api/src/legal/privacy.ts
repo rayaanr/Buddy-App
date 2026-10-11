@@ -12,6 +12,7 @@ export const privacyHtml = (contact: string) => `
 <ul>
   <li><strong>Your account:</strong> email address (to send sign-in codes), your name, and the home town you pick.</li>
   <li><strong>Your profile:</strong> bio, interests, availability and an optional photo.</li>
+  <li><strong>About you (private):</strong> your gender and birth year. We use your birth year to keep Buddy for people 18 and over. Neither is shown to other people.</li>
   <li><strong>What you do on Buddy:</strong> activities you host or join, communities you join, group chat messages, people you block, and reports you file.</li>
   <li><strong>Location:</strong> only when you tap something like “Near me” or pin a meeting point. Your phone’s position is sent with that request to find nearby activities and is not stored. A meeting point you pin is stored with the activity and shown to others.</li>
   <li><strong>Notifications:</strong> a push token for your device, if you allow notifications.</li>

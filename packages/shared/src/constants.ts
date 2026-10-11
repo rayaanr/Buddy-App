@@ -43,6 +43,21 @@ export type DiscoverFilter = (typeof DISCOVER_FILTERS)[number];
 export const DISCOVER_RADII = [5, 10, 25, 50] as const;
 export const DEFAULT_RADIUS_KM = 25;
 
+/** How people describe their gender (asked in setup, kept private). */
+export const GENDERS = ['woman', 'man', 'nonbinary', 'unspecified'] as const;
+export type Gender = (typeof GENDERS)[number];
+export const GENDER_LABELS: Record<Gender, string> = {
+  woman: 'Woman',
+  man: 'Man',
+  nonbinary: 'Non-binary',
+  unspecified: 'Prefer not to say',
+};
+
+/** Buddy is for adults: the youngest birth year allowed this year. */
+export const MIN_AGE = 18;
+export const latestBirthYear = (now = new Date()) => now.getFullYear() - MIN_AGE;
+export const EARLIEST_BIRTH_YEAR = 1920;
+
 /** Reactions people can add to a chat message (one each). */
 export const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'] as const;
 export type Reaction = (typeof REACTIONS)[number];

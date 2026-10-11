@@ -84,6 +84,10 @@ export const profiles = pgTable('profiles', {
   suspendedAt: timestamp({ withTimezone: true }),
   /** When first-run setup was finished or skipped; until then the app shows it. */
   onboardedAt: timestamp({ withTimezone: true }),
+  /** Private (never shown to others): one of GENDERS, from setup or Edit profile. */
+  gender: text(),
+  /** Private: to check members are 18 or over. */
+  birthYear: integer(),
   ...timestamps,
 });
 

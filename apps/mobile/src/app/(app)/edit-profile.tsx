@@ -1,4 +1,14 @@
-import { LIMITS, type Place, type Availability, type Interest } from '@buddy/shared';
+import {
+  EARLIEST_BIRTH_YEAR,
+  GENDER_LABELS,
+  GENDERS,
+  latestBirthYear,
+  LIMITS,
+  type Availability,
+  type Gender,
+  type Interest,
+  type Place,
+} from '@buddy/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
@@ -8,6 +18,7 @@ import { useMe, useUpdateMe } from '@/api/queries';
 import { AvailabilityChips, InterestGrid } from '@/components/onboarding/InterestPicker';
 import {
   Button,
+  Chip,
   Footer,
   KeyboardAwareScrollView,
   KeyboardScreen,
@@ -17,11 +28,15 @@ import {
   TextField,
 } from '@/components/ui';
 import { PhotoButton } from '@/components/create/PhotoButton';
+import { Wheel } from '@/components/create/Wheel';
 import { TownField } from '@/components/places/TownField';
 import { usePickedImage } from '@/hooks/usePickedImage';
 import { toast } from '@/store/ui';
 
-/** Profile → Edit profile: photo, name, bio, home town, interests and when you're free, saved together. */
+/**
+ * Profile → Edit profile: photo, name, bio, home town, interests, when you're
+ * free, and (private) gender and birth year, saved together.
+ */
 export default function EditProfileScreen() {
   const me = useMe();
   if (!me.data) return <QueryFallback query={me} />;
@@ -35,7 +50,14 @@ interface Saved {
   place: Place;
   interests: Interest[];
   availability: Availability[];
+  gender: Gender | null;
+  birthYear: number | null;
 }
+
+// Birth years on the wheel, newest first (18 and over only).
+const YEARS = Array.from({ length: latestBirthYear() - EARLIEST_BIRTH_YEAR + 1 }, (_, k) =>
+  String(latestBirthYear() - k),
+);
 
 function EditProfileForm({ me }: { me: Saved }) {
   const update = useUpdateMe();
@@ -46,6 +68,10 @@ function EditProfileForm({ me }: { me: Saved }) {
   const [town, setTown] = useState(me.place);
   const [interests, setInterests] = useState(me.interests);
   const [availability, setAvailability] = useState(me.availability);
+  const [gender, setGender] = useState(me.gender);
+  const [yearIndex, setYearIndex] = useState(
+    me.birthYear ? Math.max(0, YEARS.indexOf(String(me.birthYear))) : -1,
+  );
 
   const save = () => {
     if (update.isPending || uploading) return;
@@ -56,6 +82,8 @@ function EditProfileForm({ me }: { me: Saved }) {
         placeId: town.id,
         interests,
         availability,
+        ...(gender && { gender }),
+        ...(yearIndex >= 0 && { birthYear: Number(YEARS[yearIndex]) }),
         ...(photo.key !== undefined && { avatarKey: photo.key }),
       },
       {
@@ -115,6 +143,30 @@ function EditProfileForm({ me }: { me: Saved }) {
 
         <SectionLabel className="mb-3 mt-6">Usually free</SectionLabel>
         <AvailabilityChips value={availability} onChange={setAvailability} />
+
+        <SectionLabel className="mb-1 mt-8">Just for you</SectionLabel>
+        <Text className="mb-3 font-sans text-[13px] leading-[18px] text-muted">
+          Never shown on your profile.
+        </Text>
+        <View className="flex-row flex-wrap gap-2" role="radiogroup" accessibilityLabel="Gender">
+          {GENDERS.map((g) => (
+            <Chip
+              key={g}
+              label={GENDER_LABELS[g]}
+              selected={gender === g}
+              onPress={() => setGender(g)}
+            />
+          ))}
+        </View>
+        <View className="mt-3 items-center rounded-[20px] bg-surface py-2">
+          <Wheel
+            values={YEARS}
+            index={Math.max(0, yearIndex)}
+            onChange={setYearIndex}
+            label="Birth year"
+            width={140}
+          />
+        </View>
       </KeyboardAwareScrollView>
 
       <Footer>

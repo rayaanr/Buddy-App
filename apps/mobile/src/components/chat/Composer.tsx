@@ -289,20 +289,20 @@ export function Composer({
         >
           <AttachTile
             label="Gallery"
-            tint="#a9d2ff"
-            icon={<ImagesIcon color="#a9d2ff" />}
+            hint="Your photos"
+            icon={<ImagesIcon color={colors.lime} size={22} />}
             onPress={() => void photo('library')}
           />
           <AttachTile
             label="Camera"
-            tint="#ffb3c0"
-            icon={<CameraIcon color="#ffb3c0" size={24} />}
+            hint="Take a photo"
+            icon={<CameraIcon color={colors.lime} size={22} />}
             onPress={() => void photo('camera')}
           />
           <AttachTile
             label="Poll"
-            tint={colors.lime}
-            icon={<PollIcon color={colors.lime} />}
+            hint="Ask the group"
+            icon={<PollIcon color={colors.lime} size={22} />}
             onPress={() => {
               setAttach(false);
               onPoll();
@@ -314,15 +314,15 @@ export function Composer({
   );
 }
 
-/** One choice in the attachment panel: a round tile and its name. */
+/** One choice in the attachment panel: a card like the app's other tiles. */
 function AttachTile({
   label,
-  tint,
+  hint,
   icon,
   onPress,
 }: {
   label: string;
-  tint: string;
+  hint: string;
   icon: ReactNode;
   onPress: () => void;
 }) {
@@ -330,17 +330,17 @@ function AttachTile({
     <PressableScale
       onPress={onPress}
       haptic="light"
+      scale="dim"
       accessibilityRole="button"
       accessibilityLabel={label}
-      className="items-center gap-2"
+      accessibilityHint={hint}
+      className="flex-1 rounded-[18px] bg-surface px-3.5 pb-3.5 pt-3"
     >
-      <View
-        className="h-[62px] w-[62px] items-center justify-center rounded-full border"
-        style={{ borderColor: `${tint}55`, backgroundColor: `${tint}1f` }}
-      >
-        {icon}
-      </View>
-      <Text className="font-sans-medium text-[13.5px] text-ink-soft">{label}</Text>
+      <View className="h-10 w-10 items-center justify-center rounded-xl bg-lime-deep">{icon}</View>
+      <Text className="mt-3 font-sans-semibold text-[15px] text-ink">{label}</Text>
+      <Text className="mt-0.5 font-sans text-[12.5px] text-muted" numberOfLines={1}>
+        {hint}
+      </Text>
     </PressableScale>
   );
 }
@@ -348,10 +348,8 @@ function AttachTile({
 const styles = StyleSheet.create({
   panel: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: colors.line,
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 4,
   },
 });
