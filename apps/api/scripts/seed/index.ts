@@ -104,6 +104,7 @@ export async function seed(db: Db, { now = new Date(), demo = false }: SeedOptio
         about: c.about,
         rules: c.rules,
         coverUrl: c.cover ? unsplash(c.cover) : null,
+        placeId: (await town(c.area)).id,
       })
       .returning({ id: s.communities.id });
     communityIds.set(c.key, row!.id);

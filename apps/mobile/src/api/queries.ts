@@ -162,11 +162,16 @@ export const useActivityMembers = (id: string, enabled: boolean) =>
     enabled,
   });
 
-export const useCommunities = () =>
-  useQuery({
-    queryKey: keys.communities,
-    queryFn: async () => (await unwrap(api.communities.$get())).communities,
+/** Nearest first; `search` (2+ letters) matches names, descriptions and towns. */
+export function useCommunities(search = '') {
+  const q = search.trim();
+  return useQuery({
+    queryKey: q.length >= 2 ? [...keys.communities, 'search', q] : keys.communities,
+    queryFn: async () =>
+      (await unwrap(api.communities.$get({ query: q.length >= 2 ? { q } : {} }))).communities,
+    placeholderData: q.length >= 2 ? keepPreviousData : undefined,
   });
+}
 
 export const useCommunity = (id: string) =>
   useQuery({

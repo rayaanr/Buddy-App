@@ -5,6 +5,7 @@ import { createMiddleware } from 'hono/factory';
 import { currentUser, requireUser } from '../../auth/middleware';
 import type { AppEnv, Deps } from '../../http/context';
 import { forbidden } from '../../lib/errors';
+import { forgetPhotos } from '../../lib/photos';
 import { idParam, validate } from '../../lib/validate';
 import { createAnnouncer } from '../activities/announce';
 import { liftSuspension, listReports, resolveReport } from './service';
@@ -29,7 +30,13 @@ export function moderationRoutes(deps: Deps) {
       const me = currentUser(c);
       const id = c.req.param('id');
       const input = c.req.valid('json');
-      const { cancelled, removedMessage } = await resolveReport(db, id, me.id, input);
+      const { cancelled, removedMessage, removedPhotos } = await resolveReport(
+        db,
+        id,
+        me.id,
+        input,
+      );
+      await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, removedPhotos);
       for (const a of cancelled) await announce(a.id, me.id, a.result);
       if (removedMessage) {
         hub.publish(removedMessage.activityId, { type: 'removed', messageId: removedMessage.id });

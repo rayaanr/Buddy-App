@@ -1,9 +1,10 @@
-import { LIMITS } from '@buddy/shared';
+import { LIMITS, type Place } from '@buddy/shared';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { CoverField } from '@/components/create/CoverField';
 import { PhotoButton } from '@/components/create/PhotoButton';
+import { TownField } from '@/components/places/TownField';
 import {
   BackButton,
   Button,
@@ -26,6 +27,8 @@ interface CommunityValues {
   /** undefined: unchanged; null: removed; string: a new upload. */
   coverKey?: string | null;
   logoKey?: string | null;
+  /** Unset: the server uses the creator's home town. */
+  placeId?: number;
 }
 
 interface CommunityFormProps {
@@ -36,6 +39,7 @@ interface CommunityFormProps {
     rules: string[];
     coverUrl: string | null;
     logoUrl: string | null;
+    place: Place | null;
   };
   submitLabel: string;
   pendingLabel: string;
@@ -46,7 +50,7 @@ interface CommunityFormProps {
 /** Start a community, or (its creator) edit one. */
 export function CommunityForm({
   heading,
-  initial = { name: '', about: '', rules: [], coverUrl: null, logoUrl: null },
+  initial = { name: '', about: '', rules: [], coverUrl: null, logoUrl: null, place: null },
   submitLabel,
   pendingLabel,
   pending,
@@ -56,6 +60,7 @@ export function CommunityForm({
   const [name, setName] = useState(initial.name);
   const [about, setAbout] = useState(initial.about);
   const [rules, setRules] = useState(initial.rules);
+  const [town, setTown] = useState(initial.place);
   const cover = usePickedImage('cover', initial.coverUrl);
   const logo = usePickedImage('logo', initial.logoUrl);
 
@@ -80,6 +85,7 @@ export function CommunityForm({
       rules: rules.map((r) => r.trim()).filter(Boolean),
       coverKey: cover.key,
       logoKey: logo.key,
+      placeId: town?.id,
     });
   };
 
@@ -115,6 +121,12 @@ export function CommunityForm({
           tone="inset"
           size="md"
         />
+
+        <SectionLabel className="mb-2 mt-6">Where it meets</SectionLabel>
+        <TownField value={town} onChange={setTown} tone="inset" />
+        <Text className="mt-2 font-sans text-[13px] leading-[18px] text-muted">
+          People nearby see it first.
+        </Text>
 
         <View className="mb-2 mt-6 flex-row items-baseline justify-between">
           <SectionLabel>About</SectionLabel>

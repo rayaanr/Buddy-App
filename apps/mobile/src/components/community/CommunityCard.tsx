@@ -13,9 +13,10 @@ const LOGO = 72;
 /** How far the logo hangs below the cover; the text starts under it. */
 const LOGO_OVERHANG = 12;
 
+/** "Kandy · 6 members · 2 this week". */
 export const communityMeta = (c: CommunitySummary) =>
-  `${c.memberCount} member${c.memberCount === 1 ? '' : 's'} · ${c.weeklyActivityCount} ${
-    c.weeklyActivityCount === 1 ? 'activity' : 'activities'
+  `${c.area} · ${c.memberCount} member${c.memberCount === 1 ? '' : 's'} · ${
+    c.weeklyActivityCount
   } this week`;
 
 export function CommunityCard({ community: c }: { community: CommunitySummary }) {

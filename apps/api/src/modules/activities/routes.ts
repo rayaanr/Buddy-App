@@ -19,6 +19,7 @@ import { activities, activityMembers, communityMembers } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
 import { notFound } from '../../lib/errors';
 import { DAY, HOUR, limits, MINUTE } from '../../lib/rate-limit';
+import { forgetPhotos } from '../../lib/photos';
 import { idParam, validate } from '../../lib/validate';
 import { toChatMessage } from '../chat/service';
 import { communityAudience } from '../communities/service';
@@ -61,6 +62,7 @@ export function activityRoutes(deps: Deps) {
   const hosting = limit({ name: 'hosting', limit: 30, windowMs: HOUR, by: 'user' });
 
   const announce = createAnnouncer(deps);
+  const photoDeps = { ...deps, publicUrl: deps.env.R2_PUBLIC_URL };
 
   /**
    * A new activity in a community: its members hear about it. At most a few a
@@ -222,11 +224,9 @@ export function activityRoutes(deps: Deps) {
       .patch('/:id', hosting, idParam(), validate('json', updateActivityInput), async (c) => {
         const me = currentUser(c);
         const id = c.req.param('id');
-        await announce(
-          id,
-          me.id,
-          await updateActivity(db, { urls, storage }, me, id, c.req.valid('json')),
-        );
+        const result = await updateActivity(db, { urls, storage }, me, id, c.req.valid('json'));
+        await announce(id, me.id, result);
+        await forgetPhotos(photoDeps, result.replacedPhotos ?? []);
         return c.json(await getActivityDetail(db, urls, id, me.id));
       })
 

@@ -8,7 +8,7 @@ import {
 } from '@buddy/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -33,6 +33,7 @@ import {
   Avatar,
   BackButton,
   Button,
+  CalendarIcon,
   ConfirmDialog,
   Eyebrow,
   Footer,
@@ -52,6 +53,7 @@ import { MembersSheet } from '@/components/activity/MembersSheet';
 import { useHasPassed } from '@/hooks/useNow';
 import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { distanceLabel, hueFor, ordinal, spotsLabel, spotsLeft, whenLong } from '@/lib/activity';
+import { addToCalendar, canAddToCalendar } from '@/lib/calendar';
 import { shareActivity } from '@/lib/share';
 import { toast } from '@/store/ui';
 import { colors } from '@/theme';
@@ -250,6 +252,17 @@ function ActivityView({ activity: a }: { activity: ActivityDetail }) {
             />
             <InfoTile label="Where" value={a.place} sub={`${a.area} · ${distanceLabel(a)}`} />
           </View>
+          {canAddToCalendar && !a.cancelled && new Date(a.startsAt) > new Date() ? (
+            <Pressable
+              onPress={() => void addToCalendar(a)}
+              accessibilityRole="button"
+              hitSlop={8}
+              className="mt-3 flex-row items-center gap-2 self-start active:opacity-70"
+            >
+              <CalendarIcon size={16} color={colors.lime} />
+              <Text className="font-sans-medium text-[14px] text-lime">Add to calendar</Text>
+            </Pressable>
+          ) : null}
 
           <Attendance activity={a} canRemove={canManage} />
 

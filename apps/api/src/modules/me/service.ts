@@ -85,7 +85,17 @@ export async function updateMe(
   // Avatar keys are issued per user by the upload endpoint; reject anyone else's.
   if (input.avatarKey) await requireUpload(storage, input.avatarKey, 'avatar', userId);
   if (input.placeId !== undefined) await requirePlace(db, input.placeId);
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    // The photo being replaced, for the caller to clean up once this is saved.
+    const [before] =
+      input.avatarKey !== undefined
+        ? await tx
+            .select({ avatarKey: profiles.avatarKey })
+            .from(profiles)
+            .where(eq(profiles.userId, userId))
+        : [];
+    const replacedPhotos =
+      before?.avatarKey && before.avatarKey !== input.avatarKey ? [before.avatarKey] : [];
     if (input.name !== undefined) {
       await tx.update(user).set({ name: input.name }).where(eq(user.id, userId));
     }
@@ -108,6 +118,7 @@ export async function updateMe(
     if (Object.keys(profilePatch).length) {
       await tx.update(profiles).set(profilePatch).where(eq(profiles.userId, userId));
     }
+    return { replacedPhotos };
   });
 }
 

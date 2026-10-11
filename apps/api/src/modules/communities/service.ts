@@ -1,3 +1,4 @@
+import { placeLabel } from '@buddy/shared';
 import type {
   CommunityDetail,
   CommunitySummary,
@@ -12,6 +13,7 @@ import {
   communities,
   communityMembers,
   communityRemovals,
+  places,
   profiles,
   user,
 } from '../../db/schema';
@@ -19,8 +21,8 @@ import { badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import type { Storage } from '../../lib/storage';
 import { requireUpload } from '../../lib/upload-keys';
 import type { Urls } from '../../lib/urls';
-import { findActivitySummaries, notCancelled, upcoming } from '../activities/queries';
-import { originFor } from '../profiles/service';
+import { findActivitySummaries, notCancelled, pointSql, upcoming } from '../activities/queries';
+import { homePlace, originFor, requirePlace, toPlace } from '../profiles/service';
 import { notBlockedBetween } from '../safety/blocks';
 
 const MEMBER_PREVIEW = 6;
@@ -31,24 +33,54 @@ const MEMBER_LIST_MAX = 500;
 // these subqueries would mean the activity's or member's own id.
 const communityId = sql.raw('"communities"."id"');
 
-async function findCommunitySummaries(db: Db, viewerId: string, id?: string) {
+/**
+ * Communities as cards, nearest to the viewer's home town first. `q` keeps
+ * those whose name, description or town matches.
+ */
+async function findCommunitySummaries(
+  db: Db,
+  viewerId: string,
+  { id, q }: { id?: string; q?: string } = {},
+): Promise<CommunitySummary[]> {
+  const near = pointSql(await originFor(db, viewerId));
+  const term = q ? `%${q.toLowerCase().replace(/[\\%_]/g, (ch) => `\\${ch}`)}%` : null;
+  const distance = sql<number>`ST_Distance(${places.location}, ${near}) / 1000`;
   const rows = await db
     .select({
       id: communities.id,
       name: communities.name,
       coverUrl: communities.coverUrl,
       logoUrl: communities.logoUrl,
+      place: places,
+      distanceKm: distance,
       memberCount: sql<number>`(select count(*)::int from community_members cm where cm.community_id = ${communityId})`,
       weeklyActivityCount: sql<number>`(select count(*)::int from activities a where a.community_id = ${communityId} and a.cancelled_at is null and a.starts_at between now() and now() + interval '7 days')`,
       joined: sql<boolean>`exists (select 1 from community_members cm where cm.community_id = ${communityId} and cm.user_id = ${viewerId})`,
     })
     .from(communities)
-    .where(id ? eq(communities.id, id) : undefined)
-    .orderBy(asc(communities.name));
-  return rows satisfies CommunitySummary[];
+    .innerJoin(places, eq(places.id, communities.placeId))
+    .where(
+      and(
+        id ? eq(communities.id, id) : undefined,
+        term
+          ? sql`(lower(${communities.name}) like ${term}
+              or lower(${communities.about}) like ${term}
+              or lower(${places.name}) like ${term}
+              or lower(${places.district}) like ${term})`
+          : undefined,
+      ),
+    )
+    .orderBy(distance, asc(communities.name));
+  return rows.map(({ place, distanceKm, ...c }) => ({
+    ...c,
+    area: placeLabel(toPlace(place)),
+    placeId: place.id,
+    distanceKm: Math.round(Number(distanceKm) * 10) / 10,
+  }));
 }
 
-export const listCommunities = (db: Db, viewerId: string) => findCommunitySummaries(db, viewerId);
+export const listCommunities = (db: Db, viewerId: string, q?: string) =>
+  findCommunitySummaries(db, viewerId, { q });
 
 export async function getCommunity(
   db: Db,
@@ -56,7 +88,7 @@ export async function getCommunity(
   id: string,
   viewerId: string,
 ): Promise<CommunityDetail> {
-  const [summary] = await findCommunitySummaries(db, viewerId, id);
+  const [summary] = await findCommunitySummaries(db, viewerId, { id });
   if (!summary) throw notFound('Community');
 
   const [info] = await db
@@ -104,6 +136,7 @@ export async function getCommunity(
     })),
     upcoming: upcomingActivities,
     isCreator: info?.createdBy === viewerId,
+    place: await requirePlace(db, summary.placeId),
   };
 }
 
@@ -122,6 +155,11 @@ export async function createCommunity(
 ) {
   if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', userId);
   if (input.logoKey) await requireUpload(storage, input.logoKey, 'logo', userId);
+  // Where it meets: the town picked, or else where its creator lives.
+  const placeId =
+    input.placeId !== undefined
+      ? (await requirePlace(db, input.placeId)).id
+      : (await homePlace(db, userId)).id;
   const id = await db
     .transaction(async (tx) => {
       const [row] = await tx
@@ -132,6 +170,7 @@ export async function createCommunity(
           rules: input.rules,
           coverUrl: urls.fromKey(input.coverKey),
           logoUrl: urls.fromKey(input.logoKey),
+          placeId,
           createdBy: userId,
         })
         .returning({ id: communities.id });
@@ -153,7 +192,11 @@ export async function updateCommunity(
   input: UpdateCommunityInput,
 ) {
   const [row] = await db
-    .select({ createdBy: communities.createdBy })
+    .select({
+      createdBy: communities.createdBy,
+      coverUrl: communities.coverUrl,
+      logoUrl: communities.logoUrl,
+    })
     .from(communities)
     .where(eq(communities.id, id));
   if (!row) throw notFound('Community');
@@ -161,12 +204,15 @@ export async function updateCommunity(
   if (input.coverKey) await requireUpload(storage, input.coverKey, 'cover', userId);
   if (input.logoKey) await requireUpload(storage, input.logoKey, 'logo', userId);
 
+  if (input.placeId !== undefined) await requirePlace(db, input.placeId);
+
   const patch = {
     ...(input.name !== undefined && { name: input.name }),
     ...(input.about !== undefined && { about: input.about }),
     ...(input.rules !== undefined && { rules: input.rules }),
     ...(input.coverKey !== undefined && { coverUrl: urls.fromKey(input.coverKey) }),
     ...(input.logoKey !== undefined && { logoUrl: urls.fromKey(input.logoKey) }),
+    ...(input.placeId !== undefined && { placeId: input.placeId }),
   };
   if (Object.keys(patch).length) {
     await db
@@ -177,7 +223,12 @@ export async function updateCommunity(
         throw nameTaken(err) ? takenError() : err;
       });
   }
-  return getCommunity(db, urls, id, userId);
+  // Photos it no longer uses, for the caller to clean up.
+  const replacedPhotos = [
+    patch.coverUrl !== undefined && patch.coverUrl !== row.coverUrl ? row.coverUrl : null,
+    patch.logoUrl !== undefined && patch.logoUrl !== row.logoUrl ? row.logoUrl : null,
+  ].filter((u): u is string => !!u);
+  return { community: await getCommunity(db, urls, id, userId), replacedPhotos };
 }
 
 /** Activities can be posted in a community by its members. */
@@ -206,7 +257,7 @@ export async function joinCommunity(db: Db, id: string, userId: string) {
     .where(and(eq(communityRemovals.communityId, id), eq(communityRemovals.userId, userId)));
   if (removed) throw forbidden('You were removed from this community');
   await db.insert(communityMembers).values({ communityId: id, userId }).onConflictDoNothing();
-  const [summary] = await findCommunitySummaries(db, userId, id);
+  const [summary] = await findCommunitySummaries(db, userId, { id });
   return summary!;
 }
 
@@ -215,7 +266,7 @@ export async function leaveCommunity(db: Db, id: string, userId: string) {
   await db
     .delete(communityMembers)
     .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, userId)));
-  const [summary] = await findCommunitySummaries(db, userId, id);
+  const [summary] = await findCommunitySummaries(db, userId, { id });
   return summary!;
 }
 
@@ -283,7 +334,12 @@ export async function removeCommunityMember(
 /** The creator deletes it. Its activities go on without a community. */
 export async function deleteCommunity(db: Db, id: string, creatorId: string) {
   await requireCreator(db, id, creatorId);
-  await db.delete(communities).where(eq(communities.id, id));
+  const [gone] = await db
+    .delete(communities)
+    .where(eq(communities.id, id))
+    .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
+  // Its photos, for the caller to clean up.
+  return [gone?.coverUrl, gone?.logoUrl].filter((u): u is string => !!u);
 }
 
 /** Members to tell about a new activity: everyone but the host and anyone blocked either way. */

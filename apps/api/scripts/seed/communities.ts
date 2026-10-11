@@ -4,6 +4,8 @@ export interface SeedCommunity {
   /** Unsplash photo id; without one the app shows a plain tile. */
   cover?: string;
   about: string;
+  /** Town it meets in (a name from the places table). */
+  area: string;
   rules: string[];
   /** Member names; see people.ts. */
   people: string[];
@@ -14,6 +16,7 @@ export const COMMUNITIES: SeedCommunity[] = [
   {
     key: 'runners',
     name: 'Colombo Runners',
+    area: 'Colombo 7',
     cover: '1476480862126-209bfaa8edc8',
     about:
       'Free group runs around Colombo, four times a week. Galle Face at sunset, Viharamahadevi Park on weekend mornings. Every pace is welcome and nobody gets left behind.',
@@ -27,6 +30,7 @@ export const COMMUNITIES: SeedCommunity[] = [
   {
     key: 'gamers',
     name: 'Colombo Board Gamers',
+    area: 'Colombo 3',
     cover: '1543269865-cbf427effbad',
     about:
       'Weekly games nights in cafés around Colombo 03 and 07. Bring a game or learn a new one.',
@@ -40,6 +44,7 @@ export const COMMUNITIES: SeedCommunity[] = [
   {
     key: 'climb',
     name: 'Climb Lanka',
+    area: 'Colombo 5',
     cover: '1522163182402-834f871fd851',
     about: 'Bouldering sessions at Climb Colombo and weekend trips to the crags near Kandy.',
     rules: [
@@ -52,6 +57,7 @@ export const COMMUNITIES: SeedCommunity[] = [
   {
     key: 'sketch',
     name: 'Colombo Sketch Club',
+    area: 'Colombo 7',
     cover: '1460661419201-fd4cecdf8a8b',
     about:
       'Urban sketching and life drawing around Colombo. Temples, markets, the Fort and the odd studio session.',
@@ -69,6 +75,7 @@ export const DEMO_COMMUNITIES: SeedCommunity[] = [
   {
     key: 'food',
     name: 'Colombo Food Walkers',
+    area: 'Colombo 11',
     cover: '1488459716781-31db52582fe9',
     about:
       'Street food crawls, market mornings and the occasional cook-along. We eat our way across a different neighbourhood every month.',
@@ -82,6 +89,7 @@ export const DEMO_COMMUNITIES: SeedCommunity[] = [
   {
     key: 'cycle',
     name: 'Sunday Spinners',
+    area: 'Kandy',
     about:
       'Easy weekend rides around Diyawanna and out towards the paddy fields. Road bikes, hybrids and borrowed bikes all welcome.',
     rules: ['Helmets on, always.', 'Regroup at every stop.', 'Lights if we ride before sunrise.'],

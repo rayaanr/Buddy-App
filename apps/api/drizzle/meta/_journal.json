@@ -134,6 +134,13 @@
       "when": 1791675682819,
       "tag": "0018_community_logo",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1791678198810,
+      "tag": "0019_community_town",
+      "breakpoints": true
     }
   ]
 }

@@ -442,6 +442,10 @@ export async function updateActivity(
         coverUrl: (input.coverKey && urls.fromKey(input.coverKey)) || stockCover(group),
       }),
     };
+    const replacedPhotos =
+      patch.coverUrl !== undefined && patch.coverUrl !== row.coverUrl && row.coverUrl
+        ? [row.coverUrl]
+        : [];
     // Some edits (e.g. only repeating) have nothing to set here.
     if (Object.values(patch).some((v) => v !== undefined)) {
       await tx.update(activities).set(patch).where(eq(activities.id, activityId));
@@ -474,7 +478,7 @@ export async function updateActivity(
       timeChanged && `the time to ${whenText(startsAt!)}`,
       placeChanged && `the place to ${input.place ?? row.place}`,
     ].filter(Boolean);
-    if (!changes.length) return { ...moved, notice: null };
+    if (!changes.length) return { ...moved, notice: null, replacedPhotos };
 
     const message = await insertSystemMessage(
       tx,
@@ -485,7 +489,12 @@ export async function updateActivity(
       title: input.title ?? row.title,
       body: `Now ${[timeChanged && whenText(startsAt!), placeChanged && `at ${input.place ?? row.place}`].filter(Boolean).join(', ')}`,
     };
-    return { messages: [message, ...moved.messages], promoted: moved.promoted, notice };
+    return {
+      messages: [message, ...moved.messages],
+      promoted: moved.promoted,
+      notice,
+      replacedPhotos,
+    };
   });
 }
 

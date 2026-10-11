@@ -11,6 +11,8 @@ export interface ChangeResult {
   promoted: string[];
   notice?: { title: string; body: string } | null;
   waiting?: string[];
+  /** Photos the change replaced, for the caller to clean up once it's saved. */
+  replacedPhotos?: string[];
 }
 
 /**

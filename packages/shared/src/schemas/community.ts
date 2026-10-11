@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { LIMITS } from '../constants';
 import { activitySummary } from './activity';
+import { place } from './place';
 import { userSummary } from './common';
 
 export const communitySummary = z.object({
@@ -9,6 +10,11 @@ export const communitySummary = z.object({
   name: z.string(),
   coverUrl: z.url().nullable(),
   logoUrl: z.url().nullable(),
+  /** Where it meets, e.g. "Peradeniya, Kandy". */
+  area: z.string(),
+  placeId: z.number().int(),
+  /** From your home town, in km. */
+  distanceKm: z.number(),
   memberCount: z.number().int(),
   /** Activities starting in the next seven days. */
   weeklyActivityCount: z.number().int(),
@@ -24,6 +30,8 @@ export const communityDetail = communitySummary.extend({
   upcoming: z.array(activitySummary),
   /** You started it, so you can edit it. */
   isCreator: z.boolean(),
+  /** Its town in full (for editing). */
+  place,
 });
 export type CommunityDetail = z.infer<typeof communityDetail>;
 
@@ -44,11 +52,21 @@ export const createCommunityInput = z.object({
   /** Keys returned by the upload endpoint, if photos were uploaded. */
   coverKey: z.string().optional(),
   logoKey: z.string().optional(),
+  /** Town it meets in; defaults to the creator's home town. */
+  placeId: z.number().int().positive().optional(),
 });
 export type CreateCommunityInput = z.input<typeof createCommunityInput>;
 
 /** The creator's edits. A null cover or logo removes it. */
 export const updateCommunityInput = z
-  .object({ ...communityFields, coverKey: z.string().nullable(), logoKey: z.string().nullable() })
+  .object({
+    ...communityFields,
+    coverKey: z.string().nullable(),
+    logoKey: z.string().nullable(),
+    placeId: z.number().int().positive(),
+  })
   .partial();
 export type UpdateCommunityInput = z.infer<typeof updateCommunityInput>;
+
+/** The Communities tab: nearest first; `q` searches names, descriptions and towns. */
+export const communitiesQuery = z.object({ q: z.string().trim().min(2).max(60).optional() });

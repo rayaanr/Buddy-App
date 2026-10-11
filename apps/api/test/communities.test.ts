@@ -282,3 +282,40 @@ describe('new activities in a community', () => {
     expect(pushed).toHaveLength(3);
   });
 });
+
+describe('where communities meet', () => {
+  it('a new one meets in its creator’s town unless told otherwise', async () => {
+    const me = await t.signIn('kandy@buddy.test', 'Kumari');
+    await t.call('/v1/me', { method: 'PATCH', headers: me.headers, body: { placeId: 863 } }); // Peradeniya
+    const home = await start(me.headers, { name: `Peradeniya Readers ${Date.now()}` });
+    expect(home.body).toMatchObject({ area: 'Peradeniya, Kandy', placeId: 863, distanceKm: 0 });
+
+    const galle = await t.call<{ places: { id: number }[] }>('/v1/places/search?q=Galle');
+    const elsewhere = await start(me.headers, {
+      name: `Galle Surfers ${Date.now()}`,
+      placeId: galle.body.places[0]!.id,
+    });
+    expect(elsewhere.body.area).toBe('Galle');
+    expect(elsewhere.body.distanceKm).toBeGreaterThan(50);
+  });
+
+  it('are listed nearest first, and can be searched by name, description or town', async () => {
+    const me = await t.signIn('kandy2@buddy.test', 'Saman');
+    await t.call('/v1/me', { method: 'PATCH', headers: me.headers, body: { placeId: 863 } });
+    const list = async (query = '') =>
+      (
+        await t.call<{ communities: CommunitySummary[] }>(`/v1/communities${query}`, {
+          headers: me.headers,
+        })
+      ).body.communities;
+
+    const all = await list();
+    const distances = all.map((c) => c.distanceKm);
+    expect(distances).toEqual([...distances].sort((a, b) => a - b));
+
+    expect((await list('?q=runners')).map((c) => c.name)).toEqual(['Colombo Runners']);
+    expect((await list('?q=bouldering')).map((c) => c.name)).toEqual(['Climb Lanka']); // in its about
+    const colombo = await list('?q=colombo');
+    expect(colombo.length).toBeGreaterThan(1);
+  });
+});

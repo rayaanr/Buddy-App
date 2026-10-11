@@ -99,12 +99,18 @@ export const communities = pgTable(
     coverUrl: text(),
     /** Square logo; without one the app shows the name's initials. */
     logoUrl: text(),
+    /** Where it meets, for "near you" and the label on its card. */
+    placeId: integer()
+      .notNull()
+      .default(DEFAULT_PLACE_ID)
+      .references(() => places.id),
     /** Who started it (null for seeded ones, or after they delete their account); they can edit it. */
     createdBy: uuid().references(() => user.id, { onDelete: 'set null' }),
     ...timestamps,
   },
   (t) => [
     index('communities_created_by_idx').on(t.createdBy),
+    index('communities_place_idx').on(t.placeId),
     // "Colombo Runners" and "colombo runners" are the same community.
     uniqueIndex('communities_name_lower_idx').on(sql`lower(${t.name})`),
   ],

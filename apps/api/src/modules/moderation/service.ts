@@ -92,6 +92,8 @@ interface Resolved {
   cancelled: { id: string; result: ChangeResult }[];
   /** A removed chat message, for the caller to take out of open chats. */
   removedMessage: { id: string; activityId: string } | null;
+  /** A removed community's photos, for the caller to clean up. */
+  removedPhotos: string[];
 }
 
 /**
@@ -109,7 +111,7 @@ export async function resolveReport(
     const [report] = await tx.select().from(reports).where(eq(reports.id, reportId)).for('update');
     if (!report) throw notFound('Report');
 
-    const out: Resolved = { cancelled: [], removedMessage: null };
+    const out: Resolved = { cancelled: [], removedMessage: null, removedPhotos: [] };
     const done: string[] = [];
 
     if (input.removeContent) {
@@ -139,7 +141,11 @@ export async function resolveReport(
           });
         }
       } else if (report.communityId) {
-        await tx.delete(communities).where(eq(communities.id, report.communityId));
+        const [gone] = await tx
+          .delete(communities)
+          .where(eq(communities.id, report.communityId))
+          .returning({ coverUrl: communities.coverUrl, logoUrl: communities.logoUrl });
+        out.removedPhotos = [gone?.coverUrl, gone?.logoUrl].filter((u): u is string => !!u);
       } else {
         throw badRequest('This report is about a person; suspend them instead');
       }

@@ -5,6 +5,7 @@ import { Hono } from 'hono';
 import { currentUser, requireUser } from '../../auth/middleware';
 import { pushTokens } from '../../db/schema';
 import type { AppEnv, Deps } from '../../http/context';
+import { forgetPhotos } from '../../lib/photos';
 import { validate } from '../../lib/validate';
 import { createAnnouncer } from '../activities/announce';
 import { listBlocked } from '../safety/service';
@@ -21,7 +22,8 @@ export function meRoutes(deps: Deps) {
 
       .patch('/', validate('json', updateMeInput), async (c) => {
         const me = currentUser(c);
-        await updateMe(db, storage, me.id, c.req.valid('json'));
+        const { replacedPhotos } = await updateMe(db, storage, me.id, c.req.valid('json'));
+        await forgetPhotos({ ...deps, publicUrl: env.R2_PUBLIC_URL }, replacedPhotos);
         return c.json(await getMe(db, urls, me.id, env.ADMIN_EMAILS));
       })
 
