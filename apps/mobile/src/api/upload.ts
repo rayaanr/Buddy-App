@@ -44,20 +44,23 @@ export async function uploadImage(kind: UploadKind, picked: Picked) {
 export async function uploadSized(kind: UploadKind, picked: Picked) {
   // If shrinking fails for some reason, try the original: it may still fit.
   const image = await shrink(kind, picked).catch(() => picked);
-  // fetch reads local file:// and blob: URIs on every platform.
-  const blob = await (await fetch(image.uri)).blob();
-  const contentType = (image.mimeType ?? blob.type) as ImageType;
+  // fetch reads local file:// and blob: URIs on every platform. The raw bytes,
+  // not a Blob: on phones a Blob detours through React Native's blob store.
+  const file = await fetch(image.uri);
+  const bytes = await file.arrayBuffer();
+  const contentType = (image.mimeType ?? file.headers.get('content-type')) as ImageType;
   if (!IMAGE_TYPES.includes(contentType)) {
     throw new ApiRequestError(400, 'unsupported_image', 'Use a JPEG, PNG or WebP photo.');
   }
-  if (blob.size > LIMITS.uploadMaxBytes) {
+  const size = bytes.byteLength;
+  if (size > LIMITS.uploadMaxBytes) {
     throw new ApiRequestError(400, 'image_too_big', 'That photo is too big. Try a smaller one.');
   }
 
-  const ticket = await unwrap(api.uploads.$post({ json: { kind, contentType, size: blob.size } }));
+  const ticket = await unwrap(api.uploads.$post({ json: { kind, contentType, size } }));
   let res: Response;
   try {
-    res = await fetch(ticket.uploadUrl, { method: 'PUT', headers: ticket.headers, body: blob });
+    res = await fetch(ticket.uploadUrl, { method: 'PUT', headers: ticket.headers, body: bytes });
   } catch {
     throw new ApiRequestError(0, 'network_error', 'Can’t reach Buddy. Check your connection.');
   }
