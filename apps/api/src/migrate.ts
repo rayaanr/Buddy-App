@@ -16,8 +16,12 @@ if (!url) {
 // Works from src/ (tsx) and dist/ (built): both sit one level below the package root.
 const migrationsFolder = fileURLToPath(new URL('../drizzle', import.meta.url));
 
-const { db, close } = createDb(url, { max: 1 });
+// One connection, so the lock below and the migrations share it.
+const { db, sql, close } = createDb(url, { max: 1 });
 try {
+  // Several API copies start together: one migrates, the others wait for it
+  // and then find nothing left to do.
+  await sql`select pg_advisory_lock(4242002)`;
   await migrate(db, { migrationsFolder });
   console.log('Migrations applied.');
 } finally {

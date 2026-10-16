@@ -4,9 +4,16 @@ import postgres from 'postgres';
 import * as schema from './schema';
 
 export function createDb(url: string, options: { max?: number } = {}) {
-  const sql = postgres(url, { max: options.max ?? 10, onnotice: () => {} });
+  const sql = postgres(url, {
+    max: options.max ?? 10,
+    onnotice: () => {},
+    // PostGIS functions carry large cost estimates, which tip Postgres into
+    // compiling queries (JIT) that then run in a few milliseconds: the
+    // compiling took longer than the query. Every query here is small.
+    connection: { jit: 'off' },
+  });
   const db = drizzle(sql, { schema, casing: 'snake_case' });
-  return { db, close: () => sql.end({ timeout: 5 }) };
+  return { db, sql, close: () => sql.end({ timeout: 5 }) };
 }
 
 export type Db = ReturnType<typeof createDb>['db'];

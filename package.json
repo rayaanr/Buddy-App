@@ -5,7 +5,8 @@
   "workspaces": [
     "apps/*",
     "packages/*",
-    "e2e"
+    "e2e",
+    "load"
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",

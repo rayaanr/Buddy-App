@@ -1,12 +1,12 @@
 # Deploying the API and landing page to a VPS
 
-One server runs four containers: Postgres with PostGIS, the API, Caddy (routes by hostname and serves the landing page from `landing/`) and `cloudflared`, a Cloudflare Tunnel. Cloudflare handles HTTPS; the tunnel connects out to it, so nothing publishes a port. That lets Buddy share a server with other apps (AutoDLer's Caddy owns 80/443) and means moving servers needs no DNS change.
+One server runs Postgres with PostGIS, Valkey (Redis), the API (two copies by default), Caddy (balances the API copies, routes by hostname and serves the landing page from `landing/`) and `cloudflared`, a Cloudflare Tunnel. Cloudflare handles HTTPS; the tunnel connects out to it, so nothing publishes a port. That lets Buddy share a server with other apps (AutoDLer's Caddy owns 80/443) and means moving servers needs no DNS change.
 
 Deploys run from GitHub Actions ([`deploy.yml`](../.github/workflows/deploy.yml)): after CI passes on `main`, it builds the API image, pushes it to GHCR, then SSHes in and deploys that exact commit. Everything the server needs lives in GitHub secrets, so the server holds nothing you'd miss if it disappeared (apart from the database: see backups).
 
 | File                 | What it is                                                      |
 | -------------------- | --------------------------------------------------------------- |
-| `docker-compose.yml` | The four services                                               |
+| `docker-compose.yml` | The services                                                    |
 | `caddy/Caddyfile`    | Routes the two hostnames: API (WebSockets too) and landing page |
 | `.env.example`       | Every production setting; the real one is the `ENV_FILE` secret |
 | `deploy.sh`          | Run by CI on the server: pull, migrate, restart                 |
@@ -88,7 +88,7 @@ The first run on a bare server installs git and Docker, clones the repo and adds
 
 1. checks out the commit the image was built from,
 2. rewrites `infra/.env` from `ENV_FILE` (plus `API_IMAGE`, the image tag),
-3. runs `deploy.sh`: pull the image, apply migrations with it, restart onto it, reload Caddy.
+3. runs `deploy.sh`: pull the image, apply migrations with it, start the new API copies, stop the old ones once the new are healthy, reload Caddy.
 
 A failed migration stops the deploy with the old API still serving. Landing page and Caddyfile changes go out with the same deploy.
 
@@ -183,6 +183,7 @@ Run these from `~/buddy/infra` on the server.
 
 - **Logs:** `docker compose logs -f api` (JSON, one line per request).
 - **Uptime:** point a free monitor (e.g. UptimeRobot) at `/health`; it checks the database too.
-- **One API container only.** Rate limits and live chat are kept in memory; a second copy would need Redis.
+- **API copies.** `API_REPLICAS` in the `ENV_FILE` secret (2 by default) sets how many run; each is one Node process, so one CPU core and about 150 MB. Caddy spreads requests across them and skips one that's restarting; Valkey (`redis` in the compose file) lets them share chat events, rate limits and sign-outs, and only one runs the background jobs. Deploys start the new copies, wait until they're healthy, then stop the old ones, so the API stays up. `docker compose ps api` lists them.
+- **More capacity.** Raise `API_REPLICAS` up to the server's CPU cores minus one (Postgres needs one). Past that, Postgres is the limit: a bigger server, or Postgres on its own server.
 - **Database shell:** `docker compose exec db psql -U buddy -d buddy`. Reports are in the `reports` table.
 - **Tunnel status:** `docker compose logs cloudflared` ("Registered tunnel connection"), or the tunnel's page in Cloudflare.

@@ -96,25 +96,30 @@ export async function getActivityDetail(
     where: [eq(activities.id, id)],
   });
   if (!summary) throw notFound('Activity');
-  const [extra] = await db
-    .select({ description: activities.description, bring: activities.bring })
-    .from(activities)
-    .where(eq(activities.id, id));
+  const hostGone = isDeletedAccount(summary.host);
+  // Independent lookups, all at once rather than one after another.
+  const [[extra], attendees, hostedCount, wouldGoAgain, feedback, invitedBy, rollCall] =
+    await Promise.all([
+      db
+        .select({ description: activities.description, bring: activities.bring })
+        .from(activities)
+        .where(eq(activities.id, id)),
+      findAttendees(db, urls, id, viewerId),
+      hostGone ? 0 : countHosted(db, summary.host.id),
+      hostGone ? 0 : countWouldGoAgain(db, summary.host.id),
+      feedbackFor(db, summary, viewerId),
+      findInviter(db, urls, id, viewerId),
+      rollCallFor(db, summary),
+    ]);
   return {
     ...summary,
     description: extra?.description ?? '',
     bring: extra?.bring ?? '',
-    attendees: await findAttendees(db, urls, id, viewerId),
-    host: {
-      ...summary.host,
-      hostedCount: isDeletedAccount(summary.host) ? 0 : await countHosted(db, summary.host.id),
-      wouldGoAgain: isDeletedAccount(summary.host)
-        ? 0
-        : await countWouldGoAgain(db, summary.host.id),
-    },
-    feedback: await feedbackFor(db, summary, viewerId),
-    invitedBy: await findInviter(db, urls, id, viewerId),
-    rollCall: await rollCallFor(db, summary),
+    attendees,
+    host: { ...summary.host, hostedCount, wouldGoAgain },
+    feedback,
+    invitedBy,
+    rollCall,
   };
 }
 

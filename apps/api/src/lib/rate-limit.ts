@@ -4,41 +4,25 @@ import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 
 import type { AppEnv, Deps } from '../http/context';
+import type { Cluster, RateResult } from './cluster';
 import { HttpError } from './errors';
 
-interface Window {
-  count: number;
-  resetAt: number;
-}
-
 /**
- * Counts requests per key in fixed windows, in memory. Fine for one API
- * server (the VPS); with several, each counts on its own, so the effective
- * limit is per instance.
+ * Counts requests per key in fixed windows. The counts live in the cluster
+ * (see lib/cluster.ts), so with several API instances a limit is shared by
+ * all of them rather than applied by each.
  */
 export class RateLimiter {
-  private windows = new Map<string, Window>();
+  constructor(private cluster: Pick<Cluster, 'hit' | 'resetCounts'>) {}
 
-  /** True if this request is within the limit (and counts it). */
-  hit(key: string, limit: number, windowMs: number) {
-    const now = Date.now();
-    if (this.windows.size > 50_000) this.sweep(now);
-    const w = this.windows.get(key);
-    if (!w || w.resetAt <= now) {
-      this.windows.set(key, { count: 1, resetAt: now + windowMs });
-      return { ok: true, retryAfterS: 0 };
-    }
-    w.count++;
-    return { ok: w.count <= limit, retryAfterS: Math.ceil((w.resetAt - now) / 1000) };
+  /** Whether this request is within the limit (and counts it). */
+  hit(key: string, limit: number, windowMs: number): Promise<RateResult> {
+    return this.cluster.hit(key, limit, windowMs);
   }
 
   /** Forget all counts (tests start each case fresh). */
   reset() {
-    this.windows.clear();
-  }
-
-  private sweep(now: number) {
-    for (const [key, w] of this.windows) if (w.resetAt <= now) this.windows.delete(key);
+    return this.cluster.resetCounts();
   }
 }
 
@@ -79,7 +63,7 @@ interface LimitOptions {
 function rateLimit(limiter: RateLimiter, trustedHops: number, opts: LimitOptions) {
   return createMiddleware<AppEnv>(async (c, next) => {
     const who = opts.by === 'user' ? c.get('user')?.id : clientIp(c, trustedHops);
-    const { ok, retryAfterS } = limiter.hit(
+    const { ok, retryAfterS } = await limiter.hit(
       `${opts.name}:${who ?? 'anon'}`,
       opts.limit,
       opts.windowMs,

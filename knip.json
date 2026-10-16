@@ -19,6 +19,10 @@
     "packages/shared": {},
     "e2e": {
       "entry": ["prepare-db.ts", "tests/**/*.spec.ts"]
+    },
+    "load": {
+      "entry": ["k6/*.js"],
+      "ignoreDependencies": ["k6"]
     }
   }
 }

@@ -10,6 +10,7 @@ Find people nearby to do things with: runs, games, markets and more, in Colombo.
 | [`apps/api`](apps/api)               | Hono API on Node: Postgres + PostGIS, email sign-in, real-time chat |
 | [`packages/shared`](packages/shared) | Zod schemas shared by the app and the API                           |
 | [`e2e`](e2e)                         | Browser tests: the web app against a real API and database          |
+| [`load`](load)                       | Load tests: k6 against the built API and a generated database       |
 | [`design`](design)                   | Claude Design handoff the app was built from                        |
 | [`infra`](infra)                     | Production deploy to a VPS (Compose, Caddy, backups)                |
 | [`docs/PLAN.md`](docs/PLAN.md)       | Backend plan and roadmap                                            |

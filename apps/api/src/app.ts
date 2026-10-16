@@ -101,10 +101,19 @@ export function createApp(deps: Deps) {
   // Better Auth owns everything under /api/auth (send code, sign in, sign out, session).
   // Its rate limits key on X-Forwarded-For, which clients can forge. Replace
   // it with the address we trust (see clientIp) so limits can't be dodged.
-  app.on(['GET', 'POST'], '/api/auth/*', (c) => {
+  app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
     const headers = new Headers(c.req.raw.headers);
     headers.set('x-forwarded-for', clientIp(c, env.TRUSTED_PROXY_HOPS));
-    return auth.handler(new Request(c.req.raw, { headers }));
+    const res = await auth.handler(new Request(c.req.raw, { headers }));
+    // Signing out (or revoking sessions) must take effect at once, not when
+    // the cached session runs out.
+    const token = c.req.method === 'POST' ? deps.sessions.tokenOf(headers) : null;
+    if (token) {
+      const user = deps.sessions.get(token);
+      if (user) deps.sessions.forgetUser(user.id);
+      deps.sessions.forgetToken(token);
+    }
+    return res;
   });
 
   const v1 = new Hono<AppEnv>()

@@ -23,6 +23,8 @@ export function meRoutes(deps: Deps) {
       .patch('/', validate('json', updateMeInput), async (c) => {
         const me = currentUser(c);
         const { replacedPhotos } = await updateMe(db, storage, urls, me.id, c.req.valid('json'));
+        // A new name shows in what they do next (chat notifications use it).
+        deps.sessions.forgetUser(me.id);
         await forgetPhotos(deps, replacedPhotos);
         return c.json(await getMe(db, urls, me.id, env.ADMIN_EMAILS));
       })
@@ -32,6 +34,7 @@ export function meRoutes(deps: Deps) {
         const { cancelled, photoKeys } = await deleteAccount(db, me.id, {
           urls,
         });
+        deps.sessions.forgetUser(me.id);
         hub.disconnectEverywhere(me.id);
         for (const { id, result } of cancelled) await announce(id, me.id, result);
         if (storage && photoKeys.length) {

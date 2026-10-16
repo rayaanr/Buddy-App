@@ -95,6 +95,13 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
       // On everywhere but tests, so a server started without NODE_ENV=production
       // is still protected; development is just roomier.
       enabled: env.NODE_ENV !== 'test',
+      // Counted in the cluster, so the limits hold across API instances.
+      customStorage: {
+        consume: async (key, { window, max }) => {
+          const { ok, retryAfterS } = await limiter.hit(`auth:${key}`, max, window * 1000);
+          return { allowed: ok, retryAfter: ok ? null : retryAfterS };
+        },
+      },
       customRules: {
         // Each code request sends an email; keep abuse expensive.
         '/email-otp/send-verification-otp': {
@@ -114,7 +121,7 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
           .toLowerCase();
         if (!email) return;
         if (ctx.path === '/email-otp/send-verification-otp') {
-          if (!limiter.hit(`otp:${email}`, CODES_PER_EMAIL_PER_HOUR, 3_600_000).ok) {
+          if (!(await limiter.hit(`otp:${email}`, CODES_PER_EMAIL_PER_HOUR, 3_600_000)).ok) {
             // Look the same as success, so this can't be used to probe addresses.
             logger.warn(
               { email: emailTag(email) },
@@ -124,7 +131,7 @@ export function createAuth({ db, env, mailer, logger, limiter }: AuthDeps) {
           }
         }
         if (ctx.path === '/sign-in/email-otp') {
-          if (!limiter.hit(`otp-try:${email}`, TRIES_PER_EMAIL_PER_DAY, 86_400_000).ok) {
+          if (!(await limiter.hit(`otp-try:${email}`, TRIES_PER_EMAIL_PER_DAY, 86_400_000)).ok) {
             throw new APIError('TOO_MANY_REQUESTS', {
               message: 'Too many tries for this email. Try again tomorrow.',
             });

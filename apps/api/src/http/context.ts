@@ -1,6 +1,8 @@
 import type { Auth } from '../auth/auth';
+import type { SessionCache } from '../auth/sessions';
 import type { Db } from '../db/client';
 import type { Env } from '../env';
+import type { Cluster } from '../lib/cluster';
 import type { Mailer } from '../lib/mailer';
 import type { PushSender } from '../lib/push';
 import type { Storage } from '../lib/storage';
@@ -16,6 +18,10 @@ export interface Deps {
   env: Env;
   logger: Logger;
   auth: Auth;
+  /** Recently checked sign-ins (see auth/sessions.ts). */
+  sessions: SessionCache;
+  /** What API instances share (see lib/cluster.ts). */
+  cluster: Cluster;
   mailer: Mailer;
   /** Null until R2 is configured; upload endpoints then answer 503. */
   storage: Storage | null;

@@ -77,7 +77,7 @@ export function activityRoutes(deps: Deps) {
    */
   const tellCommunity = async (a: ActivityDetail, host: { id: string; name: string }) => {
     const community = a.community!;
-    if (!deps.limiter.hit(`community-post:${community.id}:${host.id}`, 3, DAY).ok) return;
+    if (!(await deps.limiter.hit(`community-post:${community.id}:${host.id}`, 3, DAY)).ok) return;
     const audience = await communityAudience(db, community.id, host.id);
     void push.notifyUsers(audience, {
       title: community.name,

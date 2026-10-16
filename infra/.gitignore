@@ -1,0 +1,2 @@
+# Written by deploy.sh (the API copies Caddy sends requests to).
+caddy/api-upstreams

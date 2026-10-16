@@ -49,6 +49,9 @@ export async function communityActivities(db: Db, urls: Urls, id: string, viewer
 // these subqueries would mean the activity's or member's own id.
 const communityId = sql.raw('"communities"."id"');
 
+/** Communities in the list (or in search results) at most. */
+const LIST_MAX = 100;
+
 /**
  * Communities as cards, nearest to the viewer's home town first. `q` keeps
  * those whose name, description or town matches.
@@ -62,6 +65,7 @@ async function findCommunitySummaries(
   const near = pointSql(await originFor(db, viewerId));
   const term = q ? `%${q.toLowerCase().replace(/[\\%_]/g, (ch) => `\\${ch}`)}%` : null;
   const distance = sql<number>`ST_Distance(${places.location}, ${near}) / 1000`;
+  const joined = sql<boolean>`exists (select 1 from community_members cm where cm.community_id = ${communityId} and cm.user_id = ${viewerId})`;
   const rows = await db
     .select({
       id: communities.id,
@@ -72,7 +76,7 @@ async function findCommunitySummaries(
       distanceKm: distance,
       memberCount: sql<number>`(select count(*)::int from community_members cm where cm.community_id = ${communityId})`,
       weeklyActivityCount: sql<number>`(select count(*)::int from activities a where a.community_id = ${communityId} and a.cancelled_at is null and a.starts_at between now() and now() + interval '7 days')`,
-      joined: sql<boolean>`exists (select 1 from community_members cm where cm.community_id = ${communityId} and cm.user_id = ${viewerId})`,
+      joined,
     })
     .from(communities)
     .innerJoin(places, eq(places.id, communities.placeId))
@@ -85,9 +89,17 @@ async function findCommunitySummaries(
               or lower(${places.name}) like ${term}
               or lower(${places.district}) like ${term})`
           : undefined,
+        // The whole list: the nearest LIST_MAX, and every one they joined
+        // (Create picks from those), not every community in the country.
+        id || term
+          ? undefined
+          : sql`(${joined} or ${communities.id} in (
+              select c.id from communities c join places p on p.id = c.place_id
+              order by ST_Distance(p.location, ${near}) limit ${LIST_MAX}))`,
       ),
     )
-    .orderBy(distance, asc(communities.name));
+    .orderBy(distance, asc(communities.name))
+    .limit(term ? LIST_MAX : 10_000);
   return rows.map(({ place, distanceKm, ...c }) => ({
     ...c,
     coverUrl: urls.image(c.coverUrl),

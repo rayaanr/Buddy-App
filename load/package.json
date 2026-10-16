@@ -1,0 +1,17 @@
+{
+  "name": "@buddy/load",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-db": "tsx prepare.ts",
+    "api": "tsx api.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@buddy/shared": "*",
+    "@types/node": "^22.20.5",
+    "postgres": "^3.4.9",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3"
+  }
+}

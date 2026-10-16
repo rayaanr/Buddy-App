@@ -15,6 +15,12 @@ const schema = z
     LOG_PRETTY: z.stringbool().default(false),
 
     DATABASE_URL: z.url(),
+    /**
+     * Redis (or Valkey) shared by API instances: chat events, rate limits and
+     * sign-outs reach all of them. Needed to run more than one; without it
+     * everything stays in this process (see lib/cluster.ts).
+     */
+    REDIS_URL: z.url().optional(),
 
     /** Public base URL of this API, e.g. https://api.example.com. */
     BETTER_AUTH_URL: z.url(),

@@ -90,75 +90,77 @@ async function toChatMessages(
   rows: MessageRow[],
   viewerId?: string,
 ): Promise<ChatMessage[]> {
-  const blocked = new Set(viewerId ? await blockedIds(db, viewerId) : []);
-  const shown = (userId: string | null) => !userId || !blocked.has(userId);
   const peopleIds = [
     ...new Set(rows.flatMap((r) => [r.senderId, ...r.mentions]).filter((id): id is string => !!id)),
   ];
-  const people = peopleIds.length
-    ? await db
-        .select({
-          id: user.id,
-          name: user.name,
-          avatarKey: profiles.avatarKey,
-          avatarUrl: profiles.avatarUrl,
-        })
-        .from(user)
-        .leftJoin(profiles, eq(profiles.userId, user.id))
-        .where(inArray(user.id, peopleIds))
-    : [];
+  // The messages replied to, for their one-line quotes.
+  const replyIds = [...new Set(rows.map((r) => r.replyToId).filter((id): id is string => !!id))];
+  const messageIds = rows.map((r) => r.id);
+  const pollIds = rows.filter((r) => r.poll).map((r) => r.id);
+
+  // Independent lookups, all at once.
+  const [blockedList, people, quoted, reactionRows, votes] = await Promise.all([
+    viewerId ? blockedIds(db, viewerId) : [],
+    peopleIds.length
+      ? db
+          .select({
+            id: user.id,
+            name: user.name,
+            avatarKey: profiles.avatarKey,
+            avatarUrl: profiles.avatarUrl,
+          })
+          .from(user)
+          .leftJoin(profiles, eq(profiles.userId, user.id))
+          .where(inArray(user.id, peopleIds))
+      : [],
+    replyIds.length
+      ? db
+          .select({
+            id: messages.id,
+            body: messages.body,
+            imageKey: messages.imageKey,
+            imageWidth: messages.imageWidth,
+            poll: messages.poll,
+            deletedAt: messages.deletedAt,
+            senderId: messages.senderId,
+            senderName: user.name,
+          })
+          .from(messages)
+          .leftJoin(user, eq(user.id, messages.senderId))
+          .where(inArray(messages.id, replyIds))
+      : [],
+    messageIds.length
+      ? db
+          .select({
+            messageId: messageReactions.messageId,
+            userId: messageReactions.userId,
+            emoji: messageReactions.emoji,
+          })
+          .from(messageReactions)
+          .where(inArray(messageReactions.messageId, messageIds))
+          .orderBy(asc(messageReactions.createdAt))
+      : [],
+    pollIds.length
+      ? db
+          .select({
+            messageId: pollVotes.messageId,
+            userId: pollVotes.userId,
+            optionId: pollVotes.optionId,
+          })
+          .from(pollVotes)
+          .where(inArray(pollVotes.messageId, pollIds))
+          .orderBy(asc(pollVotes.createdAt))
+      : [],
+  ]);
+  const blocked = new Set(blockedList);
+  const shown = (userId: string | null) => !userId || !blocked.has(userId);
   const byId = new Map(
     people.map((s) => [
       s.id,
       { id: s.id, name: s.name, avatarUrl: urls.avatar(s.avatarKey, s.avatarUrl) },
     ]),
   );
-
-  // The messages replied to, for their one-line quotes.
-  const replyIds = [...new Set(rows.map((r) => r.replyToId).filter((id): id is string => !!id))];
-  const quoted = replyIds.length
-    ? await db
-        .select({
-          id: messages.id,
-          body: messages.body,
-          imageKey: messages.imageKey,
-          imageWidth: messages.imageWidth,
-          poll: messages.poll,
-          deletedAt: messages.deletedAt,
-          senderId: messages.senderId,
-          senderName: user.name,
-        })
-        .from(messages)
-        .leftJoin(user, eq(user.id, messages.senderId))
-        .where(inArray(messages.id, replyIds))
-    : [];
   const quoteById = new Map(quoted.filter((q) => shown(q.senderId)).map((q) => [q.id, q]));
-
-  const messageIds = rows.map((r) => r.id);
-  const reactionRows = messageIds.length
-    ? await db
-        .select({
-          messageId: messageReactions.messageId,
-          userId: messageReactions.userId,
-          emoji: messageReactions.emoji,
-        })
-        .from(messageReactions)
-        .where(inArray(messageReactions.messageId, messageIds))
-        .orderBy(asc(messageReactions.createdAt))
-    : [];
-
-  const pollIds = rows.filter((r) => r.poll).map((r) => r.id);
-  const votes = pollIds.length
-    ? await db
-        .select({
-          messageId: pollVotes.messageId,
-          userId: pollVotes.userId,
-          optionId: pollVotes.optionId,
-        })
-        .from(pollVotes)
-        .where(inArray(pollVotes.messageId, pollIds))
-        .orderBy(asc(pollVotes.createdAt))
-    : [];
 
   return rows.map((r) => {
     // Deleted: nothing of it is shown (a reported one keeps its content for moderators).
@@ -342,12 +344,12 @@ export async function listMessages(
     hasMore = newest.length > limit;
     rows = newest.slice(0, limit).reverse();
   }
-  return {
-    messages: await toChatMessages(db, urls, rows, viewerId),
-    othersReadUpTo: await othersReadUpTo(db, room, viewerId),
-    myReadUpTo: await readUpTo(db, room, viewerId),
-    hasMore,
-  };
+  const [shown, othersRead, myRead] = await Promise.all([
+    toChatMessages(db, urls, rows, viewerId),
+    othersReadUpTo(db, room, viewerId),
+    readUpTo(db, room, viewerId),
+  ]);
+  return { messages: shown, othersReadUpTo: othersRead, myReadUpTo: myRead, hasMore };
 }
 
 /** How far the viewer has read this chat. */

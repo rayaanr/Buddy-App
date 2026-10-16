@@ -83,6 +83,19 @@ export async function findActivitySummaries(
   urls: Urls,
   { viewerId, near, where = [], orderBy, limit }: SummaryOptions,
 ): Promise<ActivitySummary[]> {
+  // Two steps: which activities, then everything shown about them. In one
+  // query Postgres badly underestimates how many activities match a filter
+  // like "near Colombo" (it guessed 1 for 10,000) and joins hosts, profiles
+  // and communities to every match by scanning them whole: 13 s instead of
+  // milliseconds. Choosing the page first keeps the joins to those rows.
+  const chosen = db
+    .select({ id: activities.id })
+    .from(activities)
+    .where(and(...where, visibleTo(viewerId)))
+    .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));
+  const ids = (limit ? await chosen.limit(limit) : await chosen).map((r) => r.id);
+  if (!ids.length) return [];
+
   const query = db
     .select({
       id: activities.id,
@@ -130,10 +143,11 @@ export async function findActivitySummaries(
         ? and(eq(viewerMember.activityId, activities.id), eq(viewerMember.userId, viewerId))
         : sql`false`,
     )
-    .where(and(...where, visibleTo(viewerId)))
-    .orderBy(...(orderBy ?? [asc(activities.startsAt), asc(activities.id)]));
+    .where(inArray(activities.id, ids));
 
-  const rows = limit ? await query.limit(limit) : await query;
+  // In the order chosen above.
+  const position = new Map(ids.map((id, i) => [id, i]));
+  const rows = (await query).sort((a, b) => position.get(a.id)! - position.get(b.id)!);
 
   return rows.map((r) => ({
     id: r.id,

@@ -11,10 +11,25 @@
 	}
 }
 
-# The API. WebSockets (live chat) pass straight through.
+# The API: the copies deploy.sh started (API_REPLICAS), listed in
+# api-upstreams, which it writes before reloading Caddy. New requests go to
+# the least busy healthy copy; chat WebSockets stay on the one they opened on.
 http://api-buddy.{$DOMAIN} {
 	encode zstd gzip
-	reverse_proxy api:7400
+	reverse_proxy {
+		import api-upstreams
+		lb_policy least_conn
+		health_uri /health
+		health_interval 5s
+		health_timeout 2s
+		# A copy that just stopped or failed: try another for up to 10 s.
+		lb_try_duration 10s
+		lb_try_interval 100ms
+		fail_duration 10s
+		transport http {
+			dial_timeout 2s
+		}
+	}
 }
 
 # The landing page (landing/index.html, mounted read-only).

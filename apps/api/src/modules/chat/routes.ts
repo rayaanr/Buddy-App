@@ -133,7 +133,7 @@ export function chatRoutes(deps: Deps, kind: Room['kind']) {
               ? `${summary.slice(0, PUSH_PREVIEW_CHARS)}…`
               : summary;
           const data = { [`${kind}Id`]: room.id, screen: 'chat' };
-          const skip = new Set([me.id, ...blocked, ...hub.connectedUsers(room.id)]);
+          const skip = new Set([me.id, ...blocked, ...(await hub.connectedUsers(room.id))]);
           // Tagged people hear about it even if they muted the chat.
           const mentioned = message.mentions.map((m) => m.id).filter((id) => !skip.has(id));
           if (mentioned.length) {

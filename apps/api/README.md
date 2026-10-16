@@ -72,7 +72,7 @@ Each activity's chat lives under `/v1/activities/:id/chat` and is open to member
 
 Sending goes over HTTP, not the socket, so the app gets a clear success or failure. The server pings every 30 seconds and drops sockets that don't answer. Members who aren't connected to that chat get an Expo push notification; the app registers its token with `POST /v1/me/push-tokens` and removes it on sign-out.
 
-Connections live in this process's memory (`src/realtime/hub.ts`). That's right for one API process; running several would need Redis pub/sub to relay events between them.
+Each API instance holds the sockets connected to it (`src/realtime/hub.ts`); events go out through the cluster (`src/lib/cluster.ts`), so a message sent through one instance reaches phones connected to another. See [Running several instances](#running-several-instances).
 
 ## Reporting and blocking
 
@@ -128,7 +128,7 @@ Buddy covers all of Sri Lanka. The `places` table holds ~2,100 towns (postal tow
 
 ## Rate limits and abuse
 
-Per signed-in user unless noted (`src/lib/rate-limit.ts`; counted in memory, so per API instance):
+Per signed-in user unless noted (`src/lib/rate-limit.ts`; counted in the cluster, so shared by all API instances):
 
 | What                          | Limit                                              | Why                                                            |
 | ----------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
@@ -146,6 +146,31 @@ Per signed-in user unless noted (`src/lib/rate-limit.ts`; counted in memory, so 
 Over the limit is a `429` with code `rate_limited` and a `Retry-After` header. Behind a reverse proxy set `TRUSTED_PROXY_HOPS` (1 for Caddy on the same server) so limits see the client's IP, not the proxy's (2 for Cloudflare then Caddy). With 0, `X-Forwarded-For` is ignored, sign-in limits included.
 
 Also hardened: Better Auth's own `update-user`, `change-email` and `delete-user` routes are off (the app uses `/v1/me`), upload keys must match exactly what `/v1/uploads` issued, chat sockets refuse other sites' pages and re-check membership once open, share pages only show upcoming activities, and a blocked person's profile shows only their name and photo. Known and accepted: chat system lines ("Ashan joined") still name someone you blocked.
+
+## Running several instances
+
+Production runs several copies of the API behind Caddy (see [infra/README.md](../../infra/README.md)). What they need to share goes through `src/lib/cluster.ts`: Redis (Valkey) when `REDIS_URL` is set, this process's memory when not (development, tests, a single copy).
+
+- **Chat events and disconnects** are broadcast to every instance, and each delivers them to the sockets it holds. Who has a chat open (so they get no push) is reported to Redis every 20 seconds and lapses after a minute.
+- **Rate limits** (ours and Better Auth's) count in Redis, so a limit holds across copies.
+- **Sessions** are cached for 30 seconds per instance (`src/auth/sessions.ts`), saving two queries per request. Sign-out, suspension, account deletion and a name change clear them on every instance at once.
+- **Background jobs** (reminders, weekly repeats, clean-ups) run on one instance: whichever holds a Postgres advisory lock (`src/lib/leader.ts`). If it stops, another takes over within 30 seconds.
+- **Migrations** take a lock too, so copies starting together don't race.
+
+`test/cluster.test.ts` runs two instances against Redis (`docker compose up -d redis` locally; CI provides it).
+
+## Load tests
+
+[`load/`](../../load) runs the built API against a generated database (20,000 people, 30,000 activities, 200,000 messages) and drives it with [k6](https://k6.io) as people using the app:
+
+```bash
+bun run --filter @buddy/load prepare-db      # once: builds buddy_load and sessions
+bun run --filter @buddy/load api             # one copy on :7420
+INSTANCES=3 bun run --filter @buddy/load api # or three behind Caddy, sharing Redis
+k6 run load/k6/app.js                        # 200 people for 2 minutes; prints a table per endpoint
+```
+
+`k6 run -e PEOPLE=500 -e MINUTES=5 load/k6/app.js` changes the load. Never point it at production: it signs in as generated people that only exist in buddy_load.
 
 ## Photo uploads (Cloudflare R2)
 

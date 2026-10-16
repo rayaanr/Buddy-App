@@ -1,10 +1,15 @@
-# Production: Postgres + PostGIS, the API, Caddy (routing + the landing page) and a
+# Production: Postgres + PostGIS, Valkey (Redis), the API (API_REPLICAS copies,
+# 2 by default), Caddy (load balancing, routing and the landing page) and a
 # Cloudflare Tunnel, on one VPS. Nothing publishes a port, so it shares a server
 # with other apps without clashing over 80/443.
 # Settings come from infra/.env (copy .env.example). From this folder:
 #
-#   docker compose up -d --build      # first start and every update
+#   sh deploy.sh                      # first start and every update (CI runs it)
 #   docker compose logs -f api
+#
+# Start and update through deploy.sh, not `docker compose up`: it replaces the
+# API copies without downtime and writes caddy/api-upstreams, the list of
+# copies Caddy balances across.
 #
 # See infra/README.md for the full server setup.
 name: buddy-prod
@@ -26,6 +31,18 @@ services:
       retries: 20
     restart: unless-stopped
 
+  # What the API copies share: chat events, rate limits, sign-outs, who has
+  # which chat open. All of it is short-lived, so nothing is saved to disk.
+  redis:
+    image: valkey/valkey:8.1-alpine
+    command: valkey-server --save "" --appendonly no --maxmemory 64mb --maxmemory-policy volatile-lru
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
   api:
     # CI deploys set API_IMAGE to the image it pushed to GHCR (see deploy.sh);
     # without it, `docker compose up -d --build` builds from this checkout.
@@ -38,12 +55,19 @@ services:
       NODE_ENV: production
       PORT: 7400
       DATABASE_URL: postgres://buddy:${DB_PASSWORD}@db:5432/buddy
+      REDIS_URL: redis://redis:6379
       BETTER_AUTH_URL: https://api-buddy.${DOMAIN:?Set DOMAIN in infra/.env}
       # cloudflared then Caddy: the client is two hops from the right of X-Forwarded-For.
       TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-2}
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Each copy is one Node process (one CPU core). Caddy spreads requests
+    # across them; deploy.sh replaces them one batch at a time.
+    deploy:
+      replicas: ${API_REPLICAS:-2}
     restart: unless-stopped
 
   caddy:

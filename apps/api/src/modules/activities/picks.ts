@@ -8,6 +8,7 @@ import { originFor } from '../profiles/service';
 import { findActivitySummaries, pointSql, upcoming } from './queries';
 
 const DECK_SIZE = 5;
+const CANDIDATES = 20;
 const RADIUS_KM = 25;
 const WIDER_KM = [100, 450];
 
@@ -53,16 +54,19 @@ export async function picksFor(db: Db, urls: Urls, userId: string): Promise<Pick
       where: [
         upcoming(),
         sql`ST_DWithin(${activities.location}, ${pointSql(near)}, ${km * 1000})`,
-        sql`not exists (select 1 from activity_members m where m.activity_id = ${activities.id} and m.user_id = ${userId})`,
-        sql`(select count(*) from activity_members m where m.activity_id = ${activities.id}) < ${activities.capacity}`,
+        // Their own activities, looked up once rather than per activity.
+        sql`${activities.id} not in (select m.activity_id from activity_members m where m.user_id = ${userId})`,
         notHidden,
       ],
       orderBy: [
         sql`(${communityScore}) + (${interestScore}) desc`,
         sql`${activities.startsAt} asc`,
       ],
-      limit: DECK_SIZE,
-    });
+      // A few spare: full ones are dropped below. Counting who's going for
+      // every activity nearby, to skip full ones in the query, made this the
+      // slowest query in the app.
+      limit: CANDIDATES,
+    }).then((found) => found.filter((a) => a.goingCount < a.capacity).slice(0, DECK_SIZE));
   // Few nearby (outside the cities): keep those first and top up from further away.
   const candidates = await within(RADIUS_KM);
   for (const km of WIDER_KM) {

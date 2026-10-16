@@ -33,7 +33,7 @@ export function createAnnouncer({
     }
     // Host notices push to everyone going: at most 3 an hour per activity, so
     // repeated edits can't spam phones (the chat lines still go up).
-    if (result.notice && limiter.hit(`notice:${id}`, 3, HOUR).ok) {
+    if (result.notice && (await limiter.hit(`notice:${id}`, 3, HOUR)).ok) {
       const message = {
         ...result.notice,
         data: { activityId: id },

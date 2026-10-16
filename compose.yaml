@@ -7,6 +7,9 @@
 # Only the database (to run the API from source with `bun run api`):
 #   docker compose up -d db
 #
+# Redis (Valkey) is only needed for the tests that run two API instances
+# together (test/cluster.test.ts): docker compose up -d redis
+#
 # Overrides go in a .env file next to this one, e.g. API_URL=http://192.168.1.20:7400
 # so a phone on your Wi-Fi can reach the API, or R2_* keys to try uploads.
 name: buddy
@@ -26,6 +29,16 @@ services:
       - ./infra/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d buddy']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # What several API instances share in production (see apps/api/src/lib/cluster.ts).
+  redis:
+    image: valkey/valkey:8.1-alpine
+    ports: ['7479:6379']
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10

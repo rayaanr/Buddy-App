@@ -66,6 +66,36 @@ export function memoryStorage() {
   return { storage, objects, removed, upload };
 }
 
+/** Starts a real HTTP + WebSocket server for `app` on a random port (for socket tests). */
+async function listenOn(app: ReturnType<typeof createApp>) {
+  const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_BYTES });
+  const server = await new Promise<ReturnType<typeof serve>>((resolve) => {
+    const s = serve({ fetch: app.fetch, port: 0, websocket: { server: wss } }, () => resolve(s));
+  });
+  const { port } = server.address() as AddressInfo;
+  return {
+    base: `http://127.0.0.1:${port}`,
+    /** Opens a socket as the signed-in user; resolves once open (or rejects with the HTTP status). */
+    connect(path: string, headers: Record<string, string>) {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`, { headers });
+      const events: unknown[] = [];
+      ws.on('message', (data) => events.push(JSON.parse(String(data))));
+      const opened = new Promise<void>((resolve, reject) => {
+        ws.once('open', () => resolve());
+        ws.once('unexpected-response', (_req, res) => reject(new Error(`HTTP ${res.statusCode}`)));
+        ws.once('error', reject);
+      });
+      return { ws, events, opened };
+    },
+    close: () =>
+      new Promise<void>((resolve) => {
+        for (const client of wss.clients) client.terminate();
+        wss.close();
+        server.close(() => resolve());
+      }),
+  };
+}
+
 /**
  * Builds the real app against the test database, re-seeded before each test.
  * `signIn` goes through the actual email-code flow and returns request headers.
@@ -99,7 +129,8 @@ export function useTestApp(
     // Notifications from the last test may still be saving: let them land first.
     await (deps.push as { settled?: () => Promise<void> }).settled?.();
     mail.sent.length = 0;
-    deps.limiter.reset();
+    await deps.limiter.reset();
+    deps.sessions.clear();
     await seed(deps.db, { publicUrl: deps.env.BETTER_AUTH_URL });
   });
   afterAll(() => close());
@@ -151,36 +182,23 @@ export function useTestApp(
   }
 
   /** Starts a real HTTP + WebSocket server on a random port (for socket tests). */
-  async function listen() {
-    const wss = new WebSocketServer({ noServer: true, maxPayload: WS_MAX_BYTES });
-    const server = await new Promise<ReturnType<typeof serve>>((resolve) => {
-      const s = serve({ fetch: app.fetch, port: 0, websocket: { server: wss } }, () => resolve(s));
+  const listen = () => listenOn(app);
+
+  /**
+   * Another API instance on the same database and settings, as when several
+   * run behind a load balancer (pass REDIS_URL in env so they share).
+   */
+  function startInstance() {
+    const other = createDeps(env, {
+      mailer: mail.mailer,
+      storage: options.storage === undefined ? null : options.storage,
+      push: options.push ?? { notifyActivity: async () => {}, notifyUsers: async () => {} },
+      venues: options.venues ?? { search: async () => ({ venues: [], attribution: null }) },
     });
-    const { port } = server.address() as AddressInfo;
-    return {
-      base: `http://127.0.0.1:${port}`,
-      /** Opens a socket as the signed-in user; resolves once open (or rejects with the HTTP status). */
-      connect(path: string, headers: Record<string, string>) {
-        const ws = new WebSocket(`ws://127.0.0.1:${port}${path}`, { headers });
-        const events: unknown[] = [];
-        ws.on('message', (data) => events.push(JSON.parse(String(data))));
-        const opened = new Promise<void>((resolve, reject) => {
-          ws.once('open', () => resolve());
-          ws.once('unexpected-response', (_req, res) =>
-            reject(new Error(`HTTP ${res.statusCode}`)),
-          );
-          ws.once('error', reject);
-        });
-        return { ws, events, opened };
-      },
-      close: () =>
-        new Promise<void>((resolve) => {
-          for (const client of wss.clients) client.terminate();
-          wss.close();
-          server.close(() => resolve());
-        }),
-    };
+    afterAll(() => other.close());
+    const otherApp = createApp(other.deps);
+    return { app: otherApp, deps: other.deps, listen: () => listenOn(otherApp) };
   }
 
-  return { app, deps, mail, requestCode, signIn, call, listen };
+  return { app, deps, mail, requestCode, signIn, call, listen, startInstance };
 }
