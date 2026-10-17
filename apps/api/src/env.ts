@@ -16,7 +16,7 @@ const schema = z
 
     DATABASE_URL: z.url(),
     /**
-     * Redis (or Valkey) shared by API instances: chat events, rate limits and
+     * Redis shared by API instances: chat events, rate limits and
      * sign-outs reach all of them. Needed to run more than one; without it
      * everything stays in this process (see lib/cluster.ts).
      */

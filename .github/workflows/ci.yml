@@ -27,11 +27,11 @@ jobs:
           --health-retries 10
       # For the tests that run two API instances together (test/cluster.test.ts).
       redis:
-        image: valkey/valkey:8.1-alpine
+        image: redis:7-alpine
         ports:
           - 7479:6379
         options: >-
-          --health-cmd "valkey-cli ping"
+          --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-retries 10
     env:

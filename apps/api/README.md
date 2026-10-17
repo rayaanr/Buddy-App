@@ -149,7 +149,7 @@ Also hardened: Better Auth's own `update-user`, `change-email` and `delete-user`
 
 ## Running several instances
 
-Production runs several copies of the API behind Caddy (see [infra/README.md](../../infra/README.md)). What they need to share goes through `src/lib/cluster.ts`: Redis (Valkey) when `REDIS_URL` is set, this process's memory when not (development, tests, a single copy).
+Production runs several copies of the API behind Caddy (see [infra/README.md](../../infra/README.md)). What they need to share goes through `src/lib/cluster.ts`: Redis when `REDIS_URL` is set, this process's memory when not (development, tests, a single copy).
 
 - **Chat events and disconnects** are broadcast to every instance, and each delivers them to the sockets it holds. Who has a chat open (so they get no push) is reported to Redis every 20 seconds and lapses after a minute.
 - **Rate limits** (ours and Better Auth's) count in Redis, so a limit holds across copies.

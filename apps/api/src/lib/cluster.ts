@@ -7,7 +7,7 @@ import type { Logger } from '../logger';
  * balancer: messages to every instance (chat events, sign-outs), rate-limit
  * counters, and who has which chat open.
  *
- * With REDIS_URL it's Redis (Valkey in production); without, it's this
+ * With REDIS_URL it's Redis; without, it's this
  * process's memory, which is right for development, tests and a single
  * instance.
  */
